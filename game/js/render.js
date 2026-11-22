@@ -24,10 +24,13 @@ KF.loadAssets = function (onProgress) {
     return fetch(url + (window.KF_VER ? '?v=' + window.KF_VER : '')).then(function (r) { return r.json(); });
   }
   // 遊べるキャラは道着キャラ男だけなので、その絵とエフェクトだけ読み込む（もう1人のキャラ・街のステージの絵は読まない）
-  return Promise.all([json('assets/kokuu/anims.json'), json('assets/fx/fx.json')])
+  // 遊べるキャラ：道着キャラ男（kokuu）と変身キャラ男（ハンマー形態 gai_h・大盾形態 gai_s）
+  var KINDS = ['kokuu', 'gai_h', 'gai_s'];
+  return Promise.all(KINDS.map(function (k) { return json('assets/' + k + '/anims.json'); }).concat([json('assets/fx/fx.json')]))
     .then(function (r) {
-      A.meta.kokuu = KF.prepAnims(r[0]); A.fx = r[1]; A.stage = {};
-      Object.keys(A.meta.kokuu.anims).forEach(function (n) { img('kokuu:' + n, 'assets/kokuu/' + A.meta.kokuu.anims[n].file); });
+      KINDS.forEach(function (k, i) { A.meta[k] = KF.prepAnims(r[i]); });
+      A.fx = r[KINDS.length]; A.stage = {};
+      KINDS.forEach(function (k) { Object.keys(A.meta[k].anims).forEach(function (n) { img(k + ':' + n, 'assets/' + k + '/' + A.meta[k].anims[n].file); }); });
       Object.keys(A.fx).forEach(function (n) { img('fx:' + n, 'assets/fx/' + A.fx[n].file); });
       return Promise.all(jobs);
     });
@@ -249,6 +252,23 @@ KF.Renderer.prototype.drawImpact = function (c, e, x, y) {
   }
   c.restore();
 };
+// 地面を走る衝撃波（ハンマーの地割れ）：とがった岩と砂ぼこりと金色の光
+KF.Renderer.prototype.drawShock = function (c, p, x) {
+  var G = KF.CONST.GROUND, t = p.t, dir = p.vx < 0 ? -1 : 1;
+  c.save(); c.globalCompositeOperation = 'lighter';
+  var g = c.createRadialGradient(x, G - 6, 2, x, G - 6, 34);
+  g.addColorStop(0, 'rgba(255,230,160,0.9)'); g.addColorStop(0.5, 'rgba(255,150,30,0.45)'); g.addColorStop(1, 'rgba(255,120,0,0)');
+  c.fillStyle = g; c.fillRect(x - 36, G - 44, 72, 50);
+  c.restore();
+  // 岩のとげ（進む向きの後ろへ小さくなる）
+  for (var i = 0; i < 5; i++) {
+    var bx = x - dir * i * 9, h = (22 - i * 4) * (0.8 + 0.2 * Math.sin((t + i * 3) * 0.9)), w = 8 - i;
+    c.fillStyle = i === 0 ? '#ffe7a6' : i < 3 ? '#ffb22a' : '#b86a08';
+    c.beginPath(); c.moveTo(bx - w, G); c.lineTo(bx + dir * 2, G - h); c.lineTo(bx + w, G); c.closePath(); c.fill();
+  }
+  c.fillStyle = 'rgba(120,90,60,0.5)';
+  for (var k = 0; k < 4; k++) { var dx = ((t * 3 + k * 17) % 40) - 20; c.fillRect(x - dir * 20 + dx, G - 4 - (k % 3) * 3, 3, 3); }
+};
 KF.Renderer.prototype.drawSpark = function (c, e, x, y) {
   if (e.t > e.life) return;
   var k = e.t / e.life, C3 = KF.IMPACT_COL[e.col];
@@ -334,7 +354,8 @@ KF.Renderer.prototype.render = function (b) {
 
   // 飛び道具・ビーム・柱
   b.projs.forEach(function (p) {
-    if (p.kind === 'ball') self.drawFxFrame(c, p.fx, (p.t >> 2), p.x + ox, p.y, p.vx < 0, 1);
+    if (p.kind === 'ball' && /^shock/.test(p.fx)) self.drawShock(c, p, p.x + ox);
+    else if (p.kind === 'ball') self.drawFxFrame(c, p.fx, (p.t >> 2), p.x + ox, p.y, p.vx < 0, 1);
     else if (p.kind === 'beam') {
       var meta = KF.Assets.fx[p.fx], img = KF.Assets.img['fx:' + p.fx];
       var fr = (p.t >> 1) % meta.n, seg = meta.w;
@@ -479,7 +500,7 @@ KF.Renderer.prototype.drawHUD = function (b) {
     c.fillStyle = 'rgba(0,0,0,0.35)';
     for (var k = 1; k < 10; k++) c.fillRect(x0 + Math.round(w * k / 10), y, 1, h);
     // 名前
-    self.text(f.D.name, L ? x0 + 2 : x0 + w - 2, y + h + 11, 11, '#ffffff', L ? 'left' : 'right', col);
+    self.text(f.D.name + (f.D.form ? '［' + f.D.form.replace('形態', '') + '］' : ''), L ? x0 + 2 : x0 + w - 2, y + h + 11, 11, '#ffffff', L ? 'left' : 'right', f.D.form ? f.D.color : col);
     if (f.modern) self.text('M', L ? x0 + 2 + 76 : x0 + w - 2 - 76, y + h + 11, 10, '#ffe14a', 'center', '#ff8a00');   // モダン操作
     // ラッシュゲージ（6分割）
     var rx = L ? x0 + w - 150 : x0, ry = y + h + 5, rw = 150, seg = rw / 6;

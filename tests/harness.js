@@ -10,7 +10,7 @@ for (const f of ['data.js', 'input.js', 'engine.js', 'ai.js', 'net.js']) {
   if (fs.existsSync(p)) vm.runInThisContext(fs.readFileSync(p, 'utf8'), { filename: f });
 }
 const meta = {};
-for (const k of ['kokuu', 'shuuen']) meta[k] = KF.prepAnims(JSON.parse(fs.readFileSync(path.join(G, 'assets', k, 'anims.json'))));
+for (const k of ['kokuu', 'shuuen', 'gai_h', 'gai_s']) meta[k] = KF.prepAnims(JSON.parse(fs.readFileSync(path.join(G, 'assets', k, 'anims.json'))));
 const N = () => ({ x: 0, y: 0, held: {}, pressed: {} });
 function inp(dir, btns, prevHeld) {
   // dir: numpad (右向き基準の絶対方向) / btns: 'lp,lk'

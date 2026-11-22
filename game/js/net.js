@@ -234,7 +234,7 @@ var KF = (typeof window !== 'undefined' ? window : global).KF || {};
     this.conn = c;
     c.on('open', function () {
       self.setStatus('connected', 'つながりました');
-      self.send({ t: 'hello', v: 1, modern: !!(KF.Input && KF.Input.modern && KF.Input.modern[1]) });
+      self.send({ t: 'hello', v: 1, modern: !!(KF.Input && KF.Input.modern && KF.Input.modern[1]), kind: KF.onlineKind || 'kokuu' });
       self.pingTimer = setInterval(function () { self.send({ t: 'ping', at: performance.now() }); }, 1000);
     });
     c.on('data', function (m) {

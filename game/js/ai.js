@@ -92,6 +92,11 @@ KF.AI.prototype.update = function () {
     var sb = Math.floor(m.sup / 1000);
     if (sb >= 3 && m.rootHit && L.superUse > 0.7 && this.rnd() < 0.5) { this.clear(); this.motion([2, 3, 6, 2, 3, 6], 'hk'); }   // 昇穿はSA3でだけキャンセルできる
   }
+  if (this.after3 && m.state === 'attack' && (m.moveId === 'upper' || m.moveId === 'lift') && m.connected && Math.floor(m.sup / 1000) >= 3) { this.clear(); this.motion([2, 3, 6, 2, 3, 6], 'hk'); this.after3 = null; }
+  if (this.after3 && m.actionable() && !this.q.length) this.after3 = null;
+  // 変身の後の必殺技（しゃがみ弱K ＞ 変身 ＞ 必殺技）
+  if (this.after2 && m.state === 'attack' && m.moveId === 'change_in') { this.clear(); this.motion(this.after2[0], this.after2[1]); this.after2 = null; }
+  if (this.after2 && m.actionable() && !this.q.length) this.after2 = null;
   // 浮いた相手への追撃：旋風脚などで浮かせたあと、動けるようになったら昇穿（ゲージがあれば超必殺）
   if (this.jug) {
     if (b.frameNo > this.jug.until || o.state === 'down' || o.state === 'getup') this.jug = null;
@@ -110,6 +115,8 @@ KF.AI.prototype.update = function () {
     var r = this.rnd();
     if (threat.kind === 'air' && dist < 190 && r < L.aa) {
       this.clear(); this.antiAir(dist);
+    } else if (threat.kind === 'proj' && m.kind === 'gai_s' && threat.d > 40 && threat.d < 100 && r < L.spacing * 0.8) {
+      this.clear(); this.motion([2, 3, 6], 'lk');   // 反射
     } else if (threat.kind === 'proj' && m.kind === 'kokuu' && threat.d > 55 && threat.d < 110 && dist < 260 && r < L.spacing * 0.7) {
       this.clear(); this.motion([2, 1, 4], dist > 180 ? 'hk' : (dist > 120 ? 'mk' : 'lk'));
     } else if (threat.kind === 'proj' && L.spacing > 0.5 && threat.d > 130 && r < L.jump * 6) {
@@ -132,7 +139,9 @@ KF.AI.prototype.update = function () {
   // 起き上がりの切り返し
   // 通常の昇穿は空中の攻撃にしか無敵がないので、切り返しはゲージがあればEX昇穿（完全無敵）で
   if (m.state === 'getup' && m.aF === m.animObj().frames.length - 2 && dist < 110 && this.rnd() < L.reversal) {
-    this.clear(); if (m.kind !== 'kokuu' || m.ex >= KF.CONST.EX_COST) this.motion([6, 2, 3], m.kind === 'kokuu' ? 'lp,mp' : 'hp');
+    this.clear();
+    if (m.D.base === 'gai') { if (m.ex >= KF.CONST.EX_COST) this.motion([6, 2, 3], 'lp,mp'); }
+    else if (m.kind !== 'kokuu' || m.ex >= KF.CONST.EX_COST) this.motion([6, 2, 3], m.kind === 'kokuu' ? 'lp,mp' : 'hp');
   }
 
   if (!this.q.length && m.actionable()) {
@@ -175,11 +184,13 @@ KF.AI.prototype.threat = function (s, dist) {
 KF.AI.prototype.antiAir = function (dist) {
   var m = this.me(), L = this.L;
   if (m.kind === 'shuuen' && this.rnd() < 0.4) { this.push(4, 'hp', 2); return; }
+  if (m.D.base === 'gai' && this.rnd() < 0.45) { this.push(2, 'hp', 1); return; }   // 変身キャラ男：しゃがみ強P（大盾は空中の攻撃に無敵）
   if (L.combo >= 2 && this.rnd() < 0.7) this.motion([6, 2, 3], dist < 90 ? 'hp' : 'mp');
   else this.push(2, 'hp', 1);
 };
 
 KF.AI.prototype.punish = function (dist, s) {
+  if (this.me().D.base === 'gai') { this.punishGai(dist, s); return; }
   var m = this.me(), L = this.L, K = m.kind === 'kokuu';
   this.clear();
   var bars = Math.floor(m.sup / 1000);
@@ -246,6 +257,7 @@ KF.AI.prototype.rushRoute = function () {
 };
 
 KF.AI.prototype.decide = function (s, dist) {
+  if (this.me().D.base === 'gai') { this.decideGai(s, dist); return; }
   var m = this.me(), L = this.L, K = m.kind === 'kokuu', r = this.rnd();
   var pr = m.D.prefRange;
   var bars = Math.floor(m.sup / 1000);
@@ -314,4 +326,80 @@ KF.AI.prototype.decide = function (s, dist) {
   if (r < 0.7) { this.push(4, '', 10); return; }
   if (r < 0.85) { this.push(5, this.pick(['lp', 'mp', 'hp', 'lk']), 2); return; }
   this.push(1, '', 12);
+};
+
+// ---------------------------------------------------------- 変身キャラ男
+//  ハンマー形態：中〜遠距離で大振りと地割れ。近づかれたら大盾に変身することがある
+//  大盾形態：近距離で押し込みと当て身。離れたらハンマーに変身することがある
+//  コンボは試験でつながると確かめたものだけを使う
+KF.AI.prototype.mot = function (seq, btn) { return seq.map(function (x, i, arr) { return { d: x, b: i === arr.length - 1 ? btn : '', n: i === arr.length - 1 ? 2 : 1 }; }); };
+KF.AI.prototype.changeForm = function () { this.push(2, '', 2); this.push(5, '', 2); this.push(2, 'lp', 2); };
+KF.AI.prototype.decideGai = function (s, dist) {
+  var m = this.me(), L = this.L, H = m.kind === 'gai_h', r = this.rnd(), bars = Math.floor(m.sup / 1000);
+  var pr = m.D.prefRange;
+  if (s.state === 'down' || s.state === 'getup') {
+    if (dist > 80) { this.push(6, '', 8); return; }
+    if (r < 0.3 * L.spacing) { this.push(5, 'lp,lk', 1); return; }
+    this.starter('lk', L.combo >= 2 ? [[2, 2, 5, 5, 2], 'lp'] : null, true, true);   // しゃがみ弱K ＞ 変身
+    if (L.combo >= 2) this.after2 = H ? [[2, 3, 6], 'lp'] : [[2, 1, 4], 'lp'];
+    return;
+  }
+  // 形態の使い分け
+  if (L.combo >= 2) {
+    if (H && dist < 90 && r < 0.18) { this.changeForm(); return; }          // 近い：大盾へ
+    if (!H && dist > 190 && r < 0.3) { this.changeForm(); return; }         // 遠い：ハンマーへ
+    // 形態をまたぐコンボ：中P ＞ 変身 ＞ 必殺技（変身キャンセルで相手ののけぞりが延びる）
+    if (dist < 110 && L.combo >= 3 && r > 0.85) {
+      this.starter('mp', [[2, 2, 5, 5, 2], 'lp'], false, true);
+      this.after2 = H ? [[2, 3, 6], 'hp'] : [[2, 1, 4], 'lp'];   // ハンマー→大盾は盾突進、大盾→ハンマーは大回転
+      return;
+    }
+  }
+  if (dist > pr[1]) {
+    if (H && r < L.fireball * 1.2 && !this.b.projs.some(function (p) { return p.owner === m; })) { this.motion([2, 3, 6], this.pick(['lp', 'mp', 'hp'])); return; }
+    if (!H && r < 0.15 && dist < 230) { this.motion([2, 3, 6], 'mp'); return; }   // 盾突進で突っ込む（飛び道具を抜ける）
+    if (r < L.jump && dist < 260) { this.push(9, '', 14); this.push(9, 'hp', 1); return; }
+    if (m.rush >= 2000 && r < L.rush * 0.6 && dist < 300) { this.push(5, 'rush', 1); this.push(6, '', 10); this.push(5, 'hp', 2); return; }
+    this.push(6, '', 6 + Math.floor(this.rnd() * 14));
+    return;
+  }
+  if (dist > pr[0]) {   // 差し合い
+    if (H) {
+      if (r < 0.3) { this.starter('mp', L.combo >= 2 ? [[2, 1, 4], 'lp'] : null, false, L.combo < 3); return; }   // 中P ＞ 大回転
+      if (r < 0.45) { this.push(2, 'mk', 2); return; }
+      if (r < 0.55) { this.push(5, 'hk', 2); return; }
+      if (r < 0.62 && L.combo >= 2) { this.push(6, 'hp', 2); this.after2 = null; this.jug = { until: this.b.frameNo + 90 }; return; }   // 地響き（中段）→床跳ねに追撃
+      if (r < 0.7 && L.combo >= 2) { this.motion([2, 3, 6], 'lk'); return; }   // 飛び叩き
+    } else {
+      if (r < 0.35) { this.starter('mp', L.combo >= 2 ? [[2, 3, 6], 'hp'] : null, true, L.combo < 3); return; }   // しゃがみ中P ＞ 盾突進
+      if (r < 0.5) { this.push(5, this.pick(['mp', 'mk']), 2); return; }
+      if (r < 0.58 && L.combo >= 2) { this.motion([2, 1, 4], 'lk'); return; }   // 盾構え（当て身）
+    }
+    if (L.spacing > this.rnd()) { this.push(this.rnd() < 0.5 ? 6 : 4, '', 8 + Math.floor(this.rnd() * 10)); return; }
+    this.push(6, '', 10); return;
+  }
+  // 近距離
+  if (r < 0.3 && L.combo >= 2) {   // 中P ～ 強P ＞ 必殺技（ゲージがあれば超必殺）
+    var fin = H ? [[2, 1, 4], 'lp'] : [[2, 3, 6], 'hp'];
+    if (bars >= 1 && L.superUse > 0.8 && this.rnd() < 0.4) fin = [[2, 3, 6, 2, 3, 6], 'hp'];
+    this.push(5, 'mp', 2);
+    this.plan = L.combo >= 3 ? [[{ d: 5, b: 'hp', n: 2 }], this.mot(fin[0], fin[1])] : [[{ d: 5, b: 'hp', n: 2 }]];
+    this.plan[0].blockOk = true; this.planLast = null;
+    return;
+  }
+  if (r < 0.42) { this.starter('lk', L.combo >= 2 ? (H ? [[2, 1, 4], 'lp'] : [[2, 3, 6], 'lp']) : null, true, true); return; }
+  if (r < 0.52) { this.push(5, 'lp,lk', 1); return; }
+  if (!H && r < 0.6) { this.motion([2, 1, 4], 'lk'); return; }   // 盾構え
+  if (r < 0.66 && L.combo >= 3 && m.rush >= 3000) { this.push(5, 'mp', 2); this.combo = { next: [{ d: 5, b: 'rush', n: 1 }, { d: 6, b: '', n: 8 }, { d: 5, b: 'hp', n: 2 }], confirm: true, done: false }; this.after = H ? [[2, 1, 4], 'lp'] : [[2, 3, 6], 'hp']; return; }
+  if (r < 0.75) { this.push(4, '', 10); return; }
+  if (r < 0.88) { this.push(5, this.pick(['lp', 'mp', 'hp', 'lk']), 2); return; }
+  this.push(1, '', 12);
+};
+KF.AI.prototype.punishGai = function (dist, s) {
+  var m = this.me(), L = this.L, H = m.kind === 'gai_h', bars = Math.floor(m.sup / 1000);
+  this.clear();
+  if (bars >= 3 && L.superUse > 0.8 && this.rnd() < 0.5) { this.starter('hp', [[6, 2, 3], 'hp']); this.after3 = { su3: true }; return; }   // 強P ＞ かち上げ/跳ね上げ ＞ Lv3
+  if (bars >= 1 && L.superUse > 0.5 && this.rnd() < 0.4) { this.push(5, 'mp', 2); this.plan = [[{ d: 5, b: 'hp', n: 2 }], this.mot([2, 3, 6, 2, 3, 6], 'hp')]; this.planLast = null; return; }
+  if (L.combo >= 2) { this.starter('hp', H ? [[2, 1, 4], 'hp'] : [[6, 2, 3], 'hp']); return; }
+  this.starter('hp', null);
 };

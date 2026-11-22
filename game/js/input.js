@@ -196,6 +196,27 @@ KF.InputBuffer.prototype.push = function (inp, facing) {
   if (this.hist.length > 40) this.hist.shift();
 };
 KF.InputBuffer.prototype.refacing = function () { };
+// ↓↓（変身）：↓を短く2回たたく。1回目の↓は8フレーム以内、離している間は6フレーム以内、全体で win フレーム以内
+//  しゃがみ技を出したあと立って、またしゃがむ（↓を長く押していた）ときは変身にならない
+KF.InputBuffer.prototype.matchDD = function (win) {
+  var H = this.hist, n = H.length, j = n - 1;
+  function down(d) { return d <= 3; }
+  var c = 0; while (j >= 0 && down(H[j].dir)) { j--; c++; if (c > win) return false; }
+  if (!c) return false;
+  var g = 0; while (j >= 0 && !down(H[j].dir)) { j--; g++; if (g > 6) return false; }
+  if (!g) return false;
+  var d = 0; while (j >= 0 && down(H[j].dir)) { j--; d++; if (d > 8) return false; }
+  return d > 0 && (n - 1 - j) <= win;
+};
+// 今のフレームの↓がまだ履歴に入っていないとき用：直前が「↓を離した間」→その前に「↓」なら成立
+KF.InputBuffer.prototype.matchDDNow = function (win) {
+  var H = this.hist, j = H.length - 1;
+  function down(d) { return d <= 3; }
+  var g = 0; while (j >= 0 && !down(H[j].dir)) { j--; g++; if (g > 6) return false; }
+  if (!g) return false;
+  var d = 0; while (j >= 0 && down(H[j].dir)) { j--; d++; if (d > 8) return false; }
+  return d > 0 && (H.length - j) <= win;
+};
 // seq を win フレーム以内に順に入力し、最後の方向から5フレーム以内にボタン
 KF.InputBuffer.prototype.match = function (seq, win, btnFrames, loose) {
   var H = this.hist, n = H.length;

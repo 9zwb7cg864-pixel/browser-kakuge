@@ -15,6 +15,7 @@ function player(seed, modern) {
     if (--left > 0) { const h = {}; for (const k in cur.held) if (r() < 0.6) h[k] = cur.held[k]; cur = { x: cur.x, y: cur.y, held: h }; return cur; }
     left = 1 + Math.floor(r() * 12);
     const q = r();
+    if (DD && q < 0.06) { seq = [{ x: 0, y: 1, held: {} }, { x: 0, y: 0, held: {} }, { x: 0, y: 1, held: { lp: true } }]; return cur = seq.shift(); }   // ↓↓P（変身）
     if (q < 0.15) { const b = B[Math.floor(r() * 6)]; seq = [[0, 1], [1, 1], [1, 0]].map(([x, y], i) => ({ x, y, held: i === 2 ? { [b]: true } : {} })); return cur = seq.shift(); }
     const held = {}; if (r() < 0.45) held[B[Math.floor(r() * B.length)]] = true;
     cur = { x: Math.floor(r() * 3) - 1, y: r() < 0.15 ? -1 : r() < 0.3 ? 1 : 0, held };
@@ -22,9 +23,11 @@ function player(seed, modern) {
   };
 }
 
+let DD = false;
 function run(o) {
   const r = rng(o.seed);
-  const mk = () => new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta, modern: o.modern || [false, false] });
+  const K = o.kinds || ['kokuu', 'kokuu']; DD = !!o.kinds;
+  const mk = () => new KF.Battle({ p1: K[0], p2: K[1], meta, modern: o.modern || [false, false] });
   const q = [[], []]; let now = 0;
   const last = [0, 0];
   const peers = [0, 1].map(side => new R({ side, delay: o.delay, keepHistory: true, maxRollback: 10, makeBattle: mk, send: m => {
@@ -53,6 +56,8 @@ function run(o) {
 }
 
 const cases = [
+  { name: '変身キャラ男どうし（↓↓Pで変身をくり返す）・遅延1F', lat: 40, jit: 30, delay: 1, ms: 60000, seed: 11, unordered: 1, kinds: ['gai_h', 'gai_h'] },
+  { name: '変身キャラ男 対 道着キャラ男・モダン', lat: 50, jit: 40, delay: 1, ms: 60000, seed: 12, unordered: 1, kinds: ['gai_h', 'kokuu'], modern: [true, false] },
   { name: 'モダン操作どうし・遅延1F（片道40ms）', lat: 40, jit: 30, delay: 1, ms: 60000, seed: 7, unordered: 1, modern: [true, true] },
   { name: 'モダン対クラシック・遅延1F', lat: 40, jit: 30, delay: 1, ms: 60000, seed: 8, unordered: 1, modern: [true, false] },
   { name: '遅延0F・近い回線（片道15ms）・順番ばらばら', lat: 15, jit: 15, delay: 0, ms: 60000, seed: 5, unordered: 1 },

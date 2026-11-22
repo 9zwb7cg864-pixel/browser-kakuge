@@ -380,6 +380,11 @@ var KF = window.KF || (window.KF = {});
         return;
       case 'launch':
         f.stepAnim();
+        if (!f.air && f.bounce) {   // 床跳ね：もう一度浮く（追撃できる）
+          f.bounce = 0; f.bounceUsed = 1; f.air = true; f.y = C.GROUND - 2; f.vy = -8.2; f.vx *= 0.5; f.floatG = 0.45;
+          this.emit('sfx', { s: 'down' }); this.spawnFx('dust', f.x, C.GROUND, 1.3); this.shake = 6;
+          return;
+        }
         if (!f.air) { // 着地 → ダウン
           f.state = 'down'; f.setAnim('down'); f.aF = 1; f.vx *= 0.3; f.t = 0;
           this.emit('sfx', { s: 'down' }); this.spawnFx('dust', f.x, C.GROUND, 1);
@@ -517,6 +522,22 @@ var KF = window.KF || (window.KF = {});
       m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'tatsu', str: 2 }, { su: 'su1' }],
       h: [{ b: 'hp' }, { sp: 'dp', str: 2 }, { su: 'su3' }],
     },
+    gai_h: {
+      l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'quake', str: 0 }, { su: 'su1' }],
+      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'spin', str: 0 }, { su: 'su1' }],
+      h: [{ b: 'hp' }, { sp: 'upper', str: 2 }, { su: 'su3' }],
+    },
+    gai_s: {
+      l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'charge', str: 0 }, { su: 'su1' }],
+      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'charge', str: 2 }, { su: 'su1' }],
+      h: [{ b: 'hp' }, { sp: 'charge', str: 2 }, { su: 'su3' }],
+    },
+  };
+  //  SPの方向ごとの技（なし・前・下・後ろ・空中）。変身キャラ男は ↓↓+SP で変身
+  KF.MODERN_SP = {
+    kokuu: { n: 'fire', f: 'dp', d: 'tatsu', b: 'palm', air: 'atatsu' },
+    gai_h: { n: 'quake', f: 'upper', d: 'leap', b: 'spin', air: null },
+    gai_s: { n: 'charge', f: 'lift', d: 'reflect', b: 'counter', air: null },
   };
   Battle.prototype.modernConvert = function (f, raw) {
     var H = raw.held || {}, Pp = raw.pressed || {};
@@ -532,8 +553,10 @@ var KF = window.KF || (window.KF = {});
       if (H.h || Pp.h) {
         req(rel < 0 ? 'su2' : crouch ? 'su3' : 'su1', 0);
       } else {
-        var mv = inAir ? 'atatsu' : rel > 0 && !crouch ? 'dp' : crouch ? 'tatsu' : rel < 0 ? 'palm' : 'fire';
-        req(mv, 1, H.auto);
+        var SPm = KF.MODERN_SP[f.kind] || KF.MODERN_SP.kokuu;
+        var mv = inAir ? SPm.air : rel > 0 && !crouch ? SPm.f : crouch ? SPm.d : rel < 0 ? SPm.b : SPm.n;
+        if (!inAir && f.D.moves.change && crouch && (f.buf.matchDD(18) || f.buf.matchDDNow(18))) mv = 'change';
+        if (mv) req(mv, 1, H.auto && mv !== 'change');
       }
       atk = atk.filter(function (k) { return k !== 'h'; });
       st.map = {};
@@ -571,6 +594,7 @@ var KF = window.KF || (window.KF = {});
       var c = cmds[i], set = c.btn === 'P' ? P : K;
       var pressed = null, nPressed = 0;
       var pw = cancelLevel ? Math.min(12, Math.max(3, this.frameNo - (f.moveStartF || 0))) : 5;
+      if (f.move && f.move.freeCancel) pw = 18;   // 変身中に入れておいた必殺技は、変身し終わった瞬間に出る
       var mq = f.mReq && f.mReq.move === c.move && this.frameNo - f.mReq.t < pw ? f.mReq : null;
       if (mq) { pressed = set[Math.min(2, mq.str)]; nPressed = mq.ex ? 2 : 1; }
       else for (var k = 0; k < 3; k++) if (f.buf.pressedWithin(set[k], pw)) { nPressed++; if (!pressed || k > set.indexOf(pressed)) pressed = set[k]; }
@@ -585,7 +609,9 @@ var KF = window.KF || (window.KF = {});
       var slowAdd = (cancelLevel && cancelLevel !== 'air' && mv.slowFrom && !willEx && f.state === 'attack' && f.move && f.move.type !== 's' && f.move.type !== 'x' && mv.slowFrom.ok.indexOf(f.moveId) < 0) ? mv.slowFrom.add : 0;
       if (cancelLevel === 's' && mv.type !== 'u' && mv.type !== 'gu' && !/[sxg]/.test(mv.type)) continue;
       if (cancelLevel === 'u' && mv.type !== 'u' && mv.type !== 'gu') continue;
-      var okSeq = mq ? true : c.dp ? f.buf.matchDP(c.win) : f.buf.match(c.seq, c.win, c.loose);
+      var wAdd = f.move && f.move.freeCancel ? 14 : 0;   // 変身中に入れておいたコマンドも受け付ける
+      if (mv.swap && f.move && f.move.freeCancel) continue;   // 変身し終わった直後に、もう一度変身はしない
+      var okSeq = mq ? true : c.dd ? f.buf.matchDD(c.win) : c.dp ? f.buf.matchDP(c.win + wAdd) : f.buf.match(c.seq, c.win + wAdd, c.loose);
       // 簡易入力（昇竜の ↘↓↘ ・ ↓↘→↘ など）
       if (!okSeq && c.alt) for (var q = 0; q < c.alt.length && !okSeq; q++) okSeq = f.buf.matchStrict(c.alt[q], c.win);
       // 超必殺の簡易コマンド（スト6：↓↘→↓→ ・ ↓→↓↘→ でも成立）
@@ -611,7 +637,9 @@ var KF = window.KF || (window.KF = {});
         f.ex -= C.EX_COST; id = id + '_ex'; str = 0;
         f.flash = 12; this.emit('sfx', { s: 'ex' });
       }
+      var wasConn = f.state === 'attack' && f.connected && f.opp.state === 'hitstun';
       this.startMove(f, id, str);
+      if (mv.swap && wasConn && mv.swapExt) f.opp.stun += mv.swapExt;
       if (slowAdd) f.preD += slowAdd;   // 竜巻P：強P以外からのキャンセルは出るのが遅れる
       // レバー入力の記録は消さない（スト6と同じ。昇竜の入力の後ろ半分をSAの入力に使い回せる＝複合入力）
       f.pendingBtn = null;
@@ -643,6 +671,7 @@ var KF = window.KF || (window.KF = {});
     if (!mv) return false;
     f.state = 'attack'; f.t = 0; f.move = mv; f.moveId = id; f.str = str || 0; f.moveStartF = this.frameNo; f.moveSerial = (f.moveSerial || 0) + 1;
     f.modernMv = !!f.nextModern; f.nextModern = false;   // モダンのSPで出した技（ダメージ8割）
+    f.armorUsed = 0;
     f.mvT = 0; f.preD = mv.preDelay ? pick(mv.preDelay, f.str) : 0;
     // ラッシュから出した技だけ：有利＋4Fと、戻りの短縮（そこからキャンセルした技には引き継がない）
     f.rushBonus = !!f.nextRush; f.nextRush = false; f.projHit = false; f.rushCut = f.rushBonus ? C.RUSH_REC_CUT : 0;
@@ -730,7 +759,9 @@ var KF = window.KF || (window.KF = {});
       if (this.tryCancel(f, cur, dir)) return;
     }
     // ラッシュ中の技は空振りでもラッシュの勢いを少し残す
+    if (mv.freeCancel && f.mvT > 1 && this.trySpecial(f, 's')) return;
     // 終了
+    if (f.aDone && mv.swap) { this.swapForm(f, mv.swap); this.startMove(f, 'change_in', 0); return; }
     if (f.aDone) {
       f.rushBonus = false;
       if (f.air) { f.state = 'air'; f.setAnim('jump_down'); f.move = null; return; }
@@ -742,6 +773,12 @@ var KF = window.KF || (window.KF = {});
     }
   };
 
+  // 形態の入れ替え（変身キャラ男）：キャラの技・絵の組をまるごと差し替える。体力やゲージはそのまま
+  Battle.prototype.swapForm = function (f, kind) {
+    f.kind = kind; f.D = KF.CHARS[kind]; f.A = this.meta[kind].anims;
+    this.spawnFx('ring_' + f.D.fx, f.x, f.y - 80, 0.9);
+    this.emit('sfx', { s: 'ex' }); this.emit('swap', { side: f.side, kind: kind });
+  };
   Battle.prototype.tryCancel = function (f, cur, dir) {
     var c = f.move.cancel || '';
     // 昇竜SA：根本で当たったときだけキャンセルできる。飛び上がったあとでもよい（空中からもう一度突き上げる）
@@ -819,7 +856,7 @@ var KF = window.KF || (window.KF = {});
 
   Battle.prototype.endCombo = function (def) {
     if (def.combo > 0) this.emit('comboEnd', { side: def.opp.side, hits: def.combo, dmg: def.comboDmg });
-    def.combo = 0; def.comboDmg = 0; def.scale = 1; def.juggle = 0;
+    def.combo = 0; def.comboDmg = 0; def.scale = 1; def.juggle = 0; def.bounceUsed = 0; def.wallUsed = 0; def.bounce = 0; def.wallB = 0;
     def.opp.rushLock = false; def.opp.chain = 0; def.opp.chainUsed = {};
     // トレーニング：コンボが終わったらラッシュゲージを満タンに戻す
     if (this.training) { def.opp.rush = C.RUSH_MAX; def.opp.rushCD = 0; }
@@ -973,6 +1010,16 @@ var KF = window.KF || (window.KF = {});
         p.life--; if (p.life <= 0) p.alive = false;
       }
     });
+    // 反射（大盾の反射）：持続中に近づいた相手の弾を跳ね返し、自分の弾にする
+    this.projs.forEach(function (p) {
+      if (p.kind !== 'ball' || !p.alive) return;
+      var q = p.owner.opp;
+      if (q.state !== 'attack' || !q.move || !q.move.reflect || q.phase() === 'r') return;
+      if (Math.abs(p.x - q.x) > 100 || p.vx * q.facing > 0) return;   // 盾が大きいので、体から100ドットまで
+      p.owner = q; p.vx = -p.vx * 1.2; p.key = q.side + ':ref' + self.frameNo; p.t = 4; p.lastHit = -99;
+      self.spawnFx('guard', p.x, p.y, 1.3); self.emit('sfx', { s: 'tech' });
+      self.emit('announce', { text: '反射', small: 1, side: q.side });
+    });
     // 飛び道具同士の相殺
     for (var i = 0; i < this.projs.length; i++) for (var j = i + 1; j < this.projs.length; j++) {
       var a = this.projs[i], b = this.projs[j];
@@ -1108,6 +1155,34 @@ var KF = window.KF || (window.KF = {});
     }
     var lastHit = false;
     if (!proj) { att.hitCount++; att.lastHitT = att.animTime(); att.connected = true; }
+    // 当て身（大盾の盾構えなど）：受けた打撃・飛び道具を止めて、反撃の技に移る（超必殺・投げは止められない）
+    if (def.state === 'attack' && def.move && def.move.gp && mv.type !== 'u' && mv.type !== 'gu') {
+      var gw = pick(def.move.gp, def.str);
+      if (def.mvT >= gw[0] && def.mvT <= gw[1]) {
+        if (!proj) att.hs = 18;
+        def.hs = 0; def.inv = 14; def.thInv = 14;
+        this.spawnFx('guard', cx, cy, 1.5); this.emit('sfx', { s: 'tech' });
+        this.emit('announce', { text: '受け止めた', small: 1, side: def.side });
+        this.startMove(def, def.move.gpTo, def.str);
+        if (proj) { proj.hits = 0; proj.alive = false; }
+        return;
+      }
+    }
+    // アーマー：決まった間だけ打撃を1回（技によっては2回）受け止める。体力は半分だけ減り、アーマーでは倒れない
+    if (def.state === 'attack' && def.move && def.move.armor && mv.type !== 'u' && mv.type !== 'gu') {
+      var aw = pick(def.move.armor, def.str);
+      if (def.mvT >= aw[0] && def.mvT <= aw[1] && (def.armorUsed || 0) < (pick(def.move.armorHits, def.str) || 1)) {
+        def.armorUsed = (def.armorUsed || 0) + 1;
+        var ad = Math.round(baseDmg * 0.5); if (def.hp - ad <= 0) ad = def.hp - 1;
+        def.hp -= ad; def.dmgPop = { v: ad, t: 40 };
+        var ahs = Math.max(6, (mv.hs || 10) - 2); def.hs = ahs; if (!proj) att.hs = ahs;
+        def.whiteT = 2; def.flash = 8;
+        this.spawnFx('guard', cx, cy, 1.2); this.emit('sfx', { s: 'block' });
+        this.emit('announce', { text: 'ARMOR', small: 1, side: def.side });
+        att.sup = Math.min(C.SUPER_MAX, att.sup + baseDmg * 0.1);
+        return;
+      }
+    }
     var maxH = mv.hits || 1;
     var hitIndex = proj ? (proj.mv.proj ? proj.mv.proj.hits : proj.mv.hits) - proj.hits : att.hitCount;
     lastHit = proj ? proj.hits <= 0 : att.hitCount >= maxH;
@@ -1176,6 +1251,8 @@ var KF = window.KF || (window.KF = {});
         def.vy = lvy || -6.5; def.vx = dirX * (lvx == null ? 2.6 : lvx); if (def.y >= C.GROUND) def.y = C.GROUND - 2;
       }
       def.floatG = mv.floatG || null;   // 浮かせ方（次に当たった技で上書き）
+      def.bounce = kd === 'bounce' && !def.bounceUsed ? 1 : 0;   // 床で一度跳ねる
+      def.wallB = kd === 'wall' && !def.wallUsed ? 1 : 0;        // 画面端で一度跳ね返る
       var jkey = proj ? proj.key : att.side + ':' + att.moveSerial;
       var isSup = mv.type === 'u' || mv.type === 'gu';   // 超必殺が当たったら、そのあとは追撃できない
       if (!wasAir) def.juggle = mv.jset != null ? pick(mv.jset, str) : (kd === 'sweep' || isSup ? 99 : 1);
@@ -1259,7 +1336,14 @@ var KF = window.KF || (window.KF = {});
     }
     var lim = this.limits();
     // 最大間隔（画面内に収める）
-    [a, b].forEach(function (f) { f.x = Math.max(lim[0], Math.min(lim[1], f.x)); });
+    var self0 = this;
+    [a, b].forEach(function (f) {
+      if (f.state === 'launch' && f.wallB && (f.x <= lim[0] + 0.5 || f.x >= lim[1] - 0.5)) {   // 壁跳ね
+        f.wallB = 0; f.wallUsed = 1; f.vx = -f.vx * 0.3; f.vy = Math.min(f.vy, -8.6); f.floatG = 0.42;
+        self0.emit('sfx', { s: 'heavy' }); self0.spawnFx('dust', f.x, f.y - 40, 1.4); self0.shake = 7;
+      }
+      f.x = Math.max(lim[0], Math.min(lim[1], f.x));
+    });
     var dx2 = b.x - a.x;
     if (vertOverlap && Math.abs(dx2) < wa + wb - 1) {
       var s2 = Math.sign(dx2) || 1;

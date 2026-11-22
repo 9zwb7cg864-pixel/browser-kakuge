@@ -22,7 +22,55 @@ STYLE = {
         outline='#10020e', glow='#ff1fd2', smear='#ffd0f8',
         limb=4.8, leg=5.4, torso=(8.6, 6.6), head=9.0, neck=3.6, fist=5.6, foot=4.2),
 }
-G_FAR, G_SCARF, G_BODY, G_NEAR, G_SMEAR = 1, 2, 3, 4, 5
+G_FAR, G_SCARF, G_BODY, G_NEAR, G_SMEAR, G_WEAP = 1, 2, 3, 4, 5, 6
+
+# 変身キャラ男：ハンマー形態（金）と大盾形態（緑）。武器はどちらも前側の手（右手）で持つ
+STYLE['gai_h'] = dict(
+    near=['#b86a08', '#ffb22a', '#ffe7a6'], far=['#5e3604', '#94580a', '#c98316'],
+    acc=['#fff3d6', '#ffffff'], scarf=['#7a3a04', '#d06a10', '#ffb04a'],
+    weap=['#4a4e5a', '#a9b2c4', '#f4f8ff'],
+    outline='#140a02', glow='#ff9a00', smear='#ffe8b8',
+    limb=4.6, leg=5.2, torso=(8.2, 6.4), head=8.8, neck=3.4, fist=5.2, foot=4.0)
+STYLE['gai_s'] = dict(
+    near=['#0c9a52', '#34f594', '#b6ffd6'], far=['#064e2a', '#0c8044', '#1cae62'],
+    acc=['#e0fff0', '#ffffff'], scarf=['#06502c', '#10944e', '#4cf09a'],
+    weap=['#3e5a50', '#9cc4b4', '#eafff6'],
+    outline='#021208', glow='#00ff86', smear='#c8ffe2',
+    limb=4.6, leg=5.2, torso=(8.2, 6.4), head=8.8, neck=3.4, fist=5.2, foot=4.0)
+WEAP = {'gai_h': 'hammer', 'gai_s': 'shield'}
+
+
+def ang_of(v):
+    return math.degrees(math.atan2(v[0], v[1]))
+
+
+def weapon_joints(kind, J, P):
+    """武器の位置を関節として足す（当たり判定にも使う）
+       ハンマー：wa＝胴の向きからの傾き（前へ倒すと＋）／ wf＝前腕の向きからのずれ
+       大盾：sa＝胴の向きからの傾き"""
+    w = WEAP.get(kind)
+    if not w:
+        return J
+    hand = J['hand_r']
+    ta = ang_of(J['u'])
+    if w == 'hammer':
+        if 'wf' in P:
+            a = J['farm_ang_r'] + P['wf']
+        else:
+            a = ta - P.get('wa', 25)
+        d = vdir(a)
+        J['tool'] = hand + d * 34
+        J['tool_b'] = hand - d * 10
+        J['tool_ang'] = a
+    else:
+        a = ta - P.get('sa', 0)
+        d = vdir(a); f = vdir(a - 90)
+        c = hand + f * 4
+        J['shld'] = c
+        J['shld_t'] = c + d * 38
+        J['shld_b'] = c - d * 34
+        J['shld_ang'] = a
+    return J
 
 
 # ------------------------------------------------------------------ 布の物理
@@ -128,6 +176,18 @@ def render(kind, J, P, cloth_pts=(), smears=()):
     # 手前の手足
     leg('r', 14, G_NEAR, 1)
     arm('r', 20, G_NEAR, 1)
+    # 武器（体の手前）
+    w = WEAP.get(kind)
+    if w == 'hammer':
+        a = J['tool_ang']; n = vdir(a + 90); hd = J['tool']
+        cv.cone(J['tool_b'], hd, 2.4, 2.4, 22, G_WEAP, 8)
+        cv.merge().cone(hd - n * 12, hd + n * 12, 9.0, 9.0, 23, G_WEAP, 8)
+        cv.merge().sphere(hd - n * 13, 7.4, 23.5, G_WEAP, 8)
+        cv.merge().sphere(hd + n * 13, 7.4, 23.5, G_WEAP, 8)
+    elif w == 'shield':
+        a = J['shld_ang']; f = vdir(a - 90)
+        cv.cone(J['shld_b'], J['shld_t'], 11.0, 11.0, 24, G_WEAP, 8)
+        cv.merge().sphere(J['shld'] + f * 6, 6.0, 25, G_WEAP, 8)
     return shade(cv, S)
 
 
@@ -141,7 +201,7 @@ def shade(cv, S):
     gx = np.roll(Hf, 1, 1) - Hf
     lit = (-gy * 0.7 - gx * 0.5)
     rim = np.zeros_like(mask)
-    for mat, ramp in ((1, S['near']), (2, S['far']), (7, S['scarf'])):
+    for mat, ramp in ((1, S['near']), (2, S['far']), (7, S['scarf']), (8, S.get('weap', S['near']))):
         sel = mask & (cv.M == mat)
         if not sel.any():
             continue

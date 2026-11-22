@@ -72,5 +72,34 @@ for (const [key, name, sup] of [['l', 'アシスト＋弱', 1000], ['m', 'アシ
   const a = assist(key, 50, 4, sup);
   ok(a.combo >= 3, `${name}を連打でコンボ（${a.r.started.join(' → ')}／${a.combo}ヒット ${a.dmg}ダメージ）`);
 }
+
+// ---- 変身キャラ男（ハンマー形態・大盾形態）
+function freshK(kind, gap) {
+  const b = new KF.Battle({ p1: kind, p2: 'kokuu', meta, modern: [true, false] });
+  for (let i = 0; i < 130; i++) b.step([N(), N()]);
+  b.p[0].x = 470; b.p[1].x = 470 + gap; b.camX = 512; b.p[0].facing = 1; b.p[1].facing = -1;
+  b.p[0].ex = KF.CONST.EX_MAX; b.p[0].sup = 3000;
+  return b;
+}
+for (const [kind, list] of [
+  ['gai_h', [['SP', 5, 'quake'], ['→＋SP', 6, 'upper'], ['↓＋SP', 2, 'leap'], ['←＋SP', 4, 'spin'], ['SP＋強', 5, 'su1', 'sp,h'], ['←＋SP＋強', 4, 'su2', 'sp,h'], ['↓＋SP＋強', 2, 'su3', 'sp,h']]],
+  ['gai_s', [['SP', 5, 'charge'], ['→＋SP', 6, 'lift'], ['↓＋SP', 2, 'reflect'], ['←＋SP', 4, 'counter'], ['SP＋強', 5, 'su1', 'sp,h'], ['←＋SP＋強', 4, 'su2', 'sp,h'], ['↓＋SP＋強', 2, 'su3', 'sp,h']]],
+]) {
+  const fn = KF.CHARS[kind].form;
+  for (const [name, dir, want, btn] of list) {
+    const b = freshK(kind, 140);
+    const pre = dir === 2 ? [M(2), M(2)] : dir !== 5 ? [M(dir)] : [];
+    const r = run(b, pre.concat([M(dir, btn || 'sp', '')]), 30);
+    ok(r.started[0] === want, `${fn}：${name}＝${want}（出た技：${r.started[0] || 'なし'}）`);
+  }
+  { const b = freshK(kind, 140); const r = run(b, [M(2), M(2), M(5), M(5), M(2, 'sp')], 60);
+    ok(r.started[0] === 'change' && b.p[0].kind === KF.CHARS[kind].other, `${fn}：↓↓＋SPで変身（出た技：${r.started[0] || 'なし'} → ${b.p[0].kind}）`); }
+  for (const key of ['l', 'm', 'h']) {
+    const b = freshK(kind, 50); b.p[0].sup = key === 'h' ? 3000 : 1000;
+    const q = []; for (let i = 0; i < 4; i++) { q.push(M(5, key, 'auto')); for (let j = 0; j < 11; j++) q.push(M(5, '', 'auto')); }
+    const r = run(b, q, 300); const combo = Math.max(0, ...r.hits.map(h => h.combo));
+    ok(combo >= 3, `${fn}：アシスト＋${{ l: '弱', m: '中', h: '強' }[key]}を連打でコンボ（${r.started.join(' → ')}／${combo}ヒット ${10000 - b.p[1].hp}ダメージ）`);
+  }
+}
 console.log(`\n結果: ${pass} 件成功 / ${fail} 件失敗`);
 process.exit(fail ? 1 : 0);

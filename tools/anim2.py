@@ -93,12 +93,16 @@ class A:
 
 def cloth_anchor(kind, J):
     u, p = J['u'], J['p']
+    if kind.startswith('gai'):
+        return [J['pelvis'] - p * 5 + u * 6]      # 腰の帯
     if kind == 'kokuu':
         return [J['neck'] + u * 2 - p * 3]
     return [J['sh_r'] - p * 3 + u * 1, J['pelvis'] - p * 6 + u * 4]
 
 
 def make_cloths(kind):
+    if kind.startswith('gai'):
+        return [stick.Cloth(8, 5.5, grav=0.34, drag=0.86)]
     if kind == 'kokuu':
         return [stick.Cloth(9, 5.0, grav=0.30, drag=0.88)]
     return [stick.Cloth(8, 6.0, grav=0.36, drag=0.86), stick.Cloth(9, 6.5, grav=0.4, drag=0.84)]
@@ -109,7 +113,7 @@ def build(kind, anim, outdir):
     sols = []
     for (P, d, ph, vx) in frs:
         P = dict(P)
-        J = RIG.solve(P)
+        J = stick.weapon_joints(kind, RIG.solve(P), P)
         sols.append((P, J, d, ph, vx))
     # 布の物理（ループは2周回してなじませる）
     cloths = make_cloths(kind)
@@ -137,7 +141,11 @@ def build(kind, anim, outdir):
     for i, (P, J, d, ph, vx) in enumerate(sols):
         smears = []
         if anim.smear and prevJ is not None and ph in ('s', 'a'):
-            for jn, en in (('hand_l', 'el_l'), ('hand_r', 'el_r'), ('toe_l', 'an_l'), ('toe_r', 'an_r')):
+            pairs = [('hand_l', 'el_l'), ('hand_r', 'el_r'), ('toe_l', 'an_l'), ('toe_r', 'an_r')]
+            if 'tool' in J: pairs.append(('tool', 'hand_r'))
+            if 'shld_t' in J: pairs.append(('shld_t', 'shld_b'))
+            for jn, en in pairs:
+                if jn not in prevJ: continue
                 dv = J[jn] - prevJ[jn]
                 if np.hypot(*dv) > 14:
                     r = stick.STYLE[kind]['limb'] * 1.25
@@ -150,7 +158,7 @@ def build(kind, anim, outdir):
             hits = anim.hit if isinstance(anim.hit[0], (list, tuple)) else [anim.hit]
             m['hit'] = [hitbox(J, h) for h in hits]
         m['j'] = {k: [round(float(J[k][0] - AX), 1), round(float(J[k][1] - AY), 1)]
-                  for k in ('hand_l', 'hand_r', 'toe_l', 'toe_r', 'head', 'pelvis', 'neck')}
+                  for k in ('hand_l', 'hand_r', 'toe_l', 'toe_r', 'head', 'pelvis', 'neck', 'tool', 'shld') if k in J}
         meta.append(m)
         prevJ = J
     n = len(imgs)

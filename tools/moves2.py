@@ -24,7 +24,7 @@ def Fk(a, b):
     return ('fk', a, b)
 
 
-def defs(kind):
+def defs(kind, Gx=None, Cx=None):
     K = kind == 'kokuu'
     out = []
 
@@ -37,6 +37,8 @@ def defs(kind):
         G = dict(px=0, py=-71, lean=5, tw=0.6, hd=-3, al=I(42, -98), ar=I(-4, -94),
                  ll=I(27, -5), lr=I(-29, -5), fl=95, fr=86, hl='claw', hr='claw')
         C = P(G, py=-46, lean=18, hd=-12, al=I(40, -74), ar=I(8, -70), ll=I(30, -5), lr=I(-26, -5), fr=60)
+    if Gx is not None:   # 構えを差し替える（変身キャラ男の共通の動きに使う）
+        G = dict(Gx); C = dict(Cx)
     sl = 1.0 if K else 1.25
 
     def F(n):

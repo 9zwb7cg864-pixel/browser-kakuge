@@ -142,12 +142,12 @@ var KF = window.KF || (window.KF = {});
     R.ctx.fillStyle = 'rgba(0,0,10,0.7)'; R.ctx.fillRect(20, y - 9, 600, 18);
     R.text(txt, 320, y, 9, col, 'center');
   }
-  function goSelect() { cfg.p1 = 'kokuu'; cfg.p2 = 'kokuu'; if (cfg.mode === 'cpu') { scene = 'level'; sel = LEVELS.indexOf(cfg.level); } else startBattle(); }
+  function goSelect() { scene = 'select'; selStage = 0; selCursor = [0, 0]; }
 
-  var KINDS = ['kokuu', 'shuuen'];
+  var KINDS = ['kokuu', 'gai_h'];
   var DESC = {
     kokuu: ['地上戦が得意なバランス型', '飛び道具・対空・突進技を持つ', '体力 10000 / 動き 速め'],
-    shuuen: ['一撃の重いパワー型', '投げ・コマンド投げが強力', '体力 11000 / 動き 遅め'],
+    gai_h: ['↓↓Pでハンマーと大盾に変身', 'ハンマー：遅いが一撃が重い・アーマー', '大盾：当て身・反射・押し込み', '体力 10500'],
   };
   function sceneSelect(m) {
     bg(0.6);
@@ -161,9 +161,13 @@ var KF = window.KF || (window.KF = {});
       var on = selCursor[selStage] === i;
       c.fillStyle = on ? 'rgba(40,20,70,0.7)' : 'rgba(10,10,30,0.6)'; c.fillRect(x, y, w, h);
       c.strokeStyle = on ? KF.CHARS[k].color : '#33335a'; c.lineWidth = on ? 2 : 1; c.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1); c.lineWidth = 1;
-      drawFighterBig(k, on ? 'win' : 'idle', x + 92, y + 222, 1.0, 1, frameT);
+      if (k === 'gai_h') {
+        drawFighterBig('gai_s', 'idle', x + 128, y + 222, 0.85, 1, frameT + 20);
+        drawFighterBig('gai_h', on ? 'win' : 'idle', x + 64, y + 222, 0.95, 1, frameT);
+      } else drawFighterBig(k, on ? 'win' : 'idle', x + 92, y + 222, 1.0, 1, frameT);
       R.text(KF.CHARS[k].name, x + 180, y + 30, 15, '#ffffff', 'center', KF.CHARS[k].color);
       DESC[k].forEach(function (l, j) { R.text(l, x + 186, y + 62 + j * 18, 9, '#c8d0f0', 'center'); });
+      if (selStage === 1 && selCursor[0] === i) R.text(cfg.mode === 'vs' || cfg.mode === 'cpu' ? '同じキャラは色違い' : '', x + 186, y + 140, 8, '#8890b0', 'center');
       if (selStage === 1 && selCursor[0] === i) R.text('1P', x + 20, y + 16, 12, '#38d6ff', 'left');
       rects.push([x, y, w, h]);
     });
@@ -173,7 +177,11 @@ var KF = window.KF || (window.KF = {});
     if (m.back) { KF.Audio.play('back'); if (selStage === 0) scene = 'title'; else selStage = 0; return; }
     if (m.ok) {
       KF.Audio.play('ok');
-      if (selStage === 0) { cfg.p1 = KINDS[selCursor[0]]; selStage = 1; selCursor[1] = 1 - selCursor[0]; }
+      if (selStage === 0) {
+        cfg.p1 = KINDS[selCursor[0]];
+        if (cfg.mode === 'training') { cfg.p2 = KINDS[selCursor[0]]; startBattle(); return; }
+        selStage = 1; selCursor[1] = 1 - selCursor[0];
+      }
       else {
         cfg.p2 = KINDS[selCursor[1]];
         if (cfg.mode === 'cpu') { scene = 'level'; sel = LEVELS.indexOf(cfg.level); }
@@ -254,7 +262,11 @@ var KF = window.KF || (window.KF = {});
 
   // ------------------------------------------------------------ オンライン対戦
   var net = null, rb = null;
-  var onl = { sel: 0, stage: 'menu', match: 0, want: [false, false], escT: 0, resSel: 0, left: false };
+  var onl = { sel: 0, stage: 'menu', match: 0, want: [false, false], escT: 0, resSel: 0, left: false, kinds: ['kokuu', 'kokuu'] };
+  // オンラインで使うキャラ（部屋に入る前に選ぶ。次に開いたときも同じキャラ）
+  try { KF.onlineKind = localStorage.getItem('kf_online_kind') || 'kokuu'; } catch (e) { KF.onlineKind = 'kokuu'; }
+  if (!KF.CHARS[KF.onlineKind]) KF.onlineKind = 'kokuu';
+  function validKind(k) { return k === 'kokuu' || k === 'gai_h' ? k : 'kokuu'; }
   var ONLINE_ITEMS = ['部屋を作る', '部屋に入る（合言葉を入れる）', '戻る'];
   var ui = null;
   // 合言葉の入力欄・招待リンクのコピーボタン（文字入力はHTMLの部品で行う）
@@ -350,22 +362,23 @@ var KF = window.KF || (window.KF = {});
     }
     if (m.t === 'hello' && net.isHost && !rb) {
       // 回線の速さを少し測ってから始める
-      onl.peerModern = !!m.modern;
-      setTimeout(function () { if (!net || rb) return; var d = delayFor(net.rtt); var md = [!!KF.Input.modern[1], onl.peerModern]; net.send({ t: 'start', g: 1, d: d, modern: md }); startOnlineMatch(1, d, md); }, 1500);
+      onl.peerModern = !!m.modern; onl.peerKind = validKind(m.kind);
+      setTimeout(function () { if (!net || rb) return; var d = delayFor(net.rtt); var md = [!!KF.Input.modern[1], onl.peerModern]; var ks = [KF.onlineKind, onl.peerKind]; net.send({ t: 'start', g: 1, d: d, modern: md, kinds: ks }); startOnlineMatch(1, d, md, ks); }, 1500);
       return;
     }
-    if (m.t === 'start') { startOnlineMatch(m.g, m.d, m.modern); return; }
+    if (m.t === 'start') { startOnlineMatch(m.g, m.d, m.modern, m.kinds); return; }
     if ((m.t === 'in' || m.t === 'hash') && rb && m.g === onl.match) { rb.receive(m); return; }
     if (m.t === 'rematch') { onl.want[1 - net.side] = true; checkRematch(); return; }
     if (m.t === 'bye') { onl.left = true; return; }
   }
-  function startOnlineMatch(g, d, md) {
+  function startOnlineMatch(g, d, md, ks) {
     md = md || [false, false]; onl.modern = md;
+    ks = ks && ks.length === 2 ? [validKind(ks[0]), validKind(ks[1])] : ['kokuu', 'kokuu']; onl.kinds = ks;
     sources[0].modern = !!md[net.side]; touchLabels(sources[0].modern);
     onl.match = g; onl.want = [false, false]; onl.left = false; onl.escT = 0; onl.resSel = 0; onl.delay = d;
     rb = new KF.Rollback({
       side: net.side, delay: d, maxRollback: 10,
-      makeBattle: function () { return new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta: KF.Assets.meta, modern: md }); },
+      makeBattle: function () { return new KF.Battle({ p1: ks[0], p2: ks[1], meta: KF.Assets.meta, modern: md }); },
       send: function (msg) { msg.g = g; net.send(msg); },
       onEvent: handleEvent,
     });
@@ -375,7 +388,7 @@ var KF = window.KF || (window.KF = {});
     KF.Touch && KF.Touch.show(isTouch);
   }
   function checkRematch() {
-    if (net && net.isHost && onl.want[0] && onl.want[1]) { var g = onl.match + 1, d = delayFor(net.rtt), md = onl.modern; net.send({ t: 'start', g: g, d: d, modern: md }); startOnlineMatch(g, d, md); }
+    if (net && net.isHost && onl.want[0] && onl.want[1]) { var g = onl.match + 1, d = delayFor(net.rtt), md = onl.modern, ks = onl.kinds; net.send({ t: 'start', g: g, d: d, modern: md, kinds: ks }); startOnlineMatch(g, d, md, ks); }
   }
   function sceneOnline(m) {
     bg(0.6);
@@ -383,6 +396,16 @@ var KF = window.KF || (window.KF = {});
     if (onl.stage === 'menu') {
       R.text('同じ合言葉の部屋に入った2人で対戦します', 320, 64, 11, '#c0c8e8', 'center');
       var rects = drawMenu(ONLINE_ITEMS, 100, onl.sel, 300);
+      // 使うキャラ：←→ か、名前をタップで切り替え
+      var ok2 = KF.CHARS[KF.onlineKind];
+      R.text('使うキャラ：◀ ' + ok2.name + ' ▶', 320, 268, 13, '#ffffff', 'center', ok2.color);
+      R.text('←→ / タップで変更', 320, 288, 9, '#8890b0', 'center');
+      var kc = clickPos && clickPos[1] > 252 && clickPos[1] < 296;
+      if (m.left || m.right || kc) {
+        KF.onlineKind = KF.onlineKind === 'kokuu' ? 'gai_h' : 'kokuu'; KF.Audio.play('cursor');
+        try { localStorage.setItem('kf_online_kind', KF.onlineKind); } catch (e) {}
+        if (kc) clickPos = null;
+      }
       if (m.up) { onl.sel = (onl.sel + 2) % 3; KF.Audio.play('cursor'); }
       if (m.down) { onl.sel = (onl.sel + 1) % 3; KF.Audio.play('cursor'); }
       var ck = pickByClick(rects); if (ck >= 0) { onl.sel = ck; m.ok = true; }
@@ -445,7 +468,7 @@ var KF = window.KF || (window.KF = {});
     var w = game.matchOver ? game.matchOver.winner : -1, me = net ? net.side : 0;
     if (w === -1) R.text('DRAW', 320, 70, 40, '#ffffff', 'center', '#7a5cff');
     else {
-      drawFighterBig('kokuu', 'win', 200, 320, 1.35, 1, frameT, game.p[w].alt);
+      drawFighterBig(game.p[w].kind, 'win', 200, 320, 1.35, 1, frameT, game.p[w].alt);
       R.text(w === me ? 'YOU WIN' : 'YOU LOSE', 430, 70, 34, '#ffffff', 'center', game.p[w].color || KF.CHARS.kokuu.color);
       R.text('ラウンド ' + game.wins[me] + ' - ' + game.wins[1 - me], 430, 110, 12, '#c0c8e8', 'center');
     }
@@ -486,7 +509,7 @@ var KF = window.KF || (window.KF = {});
     if (m.ok) {
       var it = PAUSE_ITEMS[pausedSel];
       if (it === '再開') paused = false;
-      else if (it === '技表') { scene = 'moves'; moveListFor = cfg.p1; paused = true; }
+      else if (it === '技表') { scene = 'moves'; moveListFor = game.p[0].kind; paused = true; }
       else if (it === '当たり判定 表示切替') { R.debug = !R.debug; paused = false; }
       else if (it === 'やり直す') { paused = false; startBattle(); }
       else if (it === PAUSE_TR[0]) { game.resetTraining('center'); paused = false; }
@@ -527,14 +550,19 @@ var KF = window.KF || (window.KF = {});
   }
   function sceneMoves(m) {
     bg(0.75);
+    // 技表のページ：道着キャラ男／変身キャラ男（ハンマー形態）／変身キャラ男（大盾形態）。←→・タップで切り替え
+    var PAGES = ['kokuu', 'gai_h', 'gai_s'];
+    if (moveListFor === 'gai_s' || moveListFor === 'gai_h' || moveListFor === 'kokuu') { } else moveListFor = 'kokuu';
+    var pi = PAGES.indexOf(moveListFor);
     var k = moveListFor, D = KF.CHARS[k];
-    R.text('技表：' + D.name, 320, 24, 16, '#ffffff', 'center', D.color);
+    R.text('技表：' + D.name + (D.form ? '（' + D.form + '）' : ''), 320, 24, 16, '#ffffff', 'center', D.color);
     KF.MOVE_LIST[k].forEach(function (row, i) {
-      R.text(row[0], 40, 54 + i * 21, 10, '#ffffff', 'left', D.color);
-      R.text(row[1], 250, 54 + i * 21, 9, '#c8d0f0', 'left');
+      R.text(row[0], 30, 54 + i * 21, 10, '#ffffff', 'left', D.color);
+      R.text(row[1], 400, 54 + i * 21, 9, '#c8d0f0', 'left');
     });
-    R.text('弱K / Esc：戻る', 320, 346, 9, '#8890b0', 'center');
-    if (clickPos) { scene = game && paused ? 'battle' : 'title'; }
+    R.text('←→ / 画面タップ：ページ（' + (pi + 1) + '/' + PAGES.length + '）　弱K / Esc：戻る', 320, 346, 9, '#8890b0', 'center');
+    if (m.right || clickPos) { moveListFor = PAGES[(pi + 1) % PAGES.length]; clickPos = null; }
+    if (m.left) moveListFor = PAGES[(pi + PAGES.length - 1) % PAGES.length];
     if (m.back) { scene = game && paused ? 'battle' : 'title'; }
   }
   var KEY_ACTIONS = ['up', 'down', 'left', 'right', 'lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'rush', 'start'];

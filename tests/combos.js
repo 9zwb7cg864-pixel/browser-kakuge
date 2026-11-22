@@ -76,8 +76,8 @@ function run(kind, combo, c, k) {
 
 let fail = 0;
 // CAND=ファイル名 で、試しのコンボ一覧だけを測る
-if (process.env.CAND) KF.COMBOS = { kokuu: require(require('path').resolve(process.env.CAND)) };
-else KF.COMBOS = { kokuu: KF.COMBOS.kokuu };   // 遊べるキャラは道着キャラ男だけ
+if (process.env.CAND) KF.COMBOS = { [process.env.CANDKIND || 'kokuu']: require(require('path').resolve(process.env.CAND)) };
+else KF.COMBOS = { kokuu: KF.COMBOS.kokuu, gai_h: KF.COMBOS.gai_h || [], gai_s: KF.COMBOS.gai_s || [] };   // 遊べるキャラ（変身キャラ男は始めの形態ごと）
 for (const kind of Object.keys(KF.COMBOS)) {
   console.log('■ ' + KF.CHARS[kind].name);
   for (const combo of KF.COMBOS[kind]) {
@@ -87,7 +87,7 @@ for (const kind of Object.keys(KF.COMBOS)) {
     let best = null, row = '', okCount = 0;
     if (combo.punish) { // パニッシュカウンターになる押しタイミングを探す
       let found = false;
-      for (const g of [100, 95, 90, 105]) { combo._gap = g;
+      for (const g of [100, 95, 90, 105, 115, 125, 135]) { combo._gap = g;
         for (let t = 2; t <= 26 && !found; t++) { combo._pcT = t; const r = run(kind, combo, 3, -1); if (r.pc) found = true; }
         if (found) break; }
     }

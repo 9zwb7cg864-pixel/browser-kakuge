@@ -3,6 +3,11 @@ import json, os, sys, time
 from concurrent.futures import ProcessPoolExecutor
 from PIL import Image
 import moves2 as moves
+import moves_gai
+
+
+def defs_for(kind):
+    return moves_gai.defs(kind) if kind.startswith('gai') else moves.defs(kind)
 from anim2 import build as build_anim
 from art import FW, FH
 
@@ -11,7 +16,7 @@ ROOT = os.path.join(os.path.dirname(__file__), '..', 'game', 'assets')
 
 def job(args):
     kind, idx = args
-    a = moves.defs(kind)[idx]
+    a = defs_for(kind)[idx]
     out = os.path.join(ROOT, kind)
     meta, imgs = build_anim(kind, a, out)
     return a.name, meta, len(imgs)
@@ -20,7 +25,7 @@ def job(args):
 def main(kinds=('kokuu', 'shuuen'), only=None):
     for kind in kinds:
         os.makedirs(os.path.join(ROOT, kind), exist_ok=True)
-        defs = moves.defs(kind)
+        defs = defs_for(kind)
         idxs = [i for i, a in enumerate(defs) if only is None or a.name in only]
         t = time.time()
         with ProcessPoolExecutor() as ex:
