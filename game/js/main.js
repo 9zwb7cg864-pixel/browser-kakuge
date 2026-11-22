@@ -167,7 +167,6 @@ var KF = window.KF || (window.KF = {});
       } else drawFighterBig(k, on ? 'win' : 'idle', x + 92, y + 222, 1.0, 1, frameT);
       R.text(KF.CHARS[k].name, x + 180, y + 30, 15, '#ffffff', 'center', KF.CHARS[k].color);
       DESC[k].forEach(function (l, j) { R.text(l, x + 186, y + 62 + j * 18, 9, '#c8d0f0', 'center'); });
-      if (selStage === 1 && selCursor[0] === i) R.text(cfg.mode === 'vs' || cfg.mode === 'cpu' ? '同じキャラは色違い' : '', x + 186, y + 140, 8, '#8890b0', 'center');
       if (selStage === 1 && selCursor[0] === i) R.text('1P', x + 20, y + 16, 12, '#38d6ff', 'left');
       rects.push([x, y, w, h]);
     });
@@ -632,6 +631,7 @@ var KF = window.KF || (window.KF = {});
     R.ctx.strokeStyle = md ? '#ffd23c' : '#3a3a6a'; R.ctx.strokeRect(mrect[0] + 0.5, mrect[1] + 0.5, mrect[2] - 1, mrect[3] - 1);
     R.text(keyEdit.p + 'P 操作タイプ：' + (md ? 'モダン' : 'クラシック') + '（Mキー／タップで切替）', mrect[0] + mrect[2] / 2, mrect[1] + 13, 11, md ? '#ffe14a' : '#ffffff', 'center');
     if (clicked(mrect)) { KF.Input.setModern(keyEdit.p, !md); KF.Audio.play('cursor'); clickPos = null; }
+    if (md) R.text('アシストを押しながら弱・中・強を連打か押しっぱなしで、変身や超必殺まで入る長いコンボ', 320, 348, 9, '#ffe14a', 'center');
     R.text('ゲームパッド・レバーレスのボタン設定は Tab キー（またはここをタップ）', 320, 334, 9, '#8890b0', 'center');
     // スマホ：タッチボタンの配置を変える
     if (isTouch) {

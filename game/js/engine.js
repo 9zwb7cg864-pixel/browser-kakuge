@@ -516,21 +516,23 @@ var KF = window.KF || (window.KF = {});
   //   SP＋強：方向なし・前＝虚空砲(Lv1) / 後ろ＝零界継承(Lv2) / 下＝天地穿(Lv3)
   //   アシスト＋SP＝EX技（EXゲージ1本） / アシストを押しながら弱・中・強を連打＝アシストコンボ
   //   弱＋中＝投げ。SPで出した必殺技・超必殺はダメージが8割（スト6と同じ）
+  //  アシストコンボ：アシストを押しながら同じボタンを連打すると、この順に技が出る
+  //  （前の技が出るまでは次へ進まないので、早く連打しすぎても途切れない。変身キャラ男は途中で変身する）
   KF.MODERN_AUTO = {
     kokuu: {
-      l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'tatsu', str: 0 }, { su: 'su1' }],
-      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'tatsu', str: 2 }, { su: 'su1' }],
-      h: [{ b: 'hp' }, { sp: 'dp', str: 2 }, { su: 'su3' }],
+      l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'tatsu', str: 0 }, { sp: 'dp', str: 2 }, { su: 'su3' }],
+      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'tatsu', str: 2 }, { sp: 'dp', str: 2 }, { su: 'su3' }],
+      h: [{ b: 'hp' }, { sp: 'palm', str: 0 }, { b: 'hp' }, { sp: 'fire', str: 0 }, { b: 'rush' }, { b: 'hp' }, { sp: 'dp', str: 2 }, { su: 'su3' }],
     },
     gai_h: {
-      l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'quake', str: 0 }, { su: 'su1' }],
-      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'spin', str: 0 }, { su: 'su1' }],
-      h: [{ b: 'hp' }, { sp: 'upper', str: 2 }, { su: 'su3' }],
+      l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'change' }, { sp: 'charge', str: 0 }, { su: 'su2' }],
+      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'change' }, { sp: 'lift', str: 2 }, { su: 'su3' }],
+      h: [{ b: 'hp' }, { sp: 'quake', str: 2 }, { b: 'rush' }, { b: 'hp' }, { sp: 'upper', str: 2 }, { su: 'su3' }],
     },
     gai_s: {
-      l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'charge', str: 0 }, { su: 'su1' }],
-      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'charge', str: 2 }, { su: 'su1' }],
-      h: [{ b: 'hp' }, { sp: 'charge', str: 2 }, { su: 'su3' }],
+      l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'change' }, { sp: 'quake', str: 0 }, { su: 'su1' }],
+      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'change' }, { sp: 'spin', str: 0 }, { su: 'su1' }],
+      h: [{ b: 'hp' }, { sp: 'change' }, { sp: 'quake', str: 2 }, { b: 'rush' }, { b: 'hp' }, { sp: 'upper', str: 2 }, { su: 'su3' }],
     },
   };
   //  SPの方向ごとの技（なし・前・下・後ろ・空中）。変身キャラ男は ↓↓+SP で変身
@@ -562,15 +564,39 @@ var KF = window.KF || (window.KF = {});
       st.map = {};
     }
     // ---- アシストコンボ（アシストを押しながら弱・中・強）
+    //  押すたびに次の手を予約し、つながる瞬間（動けるようになった・前の技が当たった）に自動で出す
     else if (H.auto && atk.length) {
       var key = Pp.h ? 'h' : Pp.m ? 'm' : 'l';
-      if (st.ac !== key || this.frameNo - st.acT > 45) { st.ac = key; st.acStep = 0; }
-      var seq = (KF.MODERN_AUTO[f.kind] || KF.MODERN_AUTO.kokuu)[key], step = seq[Math.min(st.acStep, seq.length - 1)];
-      st.acStep++; st.acT = this.frameNo;
-      if (step.b) { press(step.b); st.map[key] = step.b; }
-      else if (step.sp) req(step.sp, step.str || 0);
-      else if (step.su) req(step.su, 0);
+      if (st.ac !== key || (!st.acWant && !st.acFire && this.frameNo - st.acT > 45)) { st.ac = key; st.acStep = 0; st.acKind = f.kind; st.acWant = 0; st.acFire = null; }
+      st.acWant = Math.min(2, (st.acWant || 0) + 1); st.acT = this.frameNo;
       atk = [];
+    }
+    if (st.ac) {
+      // アシスト＋同じボタンを押しっぱなしでも、最後まで続けて出す
+      if (H.auto && H[st.ac] && st.acStep < 99) st.acWant = Math.max(st.acWant || 0, 1);
+      var hurt = /hit|launch|block|down|thrown|ko/.test(f.state);
+      if (hurt) { st.acWant = 0; st.acFire = null; }
+      // 出したはずの手が14フレーム出なければ、もう一度出し直す
+      if (st.acFire) {
+        if (f.moveSerial !== st.acFire.ser || (st.acFire.rush && f.state === 'rush')) st.acFire = null;
+        else if (this.frameNo - st.acFire.t > 14) { st.acStep--; st.acWant = Math.min(2, st.acWant + 1); st.acFire = null; }
+      }
+      var seqA = (KF.MODERN_AUTO[st.acKind] || KF.MODERN_AUTO.kokuu)[st.ac];
+      if (st.acWant > 0 && !st.acFire && st.acStep < seqA.length) {
+        var step = seqA[st.acStep], mvNow = f.state === 'attack' ? f.move : null;
+        var hitNow = mvNow && (f.connected || f.projHit);
+        var ready = step.b === 'rush' ? (f.actionable() || hitNow)
+          : step.b ? (f.actionable() || f.state === 'rush' || (hitNow && !mvNow.type) || (mvNow && mvNow.freeCancel))
+          : (f.actionable() || hitNow || (mvNow && mvNow.freeCancel));
+        if (ready) {
+          if (step.b) press(step.b);
+          else if (step.sp) req(step.sp, step.str || 0);
+          else if (step.su) req(step.su, 0);
+          st.acFire = { ser: f.moveSerial, t: this.frameNo, rush: step.b === 'rush' };
+          st.acStep++; st.acWant--;
+        }
+      }
+      if (st.acStep >= seqA.length && !st.acFire) st.acWant = 0;
     }
     // ---- 弱＋中の同時押しは投げ
     if (atk.indexOf('l') >= 0 && atk.indexOf('m') >= 0) { press('lp'); press('lk'); atk = []; st.map = {}; }

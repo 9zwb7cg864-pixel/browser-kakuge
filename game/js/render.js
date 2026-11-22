@@ -500,7 +500,8 @@ KF.Renderer.prototype.drawHUD = function (b) {
     c.fillStyle = 'rgba(0,0,0,0.35)';
     for (var k = 1; k < 10; k++) c.fillRect(x0 + Math.round(w * k / 10), y, 1, h);
     // 名前
-    self.text(f.D.name + (f.D.form ? '［' + f.D.form.replace('形態', '') + '］' : ''), L ? x0 + 2 : x0 + w - 2, y + h + 11, 11, '#ffffff', L ? 'left' : 'right', f.D.form ? f.D.color : col);
+    self.text(f.D.name, L ? x0 + 2 : x0 + w - 2, y + h + 11, 11, '#ffffff', L ? 'left' : 'right', col);
+    if (f.D.form) self.text(f.D.form, L ? x0 + 2 : x0 + w - 2, y + h + 23, 9, '#ffffff', L ? 'left' : 'right', f.D.color);   // 今の形態
     if (f.modern) self.text('M', L ? x0 + 2 + 76 : x0 + w - 2 - 76, y + h + 11, 10, '#ffe14a', 'center', '#ff8a00');   // モダン操作
     // ラッシュゲージ（6分割）
     var rx = L ? x0 + w - 150 : x0, ry = y + h + 5, rw = 150, seg = rw / 6;

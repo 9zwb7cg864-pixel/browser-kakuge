@@ -64,12 +64,12 @@ for (const [name, dir, btn, want] of cases) {
 function assist(key, gap, n, sup) {
   const b = fresh(gap); b.p[0].sup = sup;
   const q = [];
-  for (let i = 0; i < n; i++) { q.push(M(5, key, 'auto')); for (let j = 0; j < 11; j++) q.push(M(5, '', 'auto')); }
-  const r = run(b, q, 260);
+  for (let i = 0; i < n; i++) { q.push(M(5, key, 'auto')); for (let j = 0; j < 9; j++) q.push(M(5, '', 'auto')); }
+  const r = run(b, q, 420);
   return { r, combo: Math.max(0, ...r.hits.map(h => h.combo)), dmg: 10000 - b.p[1].hp };
 }
 for (const [key, name, sup] of [['l', 'アシスト＋弱', 1000], ['m', 'アシスト＋中', 1000], ['h', 'アシスト＋強', 3000]]) {
-  const a = assist(key, 50, 4, sup);
+  const a = assist(key, 50, 14, 3000);
   ok(a.combo >= 3, `${name}を連打でコンボ（${a.r.started.join(' → ')}／${a.combo}ヒット ${a.dmg}ダメージ）`);
 }
 
@@ -96,10 +96,19 @@ for (const [kind, list] of [
     ok(r.started[0] === 'change' && b.p[0].kind === KF.CHARS[kind].other, `${fn}：↓↓＋SPで変身（出た技：${r.started[0] || 'なし'} → ${b.p[0].kind}）`); }
   for (const key of ['l', 'm', 'h']) {
     const b = freshK(kind, 50); b.p[0].sup = key === 'h' ? 3000 : 1000;
-    const q = []; for (let i = 0; i < 4; i++) { q.push(M(5, key, 'auto')); for (let j = 0; j < 11; j++) q.push(M(5, '', 'auto')); }
-    const r = run(b, q, 300); const combo = Math.max(0, ...r.hits.map(h => h.combo));
+    const q = []; for (let i = 0; i < 14; i++) { q.push(M(5, key, 'auto')); for (let j = 0; j < 9; j++) q.push(M(5, '', 'auto')); }
+    b.p[0].sup = 3000; const r = run(b, q, 420); const combo = Math.max(0, ...r.hits.map(h => h.combo));
     ok(combo >= 3, `${fn}：アシスト＋${{ l: '弱', m: '中', h: '強' }[key]}を連打でコンボ（${r.started.join(' → ')}／${combo}ヒット ${10000 - b.p[1].hp}ダメージ）`);
   }
+}
+
+// アシスト＋ボタンを押しっぱなしでも最後まで続けて出る
+for (const kind of ['kokuu', 'gai_h', 'gai_s']) for (const key of ['l', 'm', 'h']) {
+  const b = freshK(kind, 50); const q = [M(5, key, 'auto')];
+  for (let i = 0; i < 300; i++) q.push({ x: 0, y: 0, held: { auto: true, [key]: true }, pressed: {} });
+  const r = run(b, q, 420); const seqLen = KF.MODERN_AUTO[kind][key].length;
+  const combo = Math.max(0, ...r.hits.map(h => h.combo));
+  ok(r.started.some(m => /^su/.test(m)) && combo >= 5, `${KF.CHARS[kind].name}${KF.CHARS[kind].form ? '（' + KF.CHARS[kind].form + '）' : ''}：アシスト＋${{ l: '弱', m: '中', h: '強' }[key]}押しっぱなしで${seqLen}手のコンボを最後まで（${r.started.join(' → ')}／${combo}ヒット ${10000 - b.p[1].hp}ダメージ）`);
 }
 console.log(`\n結果: ${pass} 件成功 / ${fail} 件失敗`);
 process.exit(fail ? 1 : 0);
