@@ -34,7 +34,8 @@ var KF = window.KF || (window.KF = {});
     res.left = edge('l', s.x < 0, menuPrev); res.right = edge('r', s.x > 0, menuPrev);
     res.ok = s.pressed.lp || s.pressed.start || KF.Input.isDown('Enter') && edge('ent', true, menuPrev) || edge('sp', KF.Input.isDown('Space'), menuPrev);
     if (!KF.Input.isDown('Enter')) menuPrev.ent = false;
-    res.back = s.pressed.lk || edge('esc', KF.Input.isDown('Escape'), menuPrev);
+    res.back = s.pressed.lk || edge('esc', KF.Input.isDown('Escape'), menuPrev) || !!KF._tapBack;
+    KF._tapBack = false;
     var pm = KF.Input.padMenu();
     if (edge('pa', pm.ok, menuPrev)) res.ok = true;
     if (edge('pb', pm.back, menuPrev)) { res.back = true; }
@@ -301,6 +302,30 @@ var KF = window.KF || (window.KF = {});
     }
     var standalone = window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches);
     installBtn.style.display = on && installEvt && !standalone ? 'block' : 'none';
+  }
+  // ---------------------------------------------------------- 戻るボタン（スマホ・アプリでは Esc や弱Kが押せない画面があるため）
+  var backBtn = null, quitBtn = null, quitArm = 0;
+  var standaloneApp = window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches);
+  function navButtons() {
+    var want = isTouch || standaloneApp;
+    if (!backBtn) {
+      backBtn = document.createElement('button'); backBtn.textContent = '◀ 戻る';
+      backBtn.style.cssText = 'position:fixed;left:10px;top:10px;z-index:7;font:900 15px "Noto Sans JP",sans-serif;padding:8px 14px;border-radius:8px;border:2px solid #7a7ab0;background:rgba(8,8,26,.85);color:#fff;display:none';
+      backBtn.addEventListener('click', function () { KF._tapBack = true; });
+      document.body.appendChild(backBtn);
+      quitBtn = document.createElement('button'); quitBtn.textContent = '対戦をやめる';
+      quitBtn.style.cssText = 'position:fixed;right:10px;top:10px;z-index:7;font:900 13px "Noto Sans JP",sans-serif;padding:6px 12px;border-radius:8px;border:2px solid #ff6b8a;background:rgba(8,8,26,.75);color:#fff;display:none';
+      quitBtn.addEventListener('touchstart', function (e) { e.stopPropagation(); }, { passive: true });
+      quitBtn.addEventListener('click', function () {
+        if (quitArm > 0) { quitArm = 0; leaveOnline(); return; }
+        quitArm = 120; quitBtn.textContent = 'もう一度押すとやめる';
+      });
+      document.body.appendChild(quitBtn);
+    }
+    var backScenes = { level: 1, keys: 1, online: 1, moves: 1, select: 1 };
+    backBtn.style.display = want && backScenes[scene] && !(KF.Touch && KF.Touch.editing) ? 'block' : 'none';
+    quitBtn.style.display = want && scene === 'onlineBattle' ? 'block' : 'none';
+    if (quitArm > 0 && --quitArm === 0) quitBtn.textContent = '対戦をやめる';
   }
   function goOnline() { scene = 'online'; onl.stage = 'menu'; onl.sel = 0; netUI(null); }
   function newSession() {
@@ -574,12 +599,20 @@ var KF = window.KF || (window.KF = {});
       rects.push([x, y, 240, 30]);
     });
     // 操作タイプ（クラシック／モダン）
-    var md = KF.Input.modern[keyEdit.p], mrect = [170, 296, 300, 26];
+    var md = KF.Input.modern[keyEdit.p], mrect = isTouch ? [50, 296, 320, 26] : [170, 296, 300, 26];
     R.ctx.fillStyle = md ? 'rgba(255,210,60,0.18)' : 'rgba(10,10,30,0.6)'; R.ctx.fillRect(mrect[0], mrect[1], mrect[2], mrect[3]);
     R.ctx.strokeStyle = md ? '#ffd23c' : '#3a3a6a'; R.ctx.strokeRect(mrect[0] + 0.5, mrect[1] + 0.5, mrect[2] - 1, mrect[3] - 1);
-    R.text(keyEdit.p + 'P 操作タイプ：' + (md ? 'モダン' : 'クラシック') + '（Mキー／タップで切替）', 320, mrect[1] + 13, 11, md ? '#ffe14a' : '#ffffff', 'center');
+    R.text(keyEdit.p + 'P 操作タイプ：' + (md ? 'モダン' : 'クラシック') + '（Mキー／タップで切替）', mrect[0] + mrect[2] / 2, mrect[1] + 13, 11, md ? '#ffe14a' : '#ffffff', 'center');
     if (clicked(mrect)) { KF.Input.setModern(keyEdit.p, !md); KF.Audio.play('cursor'); clickPos = null; }
     R.text('ゲームパッド・レバーレスのボタン設定は Tab キー（またはここをタップ）', 320, 334, 9, '#8890b0', 'center');
+    // スマホ：タッチボタンの配置を変える
+    if (isTouch) {
+      var trect = [380, 296, 210, 26];
+      R.ctx.fillStyle = 'rgba(255,210,60,0.2)'; R.ctx.fillRect(trect[0], trect[1], trect[2], trect[3]);
+      R.ctx.strokeStyle = '#ffd23c'; R.ctx.strokeRect(trect[0] + 0.5, trect[1] + 0.5, trect[2] - 1, trect[3] - 1);
+      R.text('スマホのボタン配置を変える', trect[0] + trect[2] / 2, trect[1] + 13, 11, '#ffe14a', 'center');
+      if (clicked(trect)) { clickPos = null; scene = 'touchEdit'; KF.Touch.onEditEnd = function () { scene = 'keys'; }; KF.Touch.startEdit(); return; }
+    }
     if (clickPos && clickPos[1] > 326) { keyEdit.p = 'pad'; keyEdit.i = 0; return; }
     if (keyEdit.wait) return;
     if (m.up) keyEdit.i = (keyEdit.i + KEY_ACTIONS.length - 1) % KEY_ACTIONS.length;
@@ -631,6 +664,7 @@ var KF = window.KF || (window.KF = {});
   function step() {
     frameT++;
     if (scene === 'load') return;
+    navButtons();
     if (scene === 'battle') { sceneBattle(); clickPos = null; }
     else if (scene === 'onlineBattle') { sceneOnlineBattle(); clickPos = null; }
     else {
@@ -643,6 +677,7 @@ var KF = window.KF || (window.KF = {});
       else if (scene === 'moves') sceneMoves(m);
       else if (scene === 'keys') sceneKeys(m);
       else if (scene === 'online') sceneOnline(m);
+      else if (scene === 'touchEdit') { bg(0.2); R.text('ボタン配置の変更中', 320, 180, 14, '#ffffff', 'center'); }
       else if (scene === 'onlineResult') sceneOnlineResult(m);
       clickPos = null;
     }

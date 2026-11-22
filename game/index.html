@@ -56,6 +56,9 @@
     .btns { bottom: calc(18px + env(safe-area-inset-bottom)); }
     .sys { top: calc(56.25vw + 10px); bottom: auto; }
   }
+  /* 配置を変えたとき：ボタンの並び枠を外して、1つずつ好きな位置に置く */
+  #touch.custom .btns { display: contents; }
+  #touch.custom .sys { display: contents; }
   /* 横持ち：小さい画面ではボタンを少し透過 */
   @media (orientation: landscape) and (max-height: 500px) {
     .btns div, .dpad { opacity: .82; }
@@ -73,17 +76,17 @@
   </div>
   <div class="sys"><div data-sys="pause" id="pausebtn">II</div></div>
 </div>
-<script>window.KF_VER = '20261122153249';</script>
-<script src="js/data.js?v=20261122153249"></script>
-<script src="js/input.js?v=20261122153249"></script>
-<script src="js/engine.js?v=20261122153249"></script>
-<script src="js/ai.js?v=20261122153249"></script>
-<script src="js/audio.js?v=20261122153249"></script>
-<script src="js/render.js?v=20261122153249"></script>
-<script src="js/touch.js?v=20261122153249"></script>
-<script src="js/vendor/peerjs.min.js?v=20261122153249"></script>
-<script src="js/net.js?v=20261122153249"></script>
-<script src="js/main.js?v=20261122153249"></script>
+<script>window.KF_VER = '20261122153902';</script>
+<script src="js/data.js?v=20261122153902"></script>
+<script src="js/input.js?v=20261122153902"></script>
+<script src="js/engine.js?v=20261122153902"></script>
+<script src="js/ai.js?v=20261122153902"></script>
+<script src="js/audio.js?v=20261122153902"></script>
+<script src="js/render.js?v=20261122153902"></script>
+<script src="js/touch.js?v=20261122153902"></script>
+<script src="js/vendor/peerjs.min.js?v=20261122153902"></script>
+<script src="js/net.js?v=20261122153902"></script>
+<script src="js/main.js?v=20261122153902"></script>
 <script>
   (function () {
     var pb = document.getElementById('pausebtn');
