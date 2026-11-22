@@ -580,7 +580,12 @@ var KF = window.KF || (window.KF = {});
     var dt = Math.min(100, now - last); last = now;
     acc += dt;
     fpsInfo.n++; fpsInfo.t += dt;
-    if (fpsInfo.t >= 1000) { fpsInfo.fps = Math.round(fpsInfo.n * 1000 / fpsInfo.t); fpsInfo.n = 0; fpsInfo.t = 0; KF.fps = fpsInfo.fps; }
+    if (fpsInfo.t >= 1000) {
+      fpsInfo.fps = Math.round(fpsInfo.n * 1000 / fpsInfo.t); fpsInfo.n = 0; fpsInfo.t = 0; KF.fps = fpsInfo.fps;
+      // 3秒続けて画面の更新が50回/秒を下回ったら、飾りを省いて軽くする
+      fpsInfo.slow = fpsInfo.fps < 50 && !document.hidden ? (fpsInfo.slow || 0) + 1 : 0;
+      if (fpsInfo.slow >= 3 && !KF.lowFx) KF.lowFx = true;
+    }
     var steps = 0;
     while (acc >= 1000 / 60 && steps < 4) { acc -= 1000 / 60; step(); steps++; }
     if (steps >= 4) acc = 0;
@@ -630,6 +635,7 @@ var KF = window.KF || (window.KF = {});
       startBattle();
     }
     if (/fps/.test(q)) showFps = true;
+    if (/low/.test(q)) KF.lowFx = true;
     var rm = q.match(/room=([A-Za-z0-9]+)/);   // 招待リンクから開いたら、その部屋に入る
     if (rm) { goOnline(); onlineJoin(rm[1]); }
   }).catch(function (e) {

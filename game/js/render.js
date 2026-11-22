@@ -23,14 +23,12 @@ KF.loadAssets = function (onProgress) {
     if (EMB && EMB.json[url]) return Promise.resolve(JSON.parse(JSON.stringify(EMB.json[url])));
     return fetch(url + (window.KF_VER ? '?v=' + window.KF_VER : '')).then(function (r) { return r.json(); });
   }
-  return Promise.all([json('assets/kokuu/anims.json'), json('assets/shuuen/anims.json'), json('assets/fx/fx.json'), json('assets/stage/stage.json')])
+  // 遊べるキャラは道着キャラ男だけなので、その絵とエフェクトだけ読み込む（もう1人のキャラ・街のステージの絵は読まない）
+  return Promise.all([json('assets/kokuu/anims.json'), json('assets/fx/fx.json')])
     .then(function (r) {
-      A.meta.kokuu = KF.prepAnims(r[0]); A.meta.shuuen = KF.prepAnims(r[1]); A.fx = r[2]; A.stage = r[3];
-      ['kokuu', 'shuuen'].forEach(function (k) {
-        Object.keys(A.meta[k].anims).forEach(function (n) { img(k + ':' + n, 'assets/' + k + '/' + A.meta[k].anims[n].file); });
-      });
+      A.meta.kokuu = KF.prepAnims(r[0]); A.fx = r[1]; A.stage = {};
+      Object.keys(A.meta.kokuu.anims).forEach(function (n) { img('kokuu:' + n, 'assets/kokuu/' + A.meta.kokuu.anims[n].file); });
       Object.keys(A.fx).forEach(function (n) { img('fx:' + n, 'assets/fx/' + A.fx[n].file); });
-      ['sky', 'far', 'mid', 'floor', 'puddle'].forEach(function (n) { img('st:' + n, 'assets/stage/' + n + '.png'); });
       return Promise.all(jobs);
     });
 };
@@ -81,7 +79,19 @@ KF.Renderer.prototype.drawStageCity = function (camX, b) {
 
 // トレーニングステージ：方眼の壁と、遠近のついた方眼の床（距離が測れる）
 KF.Renderer.prototype.drawStage = function (camX, b) {
-  var c = this.ctx, W = 640, H = 360, C = KF.CONST;
+  // カメラの位置ごとに描いた絵を取っておき、同じ位置なら1枚貼るだけにする（ステージは動かないので毎フレーム描き直さない）
+  var key = Math.round(camX);
+  if (!this.stCache) { this.stCache = document.createElement('canvas'); this.stCache.width = 680; this.stCache.height = 400; this.stKey = null; }
+  if (this.stKey !== key) {
+    this.stKey = key;
+    var sc = this.stCache.getContext('2d');
+    sc.setTransform(1, 0, 0, 1, 0, 0); sc.clearRect(0, 0, 680, 400); sc.translate(20, 20);
+    this.drawStageRaw(sc, key);
+  }
+  this.ctx.drawImage(this.stCache, -20, -20);
+};
+KF.Renderer.prototype.drawStageRaw = function (c, camX) {
+  var W = 640, H = 360, C = KF.CONST;
   var L = camX - W / 2, G = C.GROUND, base = 262, hz = 196, vp = W / 2, cell = 32;
   // 壁
   var gw = c.createLinearGradient(0, 0, 0, base);
@@ -266,7 +276,8 @@ KF.Renderer.prototype.render = function (b) {
   var ox = W / 2 - camX;
   var self = this;
 
-  // 水たまり・濡れた路面への映り込み（上下反転・半透明）
+  // 床への映り込み（上下反転・半透明）。動きが重い端末では省く
+  if (!KF.lowFx) {
   var r = this.refl.getContext('2d');
   r.clearRect(0, 0, W, H); r.imageSmoothingEnabled = false;
   b.p.forEach(function (f) { self.drawFighterImg(r, f, f.x + ox, C.GROUND + (C.GROUND - f.y) + 2, 0.55, true); });
@@ -277,6 +288,7 @@ KF.Renderer.prototype.render = function (b) {
   r.fillStyle = grd; r.fillRect(0, C.GROUND, W, H - C.GROUND);
   r.globalCompositeOperation = 'source-over';
   c.drawImage(this.refl, 0, 0);
+  }
 
   // 影
   b.p.forEach(function (f) {
@@ -414,14 +426,28 @@ KF.Renderer.prototype.drawBoxes = function (c, b, ox) {
 
 // ------------------------------------------------------------------ HUD
 KF.Renderer.prototype.text = function (s, x, y, size, color, align, glow, font) {
-  var c = this.ctx;
-  c.font = (font || '900 ') + size + 'px "Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif';
-  c.textAlign = align || 'left'; c.textBaseline = 'middle';
-  if (glow) { c.shadowColor = glow; c.shadowBlur = 8; }
-  c.lineWidth = Math.max(2, size / 6); c.strokeStyle = 'rgba(0,0,10,0.9)';
-  c.strokeText(s, x, y);
-  c.fillStyle = color; c.fillText(s, x, y);
-  c.shadowBlur = 0;
+  // 文字（特に光るぼかし付き）は描くのが重いので、同じ文字・色・大きさなら一度描いた絵を貼るだけにする
+  s = String(s);
+  var key = s + '|' + size + '|' + color + '|' + (align || 'left') + '|' + (glow || '') + '|' + (font || '');
+  var tc = this.txtCache || (this.txtCache = new Map());
+  var e = tc.get(key);
+  if (!e) {
+    var cv = document.createElement('canvas'), c = cv.getContext('2d');
+    var f = (font || '900 ') + size + 'px "Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif';
+    c.font = f;
+    var w = Math.ceil(c.measureText(s).width), pad = Math.ceil(size / 6) + (glow ? 12 : 3), h = Math.ceil(size * 1.5);
+    cv.width = Math.max(1, w + pad * 2); cv.height = h + pad * 2;
+    c.font = f; c.textAlign = 'left'; c.textBaseline = 'middle';
+    if (glow) { c.shadowColor = glow; c.shadowBlur = 8; }
+    c.lineWidth = Math.max(2, size / 6); c.strokeStyle = 'rgba(0,0,10,0.9)';
+    c.strokeText(s, pad, pad + h / 2);
+    c.fillStyle = color; c.fillText(s, pad, pad + h / 2);
+    e = { cv: cv, w: w, pad: pad, h: h };
+    // 文字はフォントの読み込み後に描かないと形が変わるので、読み込み前のものは取っておかない
+    if (!document.fonts || document.fonts.status === 'loaded') { tc.set(key, e); if (tc.size > 600) tc.delete(tc.keys().next().value); }
+  }
+  var ox = align === 'center' ? -e.w / 2 : align === 'right' ? -e.w : 0;
+  this.ctx.drawImage(e.cv, Math.round(x + ox - e.pad), Math.round(y - e.h / 2 - e.pad));
 };
 
 KF.Renderer.prototype.drawHUD = function (b) {
