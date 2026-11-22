@@ -565,7 +565,17 @@ var KF = window.KF || (window.KF = {});
 
   // ------------------------------------------------------------ ループ
   var acc = 0, last = performance.now();
+  var lastRaf = 0;
+  // オンライン対戦中は、タブが背景に回って画面の更新が止まっても裏で進め続ける（相手を待たせない）
+  setInterval(function () {
+    var now = performance.now();
+    if (now - lastRaf < 250 || (scene !== 'onlineBattle' && scene !== 'online' && scene !== 'onlineResult')) return;
+    var dt = Math.min(1500, now - last); last = now; acc += dt;
+    var n = 0;
+    while (acc >= 1000 / 60 && n < 100) { acc -= 1000 / 60; step(); n++; }
+  }, 50);
   function tick(now) {
+    lastRaf = performance.now();
     var dt = Math.min(100, now - last); last = now;
     acc += dt;
     fpsInfo.n++; fpsInfo.t += dt;
