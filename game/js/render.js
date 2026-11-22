@@ -24,8 +24,8 @@ KF.loadAssets = function (onProgress) {
     return fetch(url + (window.KF_VER ? '?v=' + window.KF_VER : '')).then(function (r) { return r.json(); });
   }
   // 遊べるキャラは道着キャラ男だけなので、その絵とエフェクトだけ読み込む（もう1人のキャラ・街のステージの絵は読まない）
-  // 遊べるキャラ：道着キャラ男（kokuu）と変身キャラ男（ハンマー形態 gai_h・大盾形態 gai_s）
-  var KINDS = ['kokuu', 'gai_h', 'gai_s'];
+  // 遊べるキャラ：道着キャラ男（kokuu）
+  var KINDS = ['kokuu'];
   return Promise.all(KINDS.map(function (k) { return json('assets/' + k + '/anims.json'); }).concat([json('assets/fx/fx.json')]))
     .then(function (r) {
       KINDS.forEach(function (k, i) { A.meta[k] = KF.prepAnims(r[i]); });

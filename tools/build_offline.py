@@ -6,7 +6,7 @@ os.makedirs(OUT, exist_ok=True)
 emb = {'json': {}, 'img': {}}
 for root, _, fs in os.walk(os.path.join(G, 'assets')):
     # 使う素材（道着キャラ男とエフェクト）だけ埋め込む
-    if os.path.basename(root) not in ('kokuu', 'gai_h', 'gai_s', 'fx'): continue
+    if os.path.basename(root) not in ('kokuu', 'fx'): continue
     for f in fs:
         p = os.path.join(root, f); rel = os.path.relpath(p, G).replace(os.sep, '/')
         if f.endswith('.json'):

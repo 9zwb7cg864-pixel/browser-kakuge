@@ -142,12 +142,12 @@ var KF = window.KF || (window.KF = {});
     R.ctx.fillStyle = 'rgba(0,0,10,0.7)'; R.ctx.fillRect(20, y - 9, 600, 18);
     R.text(txt, 320, y, 9, col, 'center');
   }
-  function goSelect() { scene = 'select'; selStage = 0; selCursor = [0, 0]; }
+  // キャラは道着キャラ男だけなので、キャラ選択は飛ばす
+  function goSelect() { cfg.p1 = 'kokuu'; cfg.p2 = 'kokuu'; if (cfg.mode === 'cpu') { scene = 'level'; sel = LEVELS.indexOf(cfg.level); } else startBattle(); }
 
-  var KINDS = ['kokuu', 'gai_h'];
+  var KINDS = ['kokuu'];
   var DESC = {
     kokuu: ['地上戦が得意なバランス型', '飛び道具・対空・突進技を持つ', '体力 10000 / 動き 速め'],
-    gai_h: ['↓↓Pでハンマーと大盾に変身', 'ハンマー：遅いが一撃が重い・アーマー', '大盾：当て身・反射・押し込み', '体力 10500'],
   };
   function sceneSelect(m) {
     bg(0.6);
@@ -161,10 +161,7 @@ var KF = window.KF || (window.KF = {});
       var on = selCursor[selStage] === i;
       c.fillStyle = on ? 'rgba(40,20,70,0.7)' : 'rgba(10,10,30,0.6)'; c.fillRect(x, y, w, h);
       c.strokeStyle = on ? KF.CHARS[k].color : '#33335a'; c.lineWidth = on ? 2 : 1; c.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1); c.lineWidth = 1;
-      if (k === 'gai_h') {
-        drawFighterBig('gai_s', 'idle', x + 128, y + 222, 0.85, 1, frameT + 20);
-        drawFighterBig('gai_h', on ? 'win' : 'idle', x + 64, y + 222, 0.95, 1, frameT);
-      } else drawFighterBig(k, on ? 'win' : 'idle', x + 92, y + 222, 1.0, 1, frameT);
+      drawFighterBig(k, on ? 'win' : 'idle', x + 92, y + 222, 1.0, 1, frameT);
       R.text(KF.CHARS[k].name, x + 180, y + 30, 15, '#ffffff', 'center', KF.CHARS[k].color);
       DESC[k].forEach(function (l, j) { R.text(l, x + 186, y + 62 + j * 18, 9, '#c8d0f0', 'center'); });
       if (selStage === 1 && selCursor[0] === i) R.text('1P', x + 20, y + 16, 12, '#38d6ff', 'left');
@@ -265,7 +262,8 @@ var KF = window.KF || (window.KF = {});
   // オンラインで使うキャラ（部屋に入る前に選ぶ。次に開いたときも同じキャラ）
   try { KF.onlineKind = localStorage.getItem('kf_online_kind') || 'kokuu'; } catch (e) { KF.onlineKind = 'kokuu'; }
   if (!KF.CHARS[KF.onlineKind]) KF.onlineKind = 'kokuu';
-  function validKind(k) { return k === 'kokuu' || k === 'gai_h' ? k : 'kokuu'; }
+  KF.onlineKind = 'kokuu';
+  function validKind(k) { return 'kokuu'; }
   var ONLINE_ITEMS = ['部屋を作る', '部屋に入る（合言葉を入れる）', '戻る'];
   var ui = null;
   // 合言葉の入力欄・招待リンクのコピーボタン（文字入力はHTMLの部品で行う）
@@ -395,16 +393,6 @@ var KF = window.KF || (window.KF = {});
     if (onl.stage === 'menu') {
       R.text('同じ合言葉の部屋に入った2人で対戦します', 320, 64, 11, '#c0c8e8', 'center');
       var rects = drawMenu(ONLINE_ITEMS, 100, onl.sel, 300);
-      // 使うキャラ：←→ か、名前をタップで切り替え
-      var ok2 = KF.CHARS[KF.onlineKind];
-      R.text('使うキャラ：◀ ' + ok2.name + ' ▶', 320, 268, 13, '#ffffff', 'center', ok2.color);
-      R.text('←→ / タップで変更', 320, 288, 9, '#8890b0', 'center');
-      var kc = clickPos && clickPos[1] > 252 && clickPos[1] < 296;
-      if (m.left || m.right || kc) {
-        KF.onlineKind = KF.onlineKind === 'kokuu' ? 'gai_h' : 'kokuu'; KF.Audio.play('cursor');
-        try { localStorage.setItem('kf_online_kind', KF.onlineKind); } catch (e) {}
-        if (kc) clickPos = null;
-      }
       if (m.up) { onl.sel = (onl.sel + 2) % 3; KF.Audio.play('cursor'); }
       if (m.down) { onl.sel = (onl.sel + 1) % 3; KF.Audio.play('cursor'); }
       var ck = pickByClick(rects); if (ck >= 0) { onl.sel = ck; m.ok = true; }
@@ -550,8 +538,8 @@ var KF = window.KF || (window.KF = {});
   function sceneMoves(m) {
     bg(0.75);
     // 技表のページ：道着キャラ男／変身キャラ男（ハンマー形態）／変身キャラ男（大盾形態）。←→・タップで切り替え
-    var PAGES = ['kokuu', 'gai_h', 'gai_s'];
-    if (moveListFor === 'gai_s' || moveListFor === 'gai_h' || moveListFor === 'kokuu') { } else moveListFor = 'kokuu';
+    var PAGES = ['kokuu'];
+    moveListFor = 'kokuu';
     var pi = PAGES.indexOf(moveListFor);
     var k = moveListFor, D = KF.CHARS[k];
     R.text('技表：' + D.name + (D.form ? '（' + D.form + '）' : ''), 320, 24, 16, '#ffffff', 'center', D.color);
@@ -559,7 +547,7 @@ var KF = window.KF || (window.KF = {});
       R.text(row[0], 30, 54 + i * 21, 10, '#ffffff', 'left', D.color);
       R.text(row[1], 400, 54 + i * 21, 9, '#c8d0f0', 'left');
     });
-    R.text('←→ / 画面タップ：ページ（' + (pi + 1) + '/' + PAGES.length + '）　弱K / Esc：戻る', 320, 346, 9, '#8890b0', 'center');
+    R.text('弱K / Esc：戻る', 320, 346, 9, '#8890b0', 'center');
     if (m.right || clickPos) { moveListFor = PAGES[(pi + 1) % PAGES.length]; clickPos = null; }
     if (m.left) moveListFor = PAGES[(pi + PAGES.length - 1) % PAGES.length];
     if (m.back) { scene = game && paused ? 'battle' : 'title'; }
