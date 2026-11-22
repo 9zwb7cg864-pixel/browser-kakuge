@@ -1,0 +1,452 @@
+// =====================================================================
+//  画面遷移：タイトル → モード → 難易度 → 対戦 → リザルト（キャラは道着キャラ男のみ。2Pは色違い）
+//  60fps固定ステップのメインループ / 操作設定 / 技表 / ポーズ
+// =====================================================================
+'use strict';
+var KF = window.KF || (window.KF = {});
+
+(function () {
+  var cv = document.getElementById('screen');
+  var R, scene = 'load', sel = 0, game = null, sources, ai = null, cfg = { mode: 'cpu', p1: 'kokuu', p2: 'kokuu', level: 'NORMAL' };
+  var menuItems = [], selStage = 0, selCursor = [0, 1], pausedSel = 0, paused = false, keyEdit = null, frameT = 0;
+  var lastEvents = 0, fpsInfo = { n: 0, t: 0, fps: 60 }, showFps = false, resultSel = 0, moveListFor = 'kokuu';
+  var isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  var LEVELS = ['EASY', 'NORMAL', 'HARD', 'EXPERT'];
+  var LEVEL_DESC = {
+    EASY: '反応が遅く、ガードや対空をあまりしない。単発の技が中心。',
+    NORMAL: 'ほどほどにガードし、簡単な必殺技キャンセルを使う。',
+    HARD: '対空・確定反撃をしっかり狙い、コンボやゲージも使う。',
+    EXPERT: '反応が速く判断が正確。ラッシュキャンセルや超必殺でとどめを狙う。',
+  };
+
+  sources = [new KF.Input.Source(1), new KF.Input.Source(2)];
+  if (isTouch) sources[0].useTouch = true;
+
+  // ------------------------------------------------------------ メニュー入力
+  var menuPrev = {};
+  function menuInput() {
+    var s = sources[0].sample(), s2 = sources[1].cpu ? null : sources[1].sample();
+    var padNow = KF.Input.padMenu();
+    if (padNow.ok && s.pressed.lk && !KF.Input.isDown(KF.Input.keys[1].lk)) s.pressed.lk = false;
+    var res = { up: false, down: false, left: false, right: false, ok: false, back: false, p2: {} };
+    function edge(name, v, store) { var p = store[name]; store[name] = v; return v && !p; }
+    res.up = edge('u', s.y < 0, menuPrev); res.down = edge('d', s.y > 0, menuPrev);
+    res.left = edge('l', s.x < 0, menuPrev); res.right = edge('r', s.x > 0, menuPrev);
+    res.ok = s.pressed.lp || s.pressed.start || KF.Input.isDown('Enter') && edge('ent', true, menuPrev) || edge('sp', KF.Input.isDown('Space'), menuPrev);
+    if (!KF.Input.isDown('Enter')) menuPrev.ent = false;
+    res.back = s.pressed.lk || edge('esc', KF.Input.isDown('Escape'), menuPrev);
+    var pm = KF.Input.padMenu();
+    if (edge('pa', pm.ok, menuPrev)) res.ok = true;
+    if (edge('pb', pm.back, menuPrev)) { res.back = true; }
+    if (pm.back) res.ok = res.ok && !s.pressed.lp;
+    if (s2) {
+      var p2 = menuPrev.p2 || (menuPrev.p2 = {});
+      res.p2.left = edge('l', s2.x < 0, p2); res.p2.right = edge('r', s2.x > 0, p2); res.p2.ok = s2.pressed.lp || s2.pressed.start; res.p2.back = s2.pressed.lk;
+    }
+    return res;
+  }
+
+  // クリック/タップでメニュー選択
+  var clickPos = null;
+  function toCanvas(e) {
+    var r = cv.getBoundingClientRect();
+    var t = e.changedTouches ? e.changedTouches[0] : e;
+    return [(t.clientX - r.left) / r.width * 640, (t.clientY - r.top) / r.height * 360];
+  }
+  cv.addEventListener('mousedown', function (e) { KF.Audio.init(); clickPos = toCanvas(e); });
+  cv.addEventListener('touchstart', function (e) { KF.Audio.init(); if (scene !== 'battle' || paused) { clickPos = toCanvas(e); e.preventDefault(); } }, { passive: false });
+  function clicked(rect) {
+    if (!clickPos) return false;
+    var x = clickPos[0], y = clickPos[1];
+    return x >= rect[0] && x <= rect[0] + rect[2] && y >= rect[1] && y <= rect[1] + rect[3];
+  }
+
+  // ------------------------------------------------------------ 描画ヘルパ
+  function bg(dim) {
+    var c = R.ctx;
+    R.t++;
+    R.drawStage(512 + Math.sin(R.t * 0.002) * 180, null);
+    // 雨はなし
+    c.fillStyle = 'rgba(2,2,10,' + (dim == null ? 0.55 : dim) + ')'; c.fillRect(0, 0, 640, 360);
+  }
+  function drawMenu(items, y0, cur, w) {
+    var c = R.ctx, rects = [];
+    w = w || 220;
+    items.forEach(function (it, i) {
+      var y = y0 + i * 30, x = 320 - w / 2, on = i === cur;
+      c.fillStyle = on ? 'rgba(0,220,255,0.18)' : 'rgba(10,10,30,0.6)';
+      c.fillRect(x, y, w, 24);
+      c.strokeStyle = on ? '#38d6ff' : '#3a3a6a'; c.strokeRect(x + 0.5, y + 0.5, w - 1, 23);
+      if (on) { c.fillStyle = '#ff3fe6'; c.fillRect(x, y, 3, 24); }
+      R.text(it, 320, y + 12, 13, on ? '#ffffff' : '#a0a8c8', 'center', on ? '#00c8ff' : null);
+      rects.push([x, y, w, 24]);
+    });
+    return rects;
+  }
+  function pickByClick(rects) {
+    for (var i = 0; i < rects.length; i++) if (clicked(rects[i])) return i;
+    return -1;
+  }
+  function drawFighterBig(kind, anim, x, y, scale, facing, t, alt) {
+    var A = KF.Assets, a = A.meta[kind].anims[anim], tot = a.total, tt = t % tot, fi = 0;
+    for (var i = 0; i < a.frames.length; i++) if (tt >= a.frames[i].start) fi = i;
+    var img = KF.fighterImg(kind, anim, alt), c = R.ctx;
+    c.save(); c.translate(x, y); c.scale(facing * scale, scale);
+    c.drawImage(img, fi * 224, 0, 224, 200, -112, -190, 224, 200);
+    c.restore();
+  }
+
+  // ------------------------------------------------------------ シーン
+  var titleSel = 0;
+  var TITLE_ITEMS = ['CPU対戦', '2人対戦', 'トレーニング', '技表', '操作設定'];
+  function sceneTitle(m) {
+    bg(0.35);
+    var c = R.ctx;
+    drawFighterBig('kokuu', 'idle', 150, 330, 1.25, 1, frameT);
+    drawFighterBig('kokuu', 'idle', 490, 330, 1.25, -1, frameT, true);
+    c.fillStyle = 'rgba(0,0,10,0.45)'; c.fillRect(0, 40, 640, 86);
+    R.text('大乱闘スマッシュ', 320, 64, 30, '#ffe14a', 'center', '#ff8a00');
+    R.text('ストリート行動ファイト', 320, 104, 38, '#ffffff', 'center', '#00d8ff');
+    var rects = drawMenu(TITLE_ITEMS, 160, titleSel, 200);
+    if (m.up) { titleSel = (titleSel + TITLE_ITEMS.length - 1) % TITLE_ITEMS.length; KF.Audio.play('cursor'); }
+    if (m.down) { titleSel = (titleSel + 1) % TITLE_ITEMS.length; KF.Audio.play('cursor'); }
+    var ck = pickByClick(rects); if (ck >= 0) { titleSel = ck; m.ok = true; }
+    drawPadStatus(316);
+    R.text('キーボード：移動WASD 決定U 戻るJ ／ パッド：決定A 戻るB', 320, 346, 9, '#8890b0', 'center');
+    if (m.ok) {
+      KF.Audio.play('ok');
+      if (titleSel === 0) { cfg.mode = 'cpu'; goSelect(); }
+      else if (titleSel === 1) { cfg.mode = 'vs'; goSelect(); }
+      else if (titleSel === 2) { cfg.mode = 'training'; goSelect(); }
+      else if (titleSel === 3) { scene = 'moves'; moveListFor = 'kokuu'; }
+      else { scene = 'keys'; keyEdit = { p: 1, i: 0, wait: false }; }
+    }
+  }
+  // コントローラーの状態（つながらない原因を画面で見られるように）
+  function drawPadStatus(y) {
+    var d = KF.Input.padDiag(), txt, col;
+    if (!d.api || d.blocked) { txt = 'コントローラー：この開き方ではブラウザが読み取りを止めています（単体版を使ってください）'; col = '#ff8080'; }
+    else if (!d.pads.length) {
+      txt = d.frame ? 'コントローラー：見つかりません（claude.aiの中で開いています → 単体版で開いてください）'
+                    : 'コントローラー：見つかりません（単体版' + (d.file ? '' : 'ではない') + '）→ Chromeがレバーレスを認識していません';
+      col = '#ffd060';
+    }
+    else {
+      var p = d.pads[0];
+      txt = 'コントローラー：' + p.id.slice(0, 30) + (d.pads.length > 1 ? ' 他' + (d.pads.length - 1) + '台' : '') + '　入力中：' + (p.bs.length ? 'ボタン' + p.bs.join(',') : '') + (p.ax.length ? ' 軸' + p.ax.join(' ') : '') + (!p.bs.length && !p.ax.length ? 'なし' : '');
+      col = '#7fffb0';
+    }
+    if (!d.focus) { txt += '（画面をクリックしてください）'; }
+    R.ctx.fillStyle = 'rgba(0,0,10,0.7)'; R.ctx.fillRect(20, y - 9, 600, 18);
+    R.text(txt, 320, y, 9, col, 'center');
+  }
+  function goSelect() { cfg.p1 = 'kokuu'; cfg.p2 = 'kokuu'; if (cfg.mode === 'cpu') { scene = 'level'; sel = LEVELS.indexOf(cfg.level); } else startBattle(); }
+
+  var KINDS = ['kokuu', 'shuuen'];
+  var DESC = {
+    kokuu: ['地上戦が得意なバランス型', '飛び道具・対空・突進技を持つ', '体力 10000 / 動き 速め'],
+    shuuen: ['一撃の重いパワー型', '投げ・コマンド投げが強力', '体力 11000 / 動き 遅め'],
+  };
+  function sceneSelect(m) {
+    bg(0.6);
+    var c = R.ctx;
+    R.text('キャラクター選択', 320, 22, 18, '#ffffff', 'center', '#7a5cff');
+    var who = selStage === 0 ? '1P' : (cfg.mode === 'vs' ? '2P' : 'CPU');
+    R.text(who + ' のキャラクターを選んでください', 320, 44, 11, '#c0c8e8', 'center');
+    var rects = [];
+    KINDS.forEach(function (k, i) {
+      var x = i === 0 ? 30 : 330, w = 280, y = 58, h = 250;
+      var on = selCursor[selStage] === i;
+      c.fillStyle = on ? 'rgba(40,20,70,0.7)' : 'rgba(10,10,30,0.6)'; c.fillRect(x, y, w, h);
+      c.strokeStyle = on ? KF.CHARS[k].color : '#33335a'; c.lineWidth = on ? 2 : 1; c.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1); c.lineWidth = 1;
+      drawFighterBig(k, on ? 'win' : 'idle', x + 92, y + 222, 1.0, 1, frameT);
+      R.text(KF.CHARS[k].name, x + 180, y + 30, 15, '#ffffff', 'center', KF.CHARS[k].color);
+      DESC[k].forEach(function (l, j) { R.text(l, x + 186, y + 62 + j * 18, 9, '#c8d0f0', 'center'); });
+      if (selStage === 1 && selCursor[0] === i) R.text('1P', x + 20, y + 16, 12, '#38d6ff', 'left');
+      rects.push([x, y, w, h]);
+    });
+    R.text('決定：弱P / 戻る：弱K', 320, 336, 9, '#8890b0', 'center');
+    if (m.left || m.right) { selCursor[selStage] = 1 - selCursor[selStage]; KF.Audio.play('cursor'); }
+    var ck = pickByClick(rects); if (ck >= 0) { selCursor[selStage] = ck; m.ok = true; }
+    if (m.back) { KF.Audio.play('back'); if (selStage === 0) scene = 'title'; else selStage = 0; return; }
+    if (m.ok) {
+      KF.Audio.play('ok');
+      if (selStage === 0) { cfg.p1 = KINDS[selCursor[0]]; selStage = 1; selCursor[1] = 1 - selCursor[0]; }
+      else {
+        cfg.p2 = KINDS[selCursor[1]];
+        if (cfg.mode === 'cpu') { scene = 'level'; sel = LEVELS.indexOf(cfg.level); }
+        else startBattle();
+      }
+    }
+  }
+  function sceneLevel(m) {
+    bg(0.6);
+    R.text('CPUの強さ', 320, 40, 20, '#ffffff', 'center', '#7a5cff');
+    var rects = drawMenu(LEVELS, 80, sel, 220);
+    R.text(LEVEL_DESC[LEVELS[sel]], 320, 220, 11, '#d0d8f8', 'center');
+    if (m.up) { sel = (sel + 3) % 4; KF.Audio.play('cursor'); }
+    if (m.down) { sel = (sel + 1) % 4; KF.Audio.play('cursor'); }
+    var ck = pickByClick(rects); if (ck >= 0) { sel = ck; m.ok = true; }
+    if (m.back) { KF.Audio.play('back'); scene = 'title'; return; }
+    if (m.ok) { KF.Audio.play('ok'); cfg.level = LEVELS[sel]; startBattle(); }
+  }
+
+  function startBattle() {
+    KF.vsMode = cfg.mode === 'vs';
+    game = new KF.Battle({ p1: cfg.p1, p2: cfg.p2, meta: KF.Assets.meta, training: cfg.mode === 'training' });
+    lastEvents = 0;
+    sources[1].cpu = null; ai = null;
+    if (cfg.mode === 'cpu') { ai = new KF.AI(game, 1, cfg.level, (Date.now() & 0xffff) + 1); sources[1].cpu = ai; }
+    if (cfg.mode === 'training') { ai = null; sources[1].cpu = { output: function () { return { x: 0, y: 0, held: {} }; } }; }
+    scene = 'battle'; paused = false;
+    R.ann = []; R.superBanner = null;
+    KF.Touch && KF.Touch.show(isTouch);
+  }
+
+  function sceneBattle() {
+    var m = null;
+    if (!paused) {
+      var i1 = sources[0].sample(), i2 = sources[1].sample();
+      if (i1.pressed.start || KF.Input.isDown('Escape') && !menuPrev.escB) { paused = true; pausedSel = 0; menuPrev.esc = KF.Input.isDown('Escape'); menuPrev.ent = KF.Input.isDown('Enter'); }
+      menuPrev.escB = KF.Input.isDown('Escape');
+      if (ai) ai.update();
+      // トレーニング：位置リセット（押したときの方向で場所を選ぶ）
+      if (cfg.mode === 'training' && i1.reset) {
+        var rm = i1.y > 0 ? (i1.x > 0 ? 'sRight' : i1.x < 0 ? 'oLeft' : 'center') : (i1.x > 0 ? 'oRight' : i1.x < 0 ? 'sLeft' : 'center');
+        game.resetTraining(rm);
+      }
+      if (!paused) game.step([i1, i2]);
+      for (; lastEvents < game.events.length; lastEvents++) handleEvent(game.events[lastEvents]);
+      if (game.events.length > 400) { game.events.splice(0, 300); lastEvents -= 300; }
+    }
+    R.render(game);
+    if (cfg.mode === 'training') drawTrainingInfo();
+    if (paused) drawPause();
+    if (game.phase === 'over' && !paused) { scene = 'result'; resultSel = 0; frameT = 0; KF.Touch && KF.Touch.show(false); }
+  }
+  function handleEvent(e) {
+    if (e.type === 'sfx') KF.Audio.play(e.s);
+    else if (e.type === 'announce') R.announce(e);
+    else if (e.type === 'super') R.superBanner = { name: e.name, side: e.side, t: 0, color: game.p[e.side].color || game.p[e.side].D.color };
+    else if (e.type === 'rushcancel') R.announce({ text: 'RUSH CANCEL', small: 1, side: e.side });
+  }
+  function drawTrainingInfo() {
+    var f = game.p[0], c = R.ctx;
+    var info = f.lastMoveInfo, y0 = document.body.classList.contains('touchmode') ? 84 : 56;
+    c.fillStyle = 'rgba(0,0,10,0.6)'; c.fillRect(4, y0, 330, 44);
+    R.text('トレーニング（位置リセット：R / パッドBACK、→←↘↙で画面端　当たり判定：F2）', 8, y0 + 8, 8, '#a0ffd0', 'left');
+    var NN = { lp: '弱P', mp: '中P', hp: '強P', lk: '弱K', mk: '中K', hk: '強K', throw: '投げ' };
+    var nmOf = function (id) { var mv = KF.CHARS[game.p[0].kind].moves[id]; if (mv && mv.name && mv.name !== 'ターゲットコンボ') return mv.name; var b = id.replace(/^(c_|j_|tc_|f_|b_)/, ''); var pre = { c_: 'しゃがみ', j_: 'ジャンプ', tc_: 'ターゲットコンボ ', f_: '→', b_: '←' }[(id.match(/^(c_|j_|tc_|f_|b_)/) || [''])[0]] || ''; return pre + (NN[b] || id); };
+    if (info) R.text('技 ' + nmOf(info.id) + '  発生 ' + info.startup + 'F  全体 ' + info.total + 'F', 8, y0 + 22, 9, '#ffffff', 'left');
+    var adv = KF._lastAdv;
+    if (adv === 'ダウン') R.text('硬直差 ダウンを奪った（起き攻めできる）', 8, y0 + 36, 9, '#7fffb0', 'left');
+    else if (adv != null) R.text('硬直差 ' + (adv > 0 ? '+' : '') + adv + 'F', 8, y0 + 36, 9, adv >= 0 ? '#7fffb0' : '#ff8080', 'left');
+  }
+  var PAUSE_BASE = ['再開', '技表', '当たり判定 表示切替', 'やり直す', 'タイトルへ'];
+  var PAUSE_TR = ['位置リセット：中央', '位置リセット：相手を画面端へ', '位置リセット：自分が画面端'];
+  var PAUSE_ITEMS = PAUSE_BASE;
+  function drawPause() {
+    PAUSE_ITEMS = cfg.mode === 'training' ? [PAUSE_BASE[0]].concat(PAUSE_TR, PAUSE_BASE.slice(1)) : PAUSE_BASE;
+    var c = R.ctx;
+    c.fillStyle = 'rgba(0,0,10,0.7)'; c.fillRect(0, 0, 640, 360);
+    R.text('PAUSE', 320, 70, 28, '#ffffff', 'center', '#7a5cff');
+    var rects = drawMenu(PAUSE_ITEMS, PAUSE_ITEMS.length > 6 ? 96 : 110, pausedSel, 260);
+    var m = menuInput();
+    if (m.up) pausedSel = (pausedSel + PAUSE_ITEMS.length - 1) % PAUSE_ITEMS.length;
+    if (m.down) pausedSel = (pausedSel + 1) % PAUSE_ITEMS.length;
+    var ck = pickByClick(rects); if (ck >= 0) { pausedSel = ck; m.ok = true; }
+    if (m.back) { paused = false; return; }
+    if (m.ok) {
+      var it = PAUSE_ITEMS[pausedSel];
+      if (it === '再開') paused = false;
+      else if (it === '技表') { scene = 'moves'; moveListFor = cfg.p1; paused = true; }
+      else if (it === '当たり判定 表示切替') { R.debug = !R.debug; paused = false; }
+      else if (it === 'やり直す') { paused = false; startBattle(); }
+      else if (it === PAUSE_TR[0]) { game.resetTraining('center'); paused = false; }
+      else if (it === PAUSE_TR[1]) { game.resetTraining('oRight'); paused = false; }
+      else if (it === PAUSE_TR[2]) { game.resetTraining('sLeft'); paused = false; }
+      else { KF.Touch && KF.Touch.show(false); scene = 'title'; }
+    }
+  }
+  var RES_ITEMS = ['再戦する', 'タイトルへ'];
+  function sceneResult(m) {
+    bg(0.5);
+    var w = game.matchOver.winner;
+    if (w === -1) R.text('DRAW', 320, 70, 40, '#ffffff', 'center', '#7a5cff');
+    else {
+      var wk = game.p[w].kind, wcol = game.p[w].color || KF.CHARS[wk].color;
+      drawFighterBig(wk, 'win', 200, 320, 1.35, 1, frameT, game.p[w].alt);
+      var label = cfg.mode === 'cpu' ? (w === 0 ? 'YOU WIN' : 'YOU LOSE') : (w === 0 ? '1P WIN' : '2P WIN');
+      R.text(label, 430, 70, 34, '#ffffff', 'center', wcol);
+      R.text(KF.CHARS[wk].name + ' の勝利', 430, 104, 13, '#ffffff', 'center');
+      R.text('ラウンド ' + game.wins[0] + ' - ' + game.wins[1], 430, 126, 11, '#c0c8e8', 'center');
+    }
+    var c = R.ctx;
+    var rects = RES_ITEMS.map(function (it, i) {
+      var y = 170 + i * 30, x = 330, on = i === resultSel;
+      c.fillStyle = on ? 'rgba(0,220,255,0.18)' : 'rgba(10,10,30,0.6)'; c.fillRect(x, y, 200, 24);
+      c.strokeStyle = on ? '#38d6ff' : '#3a3a6a'; c.strokeRect(x + 0.5, y + 0.5, 199, 23);
+      R.text(it, x + 100, y + 12, 13, on ? '#fff' : '#a0a8c8', 'center');
+      return [x, y, 200, 24];
+    });
+    if (m.up) resultSel = (resultSel + 1) % 2;
+    if (m.down) resultSel = (resultSel + 1) % 2;
+    var ck = pickByClick(rects); if (ck >= 0) { resultSel = ck; m.ok = true; }
+    if (m.ok && frameT > 30) {
+      KF.Audio.play('ok');
+      if (resultSel === 0) startBattle();
+      else scene = 'title';
+    }
+  }
+  function sceneMoves(m) {
+    bg(0.75);
+    var k = moveListFor, D = KF.CHARS[k];
+    R.text('技表：' + D.name, 320, 24, 16, '#ffffff', 'center', D.color);
+    KF.MOVE_LIST[k].forEach(function (row, i) {
+      R.text(row[0], 40, 54 + i * 21, 10, '#ffffff', 'left', D.color);
+      R.text(row[1], 250, 54 + i * 21, 9, '#c8d0f0', 'left');
+    });
+    R.text('弱K / Esc：戻る', 320, 346, 9, '#8890b0', 'center');
+    if (clickPos) { scene = game && paused ? 'battle' : 'title'; }
+    if (m.back) { scene = game && paused ? 'battle' : 'title'; }
+  }
+  var KEY_ACTIONS = ['up', 'down', 'left', 'right', 'lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'rush', 'start'];
+  var KEY_NAMES = { up: '上', down: '下', left: '左', right: '右', lp: '弱パンチ', mp: '中パンチ', hp: '強パンチ', lk: '弱キック', mk: '中キック', hk: '強キック', rush: 'ラッシュ', start: 'ポーズ', reset: '位置リセット' };
+  var keyListener = null;
+  var PAD_ACTIONS = ['lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'rush', 'start', 'reset'];
+  function scenePad(m) {
+    R.text('ゲームパッド / レバーレスの設定', 320, 22, 16, '#ffffff', 'center', '#7a5cff');
+    var ps = KF.Input.pads();
+    if (KF.padBlocked) R.text('このページの表示方法ではブラウザがコントローラーの読み取りを止めています。下の説明を見てください', 320, 300, 9, '#ff8080', 'center');
+    R.text(ps.length ? ('接続中：' + ps.map(function (p) { return (p.id || 'パッド').slice(0, 34); }).join(' / ')) : 'コントローラーが見つかりません（つないでから何かボタンを押してください）', 320, 42, 9, ps.length ? '#7fffb0' : '#ff8080', 'center');
+    var map = KF.Input.padMap(), rects = [];
+    PAD_ACTIONS.forEach(function (a, i) {
+      var col = i < 5 ? 0 : 1, row = i % 5, x = 70 + col * 260, y = 60 + row * 44;
+      var on = keyEdit.i === i;
+      R.ctx.fillStyle = on ? 'rgba(0,220,255,0.18)' : 'rgba(10,10,30,0.6)'; R.ctx.fillRect(x, y, 240, 34);
+      R.ctx.strokeStyle = on ? '#38d6ff' : '#3a3a6a'; R.ctx.strokeRect(x + 0.5, y + 0.5, 239, 33);
+      R.text(KEY_NAMES[a], x + 12, y + 17, 11, '#ffffff', 'left');
+      R.text(keyEdit.wait && on ? 'ボタンを押してください…' : 'ボタン ' + map[a], x + 228, y + 17, 11, on ? '#ffe14a' : '#a0a8c8', 'right');
+      rects.push([x, y, 240, 34]);
+    });
+    drawPadStatus(300);
+    // 押されているボタンの表示（確認用）
+    var pp = KF.Input.padPressed();
+    R.text(pp ? (pp.btn != null ? '押されているボタン：' + pp.btn : '方向キー（ハット）入力中') : '　', 320, 256, 10, '#ffe14a', 'center');
+    R.text('方向は 十字キー・左スティック・ハット(POV) のどれでも使えます。左右同時押しはニュートラル', 320, 278, 9, '#c0c8e8', 'center');
+    R.text('↑↓←→：選ぶ　弱P：変更　弱K：戻る　R：初期設定に戻す　Tab：キーボード設定へ', 320, 330, 9, '#8890b0', 'center');
+    if (keyEdit.wait) {
+      var now = KF.Input.padPressed();
+      if (keyEdit.release) { if (!now) keyEdit.release = false; return; }
+      if (now && now.btn != null) { KF.Input.setPad(PAD_ACTIONS[keyEdit.i], now.btn); keyEdit.wait = false; keyEdit.release = true; menuPrev = {}; }
+      if (KF.Input.isDown('Escape')) keyEdit.wait = false;
+      return;
+    }
+    if (keyEdit.release) { if (!KF.Input.padPressed()) keyEdit.release = false; else return; }
+    if (m.up) keyEdit.i = (keyEdit.i + PAD_ACTIONS.length - 1) % PAD_ACTIONS.length;
+    if (m.down) keyEdit.i = (keyEdit.i + 1) % PAD_ACTIONS.length;
+    if (m.left || m.right) keyEdit.i = (keyEdit.i + 5) % PAD_ACTIONS.length;
+    if (KF.Input.isDown('KeyR') && !menuPrev.kr) KF.Input.resetPad();
+    menuPrev.kr = KF.Input.isDown('KeyR');
+    var ck = pickByClick(rects); if (ck >= 0) { keyEdit.i = ck; m.ok = true; }
+    if (m.back) { scene = 'title'; return; }
+    if (m.ok) { keyEdit.wait = true; keyEdit.release = true; }
+  }
+  function sceneKeys(m) {
+    bg(0.8);
+    if (KF.Input.isDown('Tab') && !menuPrev.tab) { keyEdit.p = keyEdit.p === 'pad' ? 1 : 'pad'; keyEdit.i = 0; }
+    menuPrev.tab = KF.Input.isDown('Tab');
+    if (keyEdit.p === 'pad') { scenePad(m); return; }
+    R.text('操作設定（キー割り当て）', 320, 22, 16, '#ffffff', 'center', '#7a5cff');
+    R.text(keyEdit.p + 'P の設定　←→：1P/2P切替　弱P：変更　弱K：戻る　R：初期化　Tab：ゲームパッド設定へ', 320, 42, 9, '#c0c8e8', 'center');
+    var keys = KF.Input.keys[keyEdit.p];
+    var rects = [];
+    KEY_ACTIONS.forEach(function (a, i) {
+      var col = i < 6 ? 0 : 1, row = i % 6, x = 70 + col * 260, y = 64 + row * 40;
+      var on = keyEdit.i === i;
+      R.ctx.fillStyle = on ? 'rgba(0,220,255,0.18)' : 'rgba(10,10,30,0.6)'; R.ctx.fillRect(x, y, 240, 30);
+      R.ctx.strokeStyle = on ? '#38d6ff' : '#3a3a6a'; R.ctx.strokeRect(x + 0.5, y + 0.5, 239, 29);
+      R.text(KEY_NAMES[a], x + 12, y + 15, 11, '#ffffff', 'left');
+      R.text(keyEdit.wait && on ? 'キーを押してください…' : keys[a].replace(/^Key/, '').replace(/^Digit/, ''), x + 228, y + 15, 11, on ? '#ffe14a' : '#a0a8c8', 'right');
+      rects.push([x, y, 240, 30]);
+    });
+    R.text('ゲームパッド・レバーレスのボタン設定は Tab キー（またはここをタップ）', 320, 330, 9, '#8890b0', 'center');
+    if (clickPos && clickPos[1] > 318) { keyEdit.p = 'pad'; keyEdit.i = 0; return; }
+    if (keyEdit.wait) return;
+    if (m.up) keyEdit.i = (keyEdit.i + KEY_ACTIONS.length - 1) % KEY_ACTIONS.length;
+    if (m.down) keyEdit.i = (keyEdit.i + 1) % KEY_ACTIONS.length;
+    if (m.left || m.right) keyEdit.p = keyEdit.p === 1 ? 2 : 1;
+    if (KF.Input.isDown('KeyR') && !menuPrev.kr) { KF.Input.resetKeys(); }
+    menuPrev.kr = KF.Input.isDown('KeyR');
+    var ck = pickByClick(rects); if (ck >= 0) { keyEdit.i = ck; m.ok = true; }
+    if (m.back) { scene = 'title'; return; }
+    if (m.ok) {
+      keyEdit.wait = true;
+      setTimeout(function () {
+        keyListener = function (code) {
+          if (code !== 'Escape') { KF.Input.keys[keyEdit.p][KEY_ACTIONS[keyEdit.i]] = code; KF.Input.saveKeys(); }
+          keyEdit.wait = false; KF.Input.offKey(keyListener);
+        };
+        KF.Input.onKey(keyListener);
+      }, 150);
+    }
+  }
+
+  // ------------------------------------------------------------ ループ
+  var acc = 0, last = performance.now();
+  function tick(now) {
+    var dt = Math.min(100, now - last); last = now;
+    acc += dt;
+    fpsInfo.n++; fpsInfo.t += dt;
+    if (fpsInfo.t >= 1000) { fpsInfo.fps = Math.round(fpsInfo.n * 1000 / fpsInfo.t); fpsInfo.n = 0; fpsInfo.t = 0; KF.fps = fpsInfo.fps; }
+    var steps = 0;
+    while (acc >= 1000 / 60 && steps < 4) { acc -= 1000 / 60; step(); steps++; }
+    if (steps >= 4) acc = 0;
+    requestAnimationFrame(tick);
+  }
+  function step() {
+    frameT++;
+    if (scene === 'load') return;
+    if (scene === 'battle') { sceneBattle(); clickPos = null; }
+    else {
+      var m = menuInput();
+      if (scene === 'title') sceneTitle(m);
+      else if (scene === 'select') sceneSelect(m);
+      else if (scene === 'level') sceneLevel(m);
+      else if (scene === 'result') sceneResult(m);
+      else if (scene === 'moves') sceneMoves(m);
+      else if (scene === 'keys') sceneKeys(m);
+      clickPos = null;
+    }
+    if (KF.padNotice && KF.padNotice.t > 0) { KF.padNotice.t--; R.ctx.fillStyle = 'rgba(0,0,10,0.7)'; R.ctx.fillRect(170, 326, 300, 20); R.text(KF.padNotice.text, 320, 336, 9, '#7fffb0', 'center'); }
+    if (showFps) R.text(KF.fps + ' FPS', 636, 352, 8, '#7fffb0', 'right');
+  }
+  window.addEventListener('keydown', function (e) {
+    KF.Audio.init();
+    if (e.code === 'F2') { R && (R.debug = !R.debug); e.preventDefault(); }
+    if (e.code === 'F3') { showFps = !showFps; e.preventDefault(); }
+  });
+
+  // 硬直差の計測（トレーニング表示用）
+  setInterval(function () { }, 1000);
+
+  KF.Game = { get battle() { return game; }, get scene() { return scene; }, cfg: cfg, start: startBattle, setScene: function (s) { scene = s; } };
+
+  R = new KF.Renderer(cv);
+  var bar = document.getElementById('loadbar');
+  KF.loadAssets(function (p) { if (bar) bar.style.width = Math.round(p * 100) + '%'; }).then(function () {
+    var ld = document.getElementById('loading'); if (ld) ld.style.display = 'none';
+    scene = 'title';
+    var q = location.search;
+    if (/autostart/.test(q)) { // テスト用：URLで直接対戦開始
+      var mm = q.match(/level=(\w+)/); if (mm) cfg.level = mm[1];
+      cfg.mode = /training/.test(q) ? 'training' : (/vs/.test(q) ? 'vs' : 'cpu');
+      if (/p1=shuuen/.test(q)) { cfg.p1 = 'shuuen'; cfg.p2 = 'kokuu'; }
+      startBattle();
+    }
+    if (/fps/.test(q)) showFps = true;
+  }).catch(function (e) {
+    var ld = document.getElementById('loading'); if (ld) ld.textContent = '読み込みエラー：' + e.message;
+  });
+  requestAnimationFrame(tick);
+})();

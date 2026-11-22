@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700;900&display=swap" rel="stylesheet">
+<title>大乱闘スマッシュストリート行動ファイト</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #020208; overflow: hidden; touch-action: none;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; font-family: "Noto Sans JP", sans-serif; }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #screen { image-rendering: pixelated; image-rendering: crisp-edges; display: block; background: #000;
+    width: min(100vw, calc(100vh * 16 / 9)); height: auto; aspect-ratio: 16 / 9; }
+  #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #9fe8ff; font-size: 14px; gap: 12px; background: #020208; z-index: 5; }
+  #loading .b { width: 240px; height: 6px; border: 1px solid #38d6ff; }
+  #loadbar { height: 100%; width: 0; background: linear-gradient(90deg, #38d6ff, #ff3fe6); }
+
+  /* ---- タッチ操作 ---- */
+  #touch { display: none; position: fixed; inset: 0; pointer-events: auto; z-index: 3; }
+  .dpad { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: 18px;
+    width: var(--pad); height: var(--pad); border-radius: 50%;
+    background: radial-gradient(circle, rgba(56,214,255,.10), rgba(56,214,255,.03) 65%, transparent 70%);
+    border: 2px solid rgba(56,214,255,.45); box-sizing: border-box; }
+  .dpad::before, .dpad::after { content: ''; position: absolute; left: 50%; top: 50%; background: rgba(56,214,255,.18); transform: translate(-50%,-50%); }
+  .dpad::before { width: 30%; height: 86%; border-radius: 8px; } .dpad::after { width: 86%; height: 30%; border-radius: 8px; }
+  .knob { position: absolute; left: 50%; top: 50%; width: 40%; height: 40%; margin: -20% 0 0 -20%; border-radius: 50%;
+    background: rgba(56,214,255,.45); border: 2px solid #9fefff; box-sizing: border-box; z-index: 1; }
+  .btns { position: absolute; right: max(14px, env(safe-area-inset-right)); bottom: 14px; display: grid;
+    grid-template-columns: repeat(4, var(--btn)); grid-auto-rows: var(--btn); gap: var(--gap); }
+  .btns div, .sys div { border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff;
+    font-size: calc(var(--btn) * .24); font-weight: 900; box-sizing: border-box; text-shadow: 0 0 4px #000; }
+  .p { background: rgba(56,214,255,.16); border: 2px solid rgba(56,214,255,.7); }
+  .k { background: rgba(255,63,230,.16); border: 2px solid rgba(255,63,230,.7); }
+  .r { background: rgba(80,255,220,.16); border: 2px solid rgba(80,255,220,.75); }
+  .t { background: rgba(255,220,80,.14); border: 2px solid rgba(255,220,80,.7); }
+  .btns div.on { filter: brightness(2.2); transform: scale(.94); }
+  .sys { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); }
+  .sys div { width: 40px; height: 26px; border-radius: 6px; background: rgba(20,20,40,.6); border: 1px solid #556; font-size: 12px; }
+  :root { --pad: min(34vh, 190px); --btn: min(15vh, 70px); --gap: min(1.6vh, 9px); }
+  /* 縦持ち：画面を上に、操作部を下に */
+  @media (orientation: portrait) {
+    body.touchmode #wrap { align-items: flex-start; padding-top: env(safe-area-inset-top); }
+    body.touchmode #screen { width: 100vw; }
+    :root { --pad: min(38vw, 190px); --btn: min(16vw, 72px); --gap: 2.2vw; }
+    .btns { grid-template-columns: repeat(3, var(--btn)); }
+    .btns .r { grid-column: 1; grid-row: 3; } .btns .t { grid-column: 3; grid-row: 3; }
+    .btns div.r, .btns div.t { border-radius: 14px; }
+    .dpad { bottom: calc(24px + env(safe-area-inset-bottom)); }
+    .btns { bottom: calc(18px + env(safe-area-inset-bottom)); }
+    .sys { top: calc(56.25vw + 10px); bottom: auto; }
+  }
+  /* 横持ち：小さい画面ではボタンを少し透過 */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .btns div, .dpad { opacity: .82; }
+  }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="screen" width="640" height="360"></canvas></div>
+<div id="loading"><div>読み込み中…</div><div class="b"><div id="loadbar"></div></div></div>
+<div id="touch">
+  <div class="dpad"><div class="knob"></div></div>
+  <div class="btns">
+    <div class="p" data-b="lp">弱P</div><div class="p" data-b="mp">中P</div><div class="p" data-b="hp">強P</div><div class="r" data-b="rush">RUSH</div>
+    <div class="k" data-b="lk">弱K</div><div class="k" data-b="mk">中K</div><div class="k" data-b="hk">強K</div><div class="t" data-b="lp,lk">投げ</div>
+  </div>
+  <div class="sys"><div data-sys="pause" id="pausebtn">II</div></div>
+</div>
+<script src="js/data.js"></script>
+<script src="js/input.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/render.js"></script>
+<script src="js/touch.js"></script>
+<script src="js/main.js"></script>
+<script>
+  (function () {
+    var pb = document.getElementById('pausebtn');
+    pb.addEventListener('touchstart', function (e) { e.preventDefault(); e.stopPropagation(); KF.Input.touch.held = { start: true }; setTimeout(function () { KF.Input.touch.held = {}; }, 80); }, { passive: false });
+  })();
+</script>
+</body>
+</html>
