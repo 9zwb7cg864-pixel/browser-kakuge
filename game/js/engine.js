@@ -637,7 +637,7 @@ var KF = window.KF || (window.KF = {});
       if (cancelLevel === 'u' && mv.type !== 'u' && mv.type !== 'gu') continue;
       var wAdd = f.move && f.move.freeCancel ? 14 : 0;   // 変身中に入れておいたコマンドも受け付ける
       if (mv.swap && f.move && f.move.freeCancel) continue;   // 変身し終わった直後に、もう一度変身はしない
-      var okSeq = mq ? true : c.dd ? f.buf.matchDD(c.win) : c.dp ? f.buf.matchDP(c.win + wAdd) : f.buf.match(c.seq, c.win + wAdd, c.loose);
+      var okSeq = mq ? true : c.dd ? f.buf.matchDD(c.win, false, !!cancelLevel) : c.dp ? f.buf.matchDP(c.win + wAdd) : f.buf.match(c.seq, c.win + wAdd, c.loose);
       // 簡易入力（昇竜の ↘↓↘ ・ ↓↘→↘ など）
       if (!okSeq && c.alt) for (var q = 0; q < c.alt.length && !okSeq; q++) okSeq = f.buf.matchStrict(c.alt[q], c.win);
       // 超必殺の簡易コマンド（スト6：↓↘→↓→ ・ ↓→↓↘→ でも成立）

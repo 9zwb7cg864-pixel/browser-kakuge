@@ -196,27 +196,29 @@ KF.InputBuffer.prototype.push = function (inp, facing) {
   if (this.hist.length > 40) this.hist.shift();
 };
 KF.InputBuffer.prototype.refacing = function () { };
-// ↓↓（変身）：↓を短く2回たたく。1回目の↓は8フレーム以内、離している間は6フレーム以内、全体で win フレーム以内
-//  しゃがみ技を出したあと立って、またしゃがむ（↓を長く押していた）ときは変身にならない
-KF.InputBuffer.prototype.matchDD = function (win) {
-  var H = this.hist, n = H.length, j = n - 1;
+// ↓↓（変身）：↓を2回入れてP。人の押し方のばらつきを広く受け付ける
+//  ・ボタンの直前に↓を離していてもよい（4フレームまで）
+//  ・2回目の↓：何フレームでも（ただし全体で36フレーム以内）
+//  ・間に↓を離す：1〜12フレーム
+//  ・1回目の↓：1〜16フレーム。長くしゃがんでいたあとは変身にならない
+//  ・1回目の↓の間に攻撃ボタンを押していたら（しゃがみ技を出していたら）変身にならない
+//    （しゃがみ弱K ＞ しゃがみ弱P のつなぎが変身に化けない。しゃがみ技のあとは↓を一度離してから↓↓P）
+KF.InputBuffer.prototype.matchDD = function (win, nowDown, allowAtk) {
+  var H = this.hist, j = H.length - 1, start = j;
   function down(d) { return d <= 3; }
-  var c = 0; while (j >= 0 && down(H[j].dir)) { j--; c++; if (c > win) return false; }
+  function atk(e) { var q = e.p || {}; return q.lp || q.mp || q.hp || q.lk || q.mk || q.hk; }
+  var t = 0;
+  if (!nowDown) { while (j >= 0 && !down(H[j].dir)) { if (H[j].dir !== 5) return false; j--; if (++t > 4) return false; } }   // 離したあとはニュートラルだけ（↓↙←・↓↘→ は別の技）
+  var c = nowDown ? 1 : 0; while (j >= 0 && down(H[j].dir)) { j--; c++; }
   if (!c) return false;
-  var g = 0; while (j >= 0 && !down(H[j].dir)) { j--; g++; if (g > 6) return false; }
+  var g = 0; while (j >= 0 && !down(H[j].dir)) { j--; g++; if (g > 12) return false; }
   if (!g) return false;
-  var d = 0; while (j >= 0 && down(H[j].dir)) { j--; d++; if (d > 8) return false; }
-  return d > 0 && (n - 1 - j) <= win;
+  var d = 0; while (j >= 0 && down(H[j].dir)) { if (atk(H[j])) return false; j--; d++; if (d > 16) return false; }
+  if (!d) return false;
+  return (start - j) + (nowDown ? 1 : 0) <= 36;
 };
-// 今のフレームの↓がまだ履歴に入っていないとき用：直前が「↓を離した間」→その前に「↓」なら成立
-KF.InputBuffer.prototype.matchDDNow = function (win) {
-  var H = this.hist, j = H.length - 1;
-  function down(d) { return d <= 3; }
-  var g = 0; while (j >= 0 && !down(H[j].dir)) { j--; g++; if (g > 6) return false; }
-  if (!g) return false;
-  var d = 0; while (j >= 0 && down(H[j].dir)) { j--; d++; if (d > 8) return false; }
-  return d > 0 && (H.length - j) <= win;
-};
+// 今のフレームの↓がまだ履歴に入っていないとき用（モダン操作の↓↓＋SP）
+KF.InputBuffer.prototype.matchDDNow = function (win) { return this.matchDD(win, true); };
 // seq を win フレーム以内に順に入力し、最後の方向から5フレーム以内にボタン
 KF.InputBuffer.prototype.match = function (seq, win, btnFrames, loose) {
   var H = this.hist, n = H.length;
