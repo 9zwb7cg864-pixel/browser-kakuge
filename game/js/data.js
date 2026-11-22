@@ -39,9 +39,9 @@ KF.CHARS = {
       j_lp: { anim: 'j_p', dmg: 450, stun: [16, 12], hs: 8, push: [3, 3], lv: 'o', air: 1 },
       j_mp: { anim: 'j_p', dmg: 600, stun: [18, 14], hs: 10, push: [3, 3], lv: 'o', air: 1 },
       j_hp: { anim: 'j_hp', dmg: 850, stun: [22, 17], hs: 12, push: [3, 3], lv: 'o', air: 1 },
-      j_lk: { anim: 'j_k', dmg: 450, stun: [16, 12], hs: 8, push: [3, 3], lv: 'o', air: 1 },
-      j_mk: { anim: 'j_k', dmg: 600, stun: [18, 14], hs: 10, push: [3, 3], lv: 'o', air: 1 },
-      j_hk: { anim: 'j_hk', dmg: 900, stun: [22, 17], hs: 12, push: [3, 3], lv: 'o', air: 1 },
+      j_lk: { anim: 'j_k', dmg: 450, stun: [16, 12], hs: 8, push: [3, 3], lv: 'o', air: 1, cancel: 'a' },
+      j_mk: { anim: 'j_k', dmg: 600, stun: [18, 14], hs: 10, push: [3, 3], lv: 'o', air: 1, cancel: 'a' },
+      j_hk: { anim: 'j_hk', dmg: 900, stun: [22, 17], hs: 12, push: [3, 3], lv: 'o', air: 1, cancel: 'a' },
       tc_hp: { anim: 'hp', name: 'ターゲットコンボ', dmg: 800, adv: [2, -4], hs: 12, push: [4, 7], lv: 'm', cancel: 'sur', heavy: 1 },
       tc_hk: { anim: 'hk', name: 'ターゲットコンボ', dmg: 850, adv: [2, -5], hs: 12, push: [5, 7], lv: 'm', cancel: 'su', heavy: 1 },
       // 特殊技（方向＋ボタン）
@@ -59,7 +59,7 @@ KF.CHARS = {
       dp: { anim: 'sp_dp', type: 's', name: '昇穿', dmg: [1000, 1200, 1400], adv: ['kd', [-31, -36, -39]], hs: 12, push: [2, 4], lv: 'm', chip: 0.125, kd: 'launch', jlim: 2, jinc: 3, cancel: 'u', saGround: 1, saOnly: ['su3'], rootF: [2, 2, 1], rootDmg: 800,
             preDelay: [2, 3, 4], aaInv: [[1, 14], [1, 9], [1, 8]], jump: { vx: [1.6, 2.2, 2.8], vy: [-9.5, -10.8, -12.0] }, lvy: -9, lvx: 2.5, meter: 40 },
       dp_ex: { anim: 'ex_dp', type: 'x', name: 'EX昇穿', dmg: 800, adv: ['kd', -34], hs: 12, push: [2, 4], lv: 'm', chip: 0.125, kd: 'launch', hits: 2, rehit: 7, jlim: 3, jinc: 3, cancel: 'u', saGround: 1, saOnly: ['su2', 'su3'],
-            preDelay: 3, inv: [[1, 9]], jump: { vx: [2.4], vy: [-12.4] }, lvy: -10, lvx: 2.5, jg: 1 },   // EX：発生は中と同じ6F・完全無敵
+            preDelay: 3, inv: [[1, 9]], jump: { vx: [2.4], vy: [-12.4] }, lvy: -6, lvx: 0.6, floatG: 0.14, jugAfter: 1, jg: 1 },   // 当てたら相手がふわっと漂い、着地後の昇穿がどんな時もつながる   // EX：発生は中と同じ6F・完全無敵
       // 迅閃脚：下段スライディング。飛び道具をくぐり、当たるとダウン。ガードされると大きく不利。間合いは弱＜中＜強
       rushk: { anim: 'sp_slide', type: 's', name: '迅閃脚', dmg: [800, 900, 1000], adv: ['kd', -10], hs: 12, push: [3, 6], lv: 'l', chip: 0.125,
                kd: 'sweep', projInv: 1, jlim: 0, dash: { vx: [4.6, 5.8, 7.0], vy: 0 }, meter: 40 },
@@ -68,13 +68,14 @@ KF.CHARS = {
       // 旋風脚：コンボの部品。最後の1発で浮かせ、昇穿や超必殺で追撃できる。弱＝その場で高く／中＝運ぶ／強＝画面端まで運ぶ
       tatsu: { anim: 'sp_tatsu', type: 's', name: '旋風脚', dmg: [300, 320, 340], hits: 3, rehit: 7, hs: 8, push: [1.2, 3], lv: 'm', chip: 0.125,
                dash: { vx: [2.0, 3.6, 5.2], vy: 0 }, kdLast: 'launch', lvy: [-9.0, -8.6, -8.2], lvx: [0.8, 1.6, 2.4], jset: 1, jlim: 1, cancel: 'u', meter: 40 },
-      atatsu: { anim: 'sp_atatsu', type: 's', name: '空旋脚', air: 1, dmg: 350, hits: 2, rehit: 7, hs: 8, push: [2, 3], lv: 'm', stun: [16, 12], stall: [2.4, 3.0, 3.6], jlim: 2 },
+      atatsu: { anim: 'sp_atatsu', type: 's', name: '空旋脚', air: 1, dmg: 350, hits: 2, rehit: 7, hs: 8, push: [2, 3], lv: 'm', stun: [16, 12], stall: [2.4, 3.0, 3.6], jlim: 2,
+               airSpike: { vy: 7, vx: 0.8 } },   // 浮いた相手に当てると、最後の1発で地面へ叩きつけて床でバウンド
       palm: { anim: 'sp_palm', type: 's', name: '虚掌破', dmg: [900, 1000, 1100], adv: [0, -8], hs: 13, push: [2, 7], lv: 'm', chip: 0.125,
               kd: 'launch', lvy: -6, lvx: 0.3, floatG: 0.25, jset: -1, jlim: 0, cancel: 'u', meter: 40,   // ふわっと浮かせる（波動などで拾いやすい）
               preDelay: 10 },   // 発生24F。のけぞりの長い強P系からだけつながり、弱・中からは出るがつながらない
       // EX虚掌破：発生7F。弱・中・強どの通常技からでもつながる
       palm_ex: { anim: 'ex_palm', type: 'x', name: 'EX虚掌破', dmg: 1000, adv: [0, -4], hs: 13, push: [2, 6], lv: 'm', chip: 0.125,
-              kd: 'launch', lvy: -10, lvx: 0.8, jset: 0, jlim: 0, cancel: 'u' },
+              kd: 'launch', lvy: -7, lvx: 0.6, jset: 0, jlim: 0, cancel: 'u', floatG: 0.22 },   // ふわっと浮かせて、ジャンプで追いかけて拾える
       su3: { anim: 'su_3', type: 'u', bars: 3, name: '天地穿', dmg: 600, hits: 7, rehit: 5, hs: 6, push: [0.3, 2], lv: 'm', chip: 0.25,
              inv: [[1, 44]], lock: 1, lockAir: 1, dashS: 7, jump: { vx: [0.8], vy: [-10] }, kdLast: 'launch', lvy: -12, lvx: 2.5, lastDmg: 1800, minScale: 0.7 },
       su1: { anim: 'su_1', type: 'u', bars: 1, name: '虚空砲', dmg: 620, hits: 5, rehit: 8, hs: 6, push: [1.5, 2], lv: 'm', chip: 0.25,
@@ -334,8 +335,8 @@ KF.MOVE_LIST = {
   kokuu: [
     ['特殊技 鎚打ち（中段）', '→ + 中P'], ['特殊技 踏破肘', '→ + 強P'], ['特殊技 旋踵（ガードさせて有利）', '← + 強K'],
     ['ターゲットコンボ 連破 / 双蹴', '中P ～ 強P ／ 中K ～ 強K'], ['強K（パニッシュカウンターで浮く）', '強K'],
-    ['虚環弾', '↓↘→ + P'], ['昇穿（対空・空中の攻撃に無敵／EXは完全無敵）', '→↓↘ + P（前→下→前 なら出る）'], ['旋風脚（浮かせて追撃）/ 空中で空旋脚', '↓↘→ + K'],
-    ['虚掌破（アッパー・発生24F。強P系からだけつながる／EXはどこからでも）', '↓↙← + P'], ['迅閃脚（下段スライディング）', '↓↙← + K'], ['EX必殺技', '各コマンド + ボタン2つ（必殺ゲージ0.5本）'],
+    ['虚環弾', '↓↘→ + P'], ['昇穿（対空・無敵。EXは当てたら着地後に昇穿で追撃できる）', '→↓↘ + P（前→下→前 なら出る）'], ['旋風脚 / 空中で空旋脚（空中Kからも出せる。浮いた相手は叩きつけて床バウンド）', '↓↘→ + K'],
+    ['虚掌破（強P系からつながる。EXは高く浮かせてジャンプで追撃）', '↓↙← + P'], ['迅閃脚（下段スライディング）', '↓↙← + K'], ['EX必殺技', '各コマンド + ボタン2つ（必殺ゲージ0.5本）'],
     ['超必殺 虚空砲 / 天地穿', '↓↘→↓↘→ + P（1本） / + K（3本）'], ['超必殺 零界継承', '↓↙←↓↙← + P（2本）'],
     ['投げ / ラッシュ', '弱P+弱K（つかまれたら弱P+弱Kで抜け） / RUSH（技のキャンセルは →→ でも）'],
   ],

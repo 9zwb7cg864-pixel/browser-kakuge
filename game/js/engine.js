@@ -383,7 +383,7 @@ var KF = window.KF || (window.KF = {});
       case 'launch':
         f.stepAnim();
         if (!f.air && f.bounce) {   // 床跳ね：もう一度浮く（追撃できる）
-          f.bounce = 0; f.bounceUsed = 1; f.air = true; f.y = C.GROUND - 2; f.vy = -8.2; f.vx *= 0.5; f.floatG = 0.45;
+          f.bounce = 0; f.bounceUsed = 1; f.air = true; f.y = C.GROUND - 2; f.vy = -8.2; f.vx *= 0.5; f.floatG = 0.45; f.juggle = 0;
           this.emit('sfx', { s: 'down' }); this.spawnFx('dust', f.x, C.GROUND, 1.3); this.shake = 6;
           return;
         }
@@ -825,6 +825,8 @@ var KF = window.KF || (window.KF = {});
     if (c.indexOf('u') >= 0 || c.indexOf('s') >= 0) {
       if (this.trySpecial(f, c.indexOf('s') >= 0 ? 's' : 'u')) return true;
     }
+    // 空中キック ＞ 空中必殺技（空旋脚）
+    if (f.air && c.indexOf('a') >= 0 && this.trySpecial(f, 'air')) return true;
     // ラッシュキャンセル：スト6と同じく、ゲージ（3本）があれば1コンボ中に何度でも（ゲージ6本なので最大2回）
     if (c.indexOf('r') >= 0 && f.pendingRush && f.rush >= C.RUSH_CANCEL_COST && !f.air) {
       this.startRush(f, C.RUSH_CANCEL_COST);
@@ -895,7 +897,7 @@ var KF = window.KF || (window.KF = {});
 
   Battle.prototype.endCombo = function (def) {
     if (def.combo > 0) this.emit('comboEnd', { side: def.opp.side, hits: def.combo, dmg: def.comboDmg });
-    def.combo = 0; def.comboDmg = 0; def.scale = 1; def.juggle = 0; def.bounceUsed = 0; def.wallUsed = 0; def.swapUsed = 0; def.bounce = 0; def.wallB = 0;
+    def.combo = 0; def.comboDmg = 0; def.scale = 1; def.juggle = 0; def.hangBy = null; def.bounceUsed = 0; def.wallUsed = 0; def.swapUsed = 0; def.bounce = 0; def.wallB = 0;
     def.opp.rushLock = false; def.opp.chain = 0; def.opp.chainUsed = {};
     // トレーニング：コンボが終わったらラッシュゲージを満タンに戻す
     if (this.training) { def.opp.rush = C.RUSH_MAX; def.opp.rushCD = 0; }
@@ -992,6 +994,10 @@ var KF = window.KF || (window.KF = {});
     }
     else if (f.air) {
       f.vy += (f.state === 'launch' ? (f.floatG || 0.5) : C.GRAVITY);   // ふわっと浮かせる技（アッパー）は落ちるのが遅い
+      // EX昇穿を当てた相手は、当てた側が空中にいるあいだはゆっくりしか落ちない（着地後の昇穿が届くように）
+      if (f.state === 'launch' && f.hangBy != null) {
+        if (f.opp.air && f.opp.state === 'attack') f.vy = Math.min(f.vy, 0.5); else f.hangBy = null;
+      }
       f.y += f.vy;
       if (f.y >= C.GROUND && f.vy > 0) {
         f.y = C.GROUND; f.air = false; f.vy = 0;
@@ -1280,6 +1286,8 @@ var KF = window.KF || (window.KF = {});
     if (def.hp <= 0) kd = 'launch';
     if (mv.lock && !lastHit) kd = null;
     if (mv.lockAir && !lastHit && att.air) kd = 'launch';
+    var spike = wasAir && mv.airSpike && lastHit;   // 叩きつけ（床でバウンドさせる）
+    if (spike) kd = 'bounce';
     if (kd || wasAir) {
       def.state = 'launch'; def.air = true; def.setAnim('launch'); def.t = 0;
       if (kd === 'sweep') { def.vy = -3.5; def.vx = -dirX * -1 * 0 + dirX * 1.0; def.y = Math.min(def.y, C.GROUND - 4); }
@@ -1287,9 +1295,11 @@ var KF = window.KF || (window.KF = {});
         var lvy = mv.pcLaunch && punish ? mv.pcLaunch[0] : pick(mv.lvy, str), lvx = mv.pcLaunch && punish ? mv.pcLaunch[1] : pick(mv.lvx, str);
         // 浮いた相手を、浮かせ技ではない技（ラッシュ弱Pなど）で拾ったときは、その場で少し浮かせ直すだけにする
         if (wasAir && !kd && lvy == null && !proj && mv.type !== 'u' && mv.type !== 'gu') { lvy = KF.PICK_VY || -5.5; lvx = 0.6; }
+        if (spike) { lvy = mv.airSpike.vy; lvx = mv.airSpike.vx; }
         def.vy = lvy || -6.5; def.vx = dirX * (lvx == null ? 2.6 : lvx); if (def.y >= C.GROUND) def.y = C.GROUND - 2;
       }
       def.floatG = mv.floatG || null;   // 浮かせ方（次に当たった技で上書き）
+      def.hangBy = null;
       def.bounce = kd === 'bounce' && !def.bounceUsed ? 1 : 0;   // 床で一度跳ねる
       def.wallB = kd === 'wall' && !def.wallUsed ? 1 : 0;        // 画面端で一度跳ね返る
       var jkey = proj ? proj.key : att.side + ':' + att.moveSerial;
@@ -1297,6 +1307,7 @@ var KF = window.KF || (window.KF = {});
       if (!wasAir) def.juggle = mv.jset != null ? pick(mv.jset, str) : (kd === 'sweep' || isSup ? 99 : 1);
       else if (def.jugBy !== jkey) def.juggle += mv.jinc != null ? mv.jinc : (isSup ? 99 : 1);
       def.jugBy = jkey;
+      if (mv.jugAfter != null) { def.juggle = mv.jugAfter; def.hangBy = att.side; }   // EX昇穿：当てたあと、通常の昇穿がもう1回入るように
       if (mv.lock && !lastHit) { def.vy = -2; def.vx = 0; def.pushV = 0; def.x = att.x + att.facing * 54; }
       if (mv.lockAir && !lastHit) { def.x = att.x + att.facing * 34; def.y = Math.min(C.GROUND - 2, att.y - 6); def.vy = Math.min(att.vy, -1); def.air = true; }
     } else {
