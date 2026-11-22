@@ -23,6 +23,8 @@ KF.Input = (function () {
   var touch = { x: 0, y: 0, held: {} };
   var listeners = [];
   window.addEventListener('keydown', function (e) {
+    // 合言葉などを文字入力しているあいだは、ゲームの操作として扱わない
+    var ae = document.activeElement; if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) return;
     if (!down[e.code]) listeners.forEach(function (f) { f(e.code); });
     down[e.code] = true; latch[e.code] = true;
     if (/^(Arrow|Space|Numpad|Tab)/.test(e.code)) e.preventDefault();

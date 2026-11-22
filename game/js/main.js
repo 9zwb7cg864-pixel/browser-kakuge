@@ -98,7 +98,7 @@ var KF = window.KF || (window.KF = {});
 
   // ------------------------------------------------------------ シーン
   var titleSel = 0;
-  var TITLE_ITEMS = ['CPU対戦', '2人対戦', 'トレーニング', '技表', '操作設定'];
+  var TITLE_ITEMS = ['CPU対戦', 'オンライン対戦', '2人対戦', 'トレーニング', '技表', '操作設定'];
   function sceneTitle(m) {
     bg(0.35);
     var c = R.ctx;
@@ -107,18 +107,19 @@ var KF = window.KF || (window.KF = {});
     c.fillStyle = 'rgba(0,0,10,0.45)'; c.fillRect(0, 40, 640, 86);
     R.text('大乱闘スマッシュ', 320, 64, 30, '#ffe14a', 'center', '#ff8a00');
     R.text('ストリート行動ファイト', 320, 104, 38, '#ffffff', 'center', '#00d8ff');
-    var rects = drawMenu(TITLE_ITEMS, 160, titleSel, 200);
+    var rects = drawMenu(TITLE_ITEMS, 134, titleSel, 200);
     if (m.up) { titleSel = (titleSel + TITLE_ITEMS.length - 1) % TITLE_ITEMS.length; KF.Audio.play('cursor'); }
     if (m.down) { titleSel = (titleSel + 1) % TITLE_ITEMS.length; KF.Audio.play('cursor'); }
     var ck = pickByClick(rects); if (ck >= 0) { titleSel = ck; m.ok = true; }
-    drawPadStatus(316);
+    drawPadStatus(323);
     R.text('キーボード：移動WASD 決定U 戻るJ ／ パッド：決定A 戻るB', 320, 346, 9, '#8890b0', 'center');
     if (m.ok) {
       KF.Audio.play('ok');
       if (titleSel === 0) { cfg.mode = 'cpu'; goSelect(); }
-      else if (titleSel === 1) { cfg.mode = 'vs'; goSelect(); }
-      else if (titleSel === 2) { cfg.mode = 'training'; goSelect(); }
-      else if (titleSel === 3) { scene = 'moves'; moveListFor = 'kokuu'; }
+      else if (titleSel === 1) { goOnline(); }
+      else if (titleSel === 2) { cfg.mode = 'vs'; goSelect(); }
+      else if (titleSel === 3) { cfg.mode = 'training'; goSelect(); }
+      else if (titleSel === 4) { scene = 'moves'; moveListFor = 'kokuu'; }
       else { scene = 'keys'; keyEdit = { p: 1, i: 0, wait: false }; }
     }
   }
@@ -242,6 +243,176 @@ var KF = window.KF || (window.KF = {});
     if (adv === 'ダウン') R.text('硬直差 ダウンを奪った（起き攻めできる）', 8, y0 + 36, 9, '#7fffb0', 'left');
     else if (adv != null) R.text('硬直差 ' + (adv > 0 ? '+' : '') + adv + 'F', 8, y0 + 36, 9, adv >= 0 ? '#7fffb0' : '#ff8080', 'left');
   }
+
+  // ------------------------------------------------------------ オンライン対戦
+  var net = null, rb = null;
+  var onl = { sel: 0, stage: 'menu', match: 0, want: [false, false], escT: 0, resSel: 0, left: false };
+  var ONLINE_ITEMS = ['部屋を作る', '部屋に入る（合言葉を入れる）', '戻る'];
+  var ui = null;
+  // 合言葉の入力欄・招待リンクのコピーボタン（文字入力はHTMLの部品で行う）
+  function netUI(mode) {
+    if (!ui) {
+      ui = document.createElement('div');
+      ui.style.cssText = 'position:fixed;left:50%;bottom:12%;transform:translateX(-50%);z-index:6;display:none;gap:8px;align-items:center;font-family:inherit';
+      ui.innerHTML = '<input id="netcode" maxlength="8" placeholder="合言葉" autocomplete="off" style="font:900 22px Noto Sans JP,sans-serif;width:150px;text-align:center;text-transform:uppercase;padding:6px;border-radius:8px;border:2px solid #38d6ff;background:#08081a;color:#fff">' +
+        '<button id="netgo" style="font:900 16px Noto Sans JP,sans-serif;padding:9px 16px;border-radius:8px;border:0;background:#38d6ff;color:#001">つなぐ</button>' +
+        '<button id="netcopy" style="font:900 15px Noto Sans JP,sans-serif;padding:9px 16px;border-radius:8px;border:0;background:#ffd23c;color:#201600">招待リンクをコピー</button>';
+      document.body.appendChild(ui);
+      var go = function () { var v = document.getElementById('netcode').value; if (v.trim()) { document.getElementById('netcode').blur(); onlineJoin(v); } };
+      document.getElementById('netgo').onclick = go;
+      document.getElementById('netcode').addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); if (e.key === 'Escape') { e.target.blur(); netUI(null); onl.stage = 'menu'; } e.stopPropagation(); });
+      document.getElementById('netcopy').onclick = function () {
+        var url = net.inviteURL(), b = document.getElementById('netcopy');
+        var done = function () { b.textContent = 'コピーしました'; setTimeout(function () { b.textContent = '招待リンクをコピー'; }, 1500); };
+        if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, function () { prompt('このリンクを相手に送ってください', url); });
+        else prompt('このリンクを相手に送ってください', url);
+      };
+    }
+    ui.style.display = mode ? 'flex' : 'none';
+    document.getElementById('netcode').style.display = mode === 'join' ? '' : 'none';
+    document.getElementById('netgo').style.display = mode === 'join' ? '' : 'none';
+    document.getElementById('netcopy').style.display = mode === 'host' ? '' : 'none';
+    if (mode === 'join') setTimeout(function () { document.getElementById('netcode').focus(); }, 50);
+  }
+  window.addEventListener('pagehide', function () { if (net) net.send({ t: 'bye' }); });
+  function goOnline() { scene = 'online'; onl.stage = 'menu'; onl.sel = 0; netUI(null); }
+  function newSession() {
+    if (net) net.close();
+    net = new KF.NetSession();
+    net.on(onNetMessage);
+    return net;
+  }
+  function onlineHost() { newSession().host(); onl.stage = 'host'; netUI('host'); }
+  function onlineJoin(code) { newSession().join(code); onl.stage = 'join'; netUI(null); }
+  function leaveOnline() {
+    if (net) { net.send({ t: 'bye' }); var n = net; setTimeout(function () { n.close(); }, 200); }
+    net = null; rb = null; netUI(null); scene = 'title'; KF.Touch && KF.Touch.show(false);
+  }
+  // 回線の速さに合わせて、入力を何フレーム遅らせるか決める（遅らせるほど巻き戻しが減る）
+  function delayFor(rtt) { return rtt == null ? 2 : rtt < 45 ? 1 : rtt < 110 ? 2 : rtt < 180 ? 3 : 4; }
+  function onNetMessage(m) {
+    if (m.t === '_status') {
+      if (net.status === 'closed' && (scene === 'onlineBattle' || scene === 'onlineResult')) onl.left = true;
+      return;
+    }
+    if (m.t === 'hello' && net.isHost && !rb) {
+      // 回線の速さを少し測ってから始める
+      setTimeout(function () { if (!net || rb) return; var d = delayFor(net.rtt); net.send({ t: 'start', g: 1, d: d }); startOnlineMatch(1, d); }, 1500);
+      return;
+    }
+    if (m.t === 'start') { startOnlineMatch(m.g, m.d); return; }
+    if ((m.t === 'in' || m.t === 'hash') && rb && m.g === onl.match) { rb.receive(m); return; }
+    if (m.t === 'rematch') { onl.want[1 - net.side] = true; checkRematch(); return; }
+    if (m.t === 'bye') { onl.left = true; return; }
+  }
+  function startOnlineMatch(g, d) {
+    onl.match = g; onl.want = [false, false]; onl.left = false; onl.escT = 0; onl.resSel = 0; onl.delay = d;
+    rb = new KF.Rollback({
+      side: net.side, delay: d,
+      makeBattle: function () { return new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta: KF.Assets.meta }); },
+      send: function (msg) { msg.g = g; net.send(msg); },
+      onEvent: handleEvent,
+    });
+    game = rb.battle; cfg.mode = 'online'; ai = null; paused = false;
+    R.ann = []; R.superBanner = null;
+    netUI(null); scene = 'onlineBattle';
+    KF.Touch && KF.Touch.show(isTouch);
+  }
+  function checkRematch() {
+    if (net && net.isHost && onl.want[0] && onl.want[1]) { var g = onl.match + 1, d = delayFor(net.rtt); net.send({ t: 'start', g: g, d: d }); startOnlineMatch(g, d); }
+  }
+  function sceneOnline(m) {
+    bg(0.6);
+    R.text('オンライン対戦', 320, 34, 22, '#ffffff', 'center', '#00d8ff');
+    if (onl.stage === 'menu') {
+      R.text('同じ合言葉の部屋に入った2人で対戦します', 320, 64, 11, '#c0c8e8', 'center');
+      var rects = drawMenu(ONLINE_ITEMS, 100, onl.sel, 300);
+      if (m.up) { onl.sel = (onl.sel + 2) % 3; KF.Audio.play('cursor'); }
+      if (m.down) { onl.sel = (onl.sel + 1) % 3; KF.Audio.play('cursor'); }
+      var ck = pickByClick(rects); if (ck >= 0) { onl.sel = ck; m.ok = true; }
+      if (m.back) { KF.Audio.play('back'); scene = 'title'; return; }
+      if (m.ok) {
+        KF.Audio.play('ok');
+        if (onl.sel === 0) onlineHost();
+        else if (onl.sel === 1) { onl.stage = 'code'; netUI('join'); }
+        else scene = 'title';
+      }
+      return;
+    }
+    if (onl.stage === 'code') {
+      R.text('相手から聞いた合言葉（5文字）を入れて「つなぐ」', 320, 120, 13, '#ffffff', 'center');
+      R.text('Esc：戻る', 320, 346, 9, '#8890b0', 'center');
+      if (m.back) { netUI(null); onl.stage = 'menu'; }
+      return;
+    }
+    // 部屋を作った・入ろうとしている
+    var st = net ? net.status : 'idle';
+    if (onl.stage === 'host' && net && net.code && st !== 'error') {
+      R.text('合言葉', 320, 86, 12, '#c0c8e8', 'center');
+      R.text(net.code, 320, 128, 44, '#ffffff', 'center', '#00d8ff');
+      R.text('この合言葉か、招待リンクを相手に送ってください', 320, 170, 11, '#c0c8e8', 'center');
+    }
+    var col = st === 'error' || st === 'closed' ? '#ff8080' : '#7fffb0';
+    R.text((net && net.msg) || '', 320, 206, 13, col, 'center');
+    if (st === 'connected') R.text('まもなく対戦が始まります…', 320, 228, 11, '#ffffff', 'center');
+    R.text('弱K / Esc：やめる', 320, 346, 9, '#8890b0', 'center');
+    if (m.back) { KF.Audio.play('back'); if (net) net.close(); net = null; netUI(null); onl.stage = 'menu'; }
+  }
+  function sceneOnlineBattle() {
+    var s = sources[0].sample();
+    // Escを1.5秒以内に2回押したら対戦をやめる
+    if (KF.Input.isDown('Escape') && !menuPrev.escO) { if (onl.escT > 0) { leaveOnline(); return; } onl.escT = 90; }
+    menuPrev.escO = KF.Input.isDown('Escape');
+    if (onl.escT > 0) onl.escT--;
+    if (!onl.left) { rb.tick(s); game = rb.battle; }
+    // 相手から6秒なにも届かなければ、切れたとみなす
+    if (!onl.left && rb.lastRecvAt && performance.now() - rb.lastRecvAt > 6000) onl.left = true;
+    R.render(game);
+    var c = R.ctx, me = net ? net.side : 0;
+    // 自分の側の表示
+    R.text('あなた', me === 0 ? 24 : 616, 66, 10, '#ffe14a', me === 0 ? 'left' : 'right', '#ff8a00');
+    var pr = net && net.rtt != null ? Math.round(net.rtt) + 'ms' : '--';
+    R.text('ping ' + pr + '  入力遅延 ' + onl.delay + 'F' + (rb.maxRolled ? '  巻き戻し最大 ' + rb.maxRolled + 'F' : ''), 320, 356, 8, '#8890b0', 'center');
+    if (onl.escT > 0) R.text('もう一度 Esc で対戦をやめます', 320, 160, 12, '#ffffff', 'center', '#ff3fe6');
+    if (rb.desync) R.text('同期ずれが起きました（' + rb.desync.f + 'F）', 320, 92, 10, '#ff8080', 'center');
+    if (onl.left) {
+      c.fillStyle = 'rgba(0,0,10,0.7)'; c.fillRect(0, 140, 640, 60);
+      R.text('相手との接続が切れました', 320, 162, 16, '#ff8080', 'center');
+      R.text('弱K / Esc：タイトルへ', 320, 186, 10, '#ffffff', 'center');
+      if (s.pressed.lk || KF.Input.isDown('Escape') || clickPos) leaveOnline();
+      return;
+    }
+    if (game.phase === 'over') { scene = 'onlineResult'; frameT = 0; KF.Touch && KF.Touch.show(false); }
+  }
+  function sceneOnlineResult(m) {
+    bg(0.5);
+    var w = game.matchOver ? game.matchOver.winner : -1, me = net ? net.side : 0;
+    if (w === -1) R.text('DRAW', 320, 70, 40, '#ffffff', 'center', '#7a5cff');
+    else {
+      drawFighterBig('kokuu', 'win', 200, 320, 1.35, 1, frameT, game.p[w].alt);
+      R.text(w === me ? 'YOU WIN' : 'YOU LOSE', 430, 70, 34, '#ffffff', 'center', game.p[w].color || KF.CHARS.kokuu.color);
+      R.text('ラウンド ' + game.wins[me] + ' - ' + game.wins[1 - me], 430, 110, 12, '#c0c8e8', 'center');
+    }
+    var c = R.ctx, items = ['もう一戦', 'やめる'];
+    var rects = items.map(function (it, i) {
+      var y = 170 + i * 30, x = 330, on = i === onl.resSel;
+      c.fillStyle = on ? 'rgba(0,220,255,0.18)' : 'rgba(10,10,30,0.6)'; c.fillRect(x, y, 200, 24);
+      c.strokeStyle = on ? '#38d6ff' : '#3a3a6a'; c.strokeRect(x + 0.5, y + 0.5, 199, 23);
+      R.text(it, x + 100, y + 12, 13, on ? '#fff' : '#a0a8c8', 'center');
+      return [x, y, 200, 24];
+    });
+    if (onl.left) R.text('相手は退出しました', 430, 246, 11, '#ff8080', 'center');
+    else if (onl.want[me]) R.text(onl.want[1 - me] ? 'まもなく始まります…' : '相手の返事を待っています…', 430, 246, 11, '#7fffb0', 'center');
+    else if (onl.want[1 - me]) R.text('相手は「もう一戦」を選びました', 430, 246, 11, '#ffe14a', 'center');
+    if (m.up || m.down) onl.resSel = 1 - onl.resSel;
+    var ck = pickByClick(rects); if (ck >= 0) { onl.resSel = ck; m.ok = true; }
+    if (m.ok) {
+      KF.Audio.play('ok');
+      if (onl.resSel === 0 && !onl.left) { onl.want[me] = true; net.send({ t: 'rematch' }); checkRematch(); }
+      else leaveOnline();
+    }
+  }
+
   var PAUSE_BASE = ['再開', '技表', '当たり判定 表示切替', 'やり直す', 'タイトルへ'];
   var PAUSE_TR = ['位置リセット：中央', '位置リセット：相手を画面端へ', '位置リセット：自分が画面端'];
   var PAUSE_ITEMS = PAUSE_BASE;
@@ -408,6 +579,7 @@ var KF = window.KF || (window.KF = {});
     frameT++;
     if (scene === 'load') return;
     if (scene === 'battle') { sceneBattle(); clickPos = null; }
+    else if (scene === 'onlineBattle') { sceneOnlineBattle(); clickPos = null; }
     else {
       var m = menuInput();
       if (scene === 'title') sceneTitle(m);
@@ -416,6 +588,8 @@ var KF = window.KF || (window.KF = {});
       else if (scene === 'result') sceneResult(m);
       else if (scene === 'moves') sceneMoves(m);
       else if (scene === 'keys') sceneKeys(m);
+      else if (scene === 'online') sceneOnline(m);
+      else if (scene === 'onlineResult') sceneOnlineResult(m);
       clickPos = null;
     }
     if (KF.padNotice && KF.padNotice.t > 0) { KF.padNotice.t--; R.ctx.fillStyle = 'rgba(0,0,10,0.7)'; R.ctx.fillRect(170, 326, 300, 20); R.text(KF.padNotice.text, 320, 336, 9, '#7fffb0', 'center'); }
@@ -430,7 +604,7 @@ var KF = window.KF || (window.KF = {});
   // 硬直差の計測（トレーニング表示用）
   setInterval(function () { }, 1000);
 
-  KF.Game = { get battle() { return game; }, get scene() { return scene; }, cfg: cfg, start: startBattle, setScene: function (s) { scene = s; } };
+  KF.Game = { get battle() { return game; }, get scene() { return scene; }, get net() { return net; }, get rb() { return rb; }, cfg: cfg, start: startBattle, setScene: function (s) { scene = s; } };
 
   R = new KF.Renderer(cv);
   var bar = document.getElementById('loadbar');
@@ -445,6 +619,8 @@ var KF = window.KF || (window.KF = {});
       startBattle();
     }
     if (/fps/.test(q)) showFps = true;
+    var rm = q.match(/room=([A-Za-z0-9]+)/);   // 招待リンクから開いたら、その部屋に入る
+    if (rm) { goOnline(); onlineJoin(rm[1]); }
   }).catch(function (e) {
     var ld = document.getElementById('loading'); if (ld) ld.textContent = '読み込みエラー：' + e.message;
   });
