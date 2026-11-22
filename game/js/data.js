@@ -120,17 +120,17 @@ KF.CHARS = {
       change_in: { anim: 'change_in', freeCancel: 1 },
       // 地割れ：地面を走る衝撃波（下段）。空中の相手に当たると浮かせ直す
       quake: { anim: 'sp_quake', type: 's', name: '地割れ', dmg: [700, 800, 900], adv: [2, -6], hs: 11, push: [6, 6], lv: 'l', chip: 0.125,
-               proj: { fx: 'shock_h', spd: [4.2, 5.6, 7.0], life: 120, hits: 1, r: 16, ground: 1 }, meter: 40, cancel: 'u', lvy: -4.5, lvx: 1.0, floatG: 0.4 },
+               proj: { fx: 'shock_h', spd: [4.2, 5.6, 7.0], life: 120, hits: 1, r: 16, ground: 1 }, meter: 40, cancel: 'u', lvy: -4.5, lvx: 1.0, floatG: 0.4, jlim: 2, jinc: 1 },
       quake_ex: { anim: 'sp_quake', type: 'x', name: 'EX地割れ', dmg: 500, adv: [6, 0], hs: 11, push: [6, 6], lv: 'l', chip: 0.125,
-               proj: { fx: 'shock_h', spd: [7.0], life: 120, hits: 2, r: 20, rehit: 7, ground: 1 }, cancel: 'u', kdLast: 'launch', lvy: -8, lvx: 1.2 },
+               proj: { fx: 'shock_h', spd: [7.0], life: 120, hits: 2, r: 20, rehit: 7, ground: 1 }, cancel: 'u', kdLast: 'launch', lvy: -8, lvx: 1.2, jlim: 3, jinc: 1 },
       // かち上げ：対空（空中の攻撃に無敵）。根本で当てるとSA3でキャンセルできる
       upper: { anim: 'sp_upper', type: 's', name: 'かち上げ', dmg: [1100, 1250, 1400], adv: ['kd', [-28, -32, -36]], hs: 13, push: [2, 4], lv: 'm', chip: 0.125, kd: 'launch',
-               jlim: 2, jinc: 3, cancel: 'u', preDelay: [2, 3, 4], aaInv: [[1, 12], [1, 9], [1, 8]], jump: { vx: [1.0, 1.4, 1.8], vy: [-7, -8, -9] }, lvy: -9.5, lvx: 2.2, meter: 40 },
+               jlim: 3, jinc: 3, cancel: 'u', preDelay: [2, 3, 4], aaInv: [[1, 12], [1, 9], [1, 8]], jump: { vx: [1.0, 1.4, 1.8], vy: [-7, -8, -9] }, lvy: -9.5, lvx: 2.2, meter: 40 },
       upper_ex: { anim: 'sp_upper', type: 'x', name: 'EXかち上げ', dmg: 750, adv: ['kd', -32], hs: 13, push: [2, 4], lv: 'm', chip: 0.125, kd: 'launch', hits: 2, rehit: 6,
                jlim: 3, jinc: 3, cancel: 'u', preDelay: 3, inv: [[1, 10]], jump: { vx: [1.6], vy: [-9.5] }, lvy: -10, lvx: 2.2, jg: 1 },
       // 大回転：アーマー（1回）で受けながら2段。最後の1発で画面端へ吹き飛ばして壁で跳ね返す
       spin: { anim: 'sp_spin', type: 's', name: '大回転', preDelay: 2, dmg: [380, 420, 460], hits: 3, rehit: 8, hs: 11, push: [2, 7], lv: 'm', chip: 0.125, adv: ['kd', -8],
-              armor: [[4, 22]], dash: { vx: [4.4, 5.4, 6.4], vy: 0 }, kdLast: 'wall', lvy: [-5, -5.5, -6], lvx: [6, 7, 8], jset: 1, jlim: 1, cancel: 'u', meter: 40 },
+              armor: [[4, 22]], dash: { vx: [4.4, 5.4, 6.4], vy: 0 }, kdLast: 'wall', lvy: [-5, -5.5, -6], lvx: [6, 7, 8], jset: 1, jlim: 2, cancel: 'u', meter: 40 },
       spin_ex: { anim: 'sp_spin', type: 'x', name: 'EX大回転', dmg: 340, hits: 4, rehit: 6, hs: 11, push: [2, 7], lv: 'm', chip: 0.125, adv: ['kd', -6],
               armor: [[4, 26]], armorHits: 2, dash: { vx: [7.2], vy: 0 }, kdLast: 'wall', lvy: -6, lvx: 8, jset: 0, jlim: 2, cancel: 'u' },
       // 飛び叩き：飛び上がって上から叩く（中段）。当たると床で跳ねる
@@ -196,7 +196,7 @@ KF.CHARS = {
                 projInv: 1, dash: { vx: [8.0], vy: 0 }, kdLast: 'wall', lvy: -6, lvx: 8, jset: 0, jlim: 2, cancel: 'u' },
       // 跳ね上げ：盾ごと飛び上がる対空（空中の攻撃に無敵）
       lift: { anim: 'sp_lift', type: 's', name: '跳ね上げ', dmg: [1000, 1150, 1300], adv: ['kd', [-28, -32, -36]], hs: 12, push: [2, 4], lv: 'm', chip: 0.125, kd: 'launch',
-              jlim: 2, jinc: 3, cancel: 'u', preDelay: [2, 3, 4], aaInv: [[1, 12], [1, 9], [1, 8]], jump: { vx: [1.2, 1.6, 2.0], vy: [-8, -9, -10] }, lvy: -9, lvx: 2.4, meter: 40 },
+              jlim: 3, jinc: 3, cancel: 'u', preDelay: [2, 3, 4], aaInv: [[1, 12], [1, 9], [1, 8]], jump: { vx: [1.2, 1.6, 2.0], vy: [-8, -9, -10] }, lvy: -9, lvx: 2.4, meter: 40 },
       lift_ex: { anim: 'sp_lift', type: 'x', name: 'EX跳ね上げ', dmg: 700, adv: ['kd', -32], hs: 12, push: [2, 4], lv: 'm', chip: 0.125, kd: 'launch', hits: 2, rehit: 6,
               jlim: 3, jinc: 3, cancel: 'u', preDelay: 3, inv: [[1, 10]], jump: { vx: [1.6], vy: [-10.5] }, lvy: -10, lvx: 2.4, jg: 1 },
       // 反射：飛び道具を跳ね返す。近くの相手にも当たる
@@ -204,9 +204,9 @@ KF.CHARS = {
       reflect_ex: { anim: 'sp_reflect', type: 'x', name: 'EX反射', dmg: 800, adv: [4, 0], hs: 12, push: [6, 7], lv: 'm', chip: 0.125, reflect: 1, kd: 'launch', lvy: -7, lvx: 2, jset: 0, jlim: 0, cancel: 'u' },
       // 光盾投げ：光の盾を投げる飛び道具（ゆっくり・強いほど速い）。当たったらラッシュでキャンセルできる
       disc: { anim: 'sp_disc', type: 's', name: '光盾投げ', dmg: 650, adv: [1, -5], hs: 11, push: [6, 6], lv: 'm', chip: 0.125,
-              proj: { fx: 'disc_s', spd: [3.4, 4.4, 5.4], life: 150, hits: 1, r: 18 }, meter: 40, cancel: 'ur', lvy: -3.5, lvx: 0.6, floatG: 0.35 },
+              proj: { fx: 'disc_s', spd: [3.4, 4.4, 5.4], life: 150, hits: 1, r: 18 }, meter: 40, cancel: 'ur', lvy: -3.5, lvx: 0.6, floatG: 0.35, jlim: 2, jinc: 1 },
       disc_ex: { anim: 'sp_disc', type: 'x', name: 'EX光盾投げ', dmg: 450, adv: [5, 0], hs: 11, push: [6, 6], lv: 'm', chip: 0.125,
-              proj: { fx: 'disc_s', spd: [6.0], life: 150, hits: 2, r: 22, rehit: 8 }, cancel: 'ur', kdLast: 'launch', lvy: -7, lvx: 1.4 },
+              proj: { fx: 'disc_s', spd: [6.0], life: 150, hits: 2, r: 22, rehit: 8 }, cancel: 'ur', kdLast: 'launch', lvy: -7, lvx: 1.4, jlim: 3, jinc: 1 },
       // 盾落下：空中から真下気味に盾ごと落ちて押しつぶす（中段）
       sdrop: { anim: 'sp_sdrop', type: 's', name: '盾落下', air: 1, dmg: [800, 900, 1000], stun: [20, 16], hs: 13, push: [3, 6], lv: 'o', chip: 0.125,
                dive: { vx: 1.6, vy: 9.0 }, meter: 40 },
@@ -341,7 +341,7 @@ KF.MOVE_LIST = {
   ],
   gai_h: [
     ['【ハンマー形態】遅いが一発が重い。強Pは発生前に攻撃を1回受け止める（アーマー）', ''],
-    ['変身（大盾形態へ。当てた技から出すとのけぞりが延びる）', '↓↓ + P'],
+    ['変身（大盾形態へ。当てた必殺技からも出せる＝変身キャンセル・1コンボ1回）', '↓↓ + P'],
     ['特殊技 地響き（中段・床跳ね） / 槌突き（ガードされても有利）', '→ + 強P ／ ← + 強P'],
     ['特殊技 すくい打ち（下段・踏み込む）', '→ + 中K'],
     ['ターゲットコンボ / 回し打ち（浮かせる）', '中P ～ 強P ／ 中K ～ 強K'],
@@ -354,7 +354,7 @@ KF.MOVE_LIST = {
   ],
   gai_s: [
     ['【大盾形態】守りから返す。押し込みが強い', ''],
-    ['変身（ハンマー形態へ。当てた技から出すとのけぞりが延びる）', '↓↓ + P'],
+    ['変身（ハンマー形態へ。当てた必殺技からも出せる＝変身キャンセル・1コンボ1回）', '↓↓ + P'],
     ['特殊技 盾落とし（中段） / 盾押し（大きく押し出す・有利）', '→ + 強P ／ ← + 強P'],
     ['特殊技 盾すべり（下段・ダウン）', '→ + 中K'],
     ['ターゲットコンボ / 盾連打', '中P ～ 強P ／ 中K ～ 強K'], ['しゃがみ強P（対空・空中の攻撃に無敵）', '↓ + 強P'],
@@ -399,6 +399,9 @@ KF.COMBOS = {
     {name: "槌突きから",text: "←強P（槌突き） ＞ 地割れ",steps: [{d: 4,b: "hp"},{m: [2,3,6],b: "hp"}]},
     {name: "すくい打ち（下段）から",text: "→中K（すくい打ち・下段） ＞ 地割れ",gap: 100,steps: [{d: 6,b: "mk"},{m: [2,3,6],b: "hp"}]},
     {name: "回し打ちから変身",text: "中K ～ 強K ＞ 変身 ＞ 跳ね上げ",steps: [{b: "mk"},{b: "hk"},{m: [5,2,2,5,5,2],b: "lp"},{m: [6,2,3],b: "hp",noHit: 1,wait: 8}]},
+    {name: "変身キャンセル 長いコンボ",text: "強P ＞ 地割れ ＞ 変身 ＞ 光盾投げ ＞ RUSH ～ 強P ＞ 跳ね上げ",steps: [{b: "hp"},{m: [2,3,6],b: "hp"},{m: [5,2,2,5,5,2],b: "lp"},{m: [2,1,4],b: "hp",noHit: 1,wait: 4},{b: "rush"},{b: "hp",wait: 8,noHit: 1},{m: [6,2,3],b: "hp"}]},
+    {name: "変身キャンセル 地上",text: "中P ～ 強P ＞ 地割れ ＞ 変身 ＞ 盾突進",steps: [{b: "mp"},{b: "hp"},{m: [2,3,6],b: "hp"},{m: [5,2,2,5,5,2],b: "lp"},{m: [2,3,6],b: "hp",noHit: 1,wait: 4}]},
+    {name: "床跳ねから変身",text: "地響き（床跳ね），強K ＞ 大回転 ＞ 変身 ＞ 跳ね上げ",steps: [{d: 6,b: "hp"},{b: "hk",link: 1},{m: [2,1,4],b: "lp"},{m: [5,2,2,5,5,2],b: "lp"},{m: [6,2,3],b: "hp",noHit: 1,wait: 4}]},
   ],
   // 変身キャラ男（大盾形態から始める）
   gai_s: [
@@ -422,6 +425,9 @@ KF.COMBOS = {
     {name: "盾押しから",text: "←強P（盾押し） ＞ 光盾投げ",steps: [{d: 4,b: "hp"},{m: [2,1,4],b: "hp"}]},
     {name: "光盾投げからラッシュ",text: "しゃがみ中P ＞ 光盾投げ ＞ RUSH ～ 強P ＞ 盾突進",steps: [{d: 2,b: "mp"},{m: [2,1,4],b: "lp"},{b: "rush"},{b: "hp",wait: 8,noHit: 1},{m: [2,3,6],b: "hp"}]},
     {name: "下段から光盾投げ",text: "しゃがみ中K ＞ 光盾投げ",steps: [{d: 2,b: "mk"},{m: [2,1,4],b: "hp"}]},
+    {name: "変身キャンセル 突進から",text: "強P ＞ 盾突進 ＞ 変身 ＞ 大回転",steps: [{b: "hp"},{m: [2,3,6],b: "hp"},{m: [5,2,2,5,5,2],b: "lp"},{m: [2,1,4],b: "hp",noHit: 1,wait: 4}]},
+    {name: "変身キャンセル 飛び道具から",text: "しゃがみ中P ＞ 光盾投げ ＞ 変身 ＞ 大回転",steps: [{d: 2,b: "mp"},{m: [2,1,4],b: "hp"},{m: [5,2,2,5,5,2],b: "lp"},{m: [2,1,4],b: "hp",noHit: 1,wait: 4}]},
+    {name: "変身キャンセルから超必殺",text: "中K ～ 強K ＞ 盾突進 ＞ 変身 ＞ かち上げ ＞ 天崩",sup: 3000,steps: [{b: "mk"},{b: "hk"},{m: [2,3,6],b: "hp"},{m: [5,2,2,5,5,2],b: "lp"},{m: [6,2,3],b: "hp",noHit: 1,wait: 4},{m: [2,3,6,2,3,6],b: "hk"}]},
   ],
   kokuu: [
     // ---- 基本

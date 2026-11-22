@@ -72,7 +72,7 @@ KF.AI.prototype.update = function () {
     }
     c.done = true;
   }
-  if (this.plan && m.state === 'attack' && m.connected && m.moveId !== this.planLast) {
+  if (this.plan && m.state === 'attack' && (m.connected || m.projHit) && m.moveId !== this.planLast) {
     this.planLast = m.moveId;
     var stg = this.plan.shift();
     if (stg && (o.state === 'hitstun' || o.state === 'launch' || (o.state === 'blockstun' && this.plan.length > 0 && stg.blockOk))) {
@@ -348,6 +348,13 @@ KF.AI.prototype.decideGai = function (s, dist) {
   if (L.combo >= 2) {
     if (H && dist < 90 && r < 0.18) { this.changeForm(); return; }          // 近い：大盾へ
     if (!H && dist > 190 && r < 0.3) { this.changeForm(); return; }         // 遠い：ハンマーへ
+    // 変身キャンセルのコンボ：中P～強P ＞ 必殺技 ＞ 変身 ＞ もう一方の形態の必殺技
+    if (dist < 110 && L.combo >= 3 && r > 0.8) {
+      this.push(5, 'mp', 2);
+      this.plan = [[{ d: 5, b: 'hp', n: 2 }], H ? this.mot([2, 3, 6], 'hp') : this.mot([2, 3, 6], 'hp'), this.mot([5, 2, 2, 5, 5, 2], 'lp').concat([{ d: 5, b: '', n: 18 }], H ? this.mot([2, 1, 4], 'hp') : this.mot([2, 1, 4], 'hp'))];   // ハンマー：地割れ＞変身＞光盾投げ／大盾：盾突進＞変身＞大回転
+      this.plan[0].blockOk = true; this.planLast = null;
+      return;
+    }
     // 形態をまたぐコンボ：中P ＞ 変身 ＞ 必殺技（変身キャンセルで相手ののけぞりが延びる）
     if (dist < 110 && L.combo >= 3 && r > 0.85) {
       this.starter('mp', [[2, 2, 5, 5, 2], 'lp'], false, true);

@@ -39,5 +39,19 @@ for (const kind of ['gai_h', 'gai_s']) {
   const r = run(kind, [I(4, 'hp')], 85, true);
   ok(r.blk.includes('b_hp'), `${KF.CHARS[kind].form}：←＋強P はガードされる（相手がガード）`);
 }
+
+// 変身キャンセル：必殺技が当たったら変身でキャンセルでき、1コンボに1回だけ
+{
+  const CH = [I(5), I(2), I(2), I(5), I(5), I(2, 'lp')];
+  const b = new KF.Battle({ p1: 'gai_h', p2: 'kokuu', meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]);
+  b.p[0].x = 470; b.p[1].x = 530;
+  const plan = [[0, [I(5, 'hp')]], [14, [I(2), I(3), I(6, 'hp')]], [24, CH], [52, [I(2), I(3), I(6, 'hp')]], [62, CH]];
+  let f = 0, kinds = [];
+  for (const [at, xs] of plan) { while (f < at) { b.step([N(), N()]); f++; kinds.push(b.p[0].kind); } for (const x of xs) { b.step([x, N()]); f++; kinds.push(b.p[0].kind); } }
+  for (let i = 0; i < 60; i++) { b.step([N(), N()]); kinds.push(b.p[0].kind); }
+  const swaps = kinds.filter((k, i) => i && k !== kinds[i - 1]).length;
+  const ann = b.events.filter(e => e.type === 'announce' && e.text === '変身キャンセル').length;
+  ok(swaps === 1 && ann === 1, `強P ＞ 地割れ ＞ 変身キャンセル（1回目は出る）／ 盾突進 ＞ もう一度変身 は出ない（変身 ${swaps}回）`);
+}
 console.log(`\n結果: ${pass} 件成功 / ${fail} 件失敗`);
 process.exit(fail ? 1 : 0);

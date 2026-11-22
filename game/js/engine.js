@@ -532,12 +532,12 @@ var KF = window.KF || (window.KF = {});
     gai_h: {
       l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'change' }, { sp: 'charge', str: 0 }, { su: 'su2' }],
       m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'change' }, { sp: 'lift', str: 2 }, { su: 'su3' }],
-      h: [{ b: 'hp' }, { sp: 'quake', str: 2 }, { b: 'rush' }, { b: 'hp' }, { sp: 'upper', str: 2 }, { su: 'su3' }],
+      h: [{ b: 'hp' }, { sp: 'quake', str: 2 }, { sp: 'change' }, { sp: 'disc', str: 2 }, { b: 'rush' }, { b: 'hp' }, { sp: 'lift', str: 2 }, { su: 'su3' }],   // 変身キャンセルを使う
     },
     gai_s: {
       l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'change' }, { sp: 'quake', str: 0 }, { su: 'su1' }],
       m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'change' }, { sp: 'spin', str: 0 }, { su: 'su1' }],
-      h: [{ b: 'hp' }, { sp: 'change' }, { sp: 'quake', str: 2 }, { b: 'rush' }, { b: 'hp' }, { sp: 'upper', str: 2 }, { su: 'su3' }],
+      h: [{ b: 'hp' }, { sp: 'charge', str: 2 }, { sp: 'change' }, { sp: 'spin', str: 2 }, { su: 'su1' }],   // 変身キャンセルを使う
     },
   };
   //  SPの方向ごとの技（なし・前・下・後ろ・空中）。変身キャラ男は ↓↓+SP で変身
@@ -619,11 +619,12 @@ var KF = window.KF || (window.KF = {});
     return out;
   };
 
-  Battle.prototype.trySpecial = function (f, cancelLevel) {
+  Battle.prototype.trySpecial = function (f, cancelLevel, only) {
     var cmds = KF.COMMANDS[f.kind];
     var P = ['lp', 'mp', 'hp'], K = ['lk', 'mk', 'hk'];
     for (var i = 0; i < cmds.length; i++) {
       var c = cmds[i], set = c.btn === 'P' ? P : K;
+      if (only && c.move !== only) continue;
       var pressed = null, nPressed = 0;
       var pw = cancelLevel ? Math.min(12, Math.max(3, this.frameNo - (f.moveStartF || 0))) : 5;
       if (f.move && f.move.freeCancel) pw = 18;   // 変身中に入れておいた必殺技は、変身し終わった瞬間に出る
@@ -672,6 +673,7 @@ var KF = window.KF || (window.KF = {});
       var wasConn = f.state === 'attack' && f.connected && f.opp.state === 'hitstun';
       this.startMove(f, id, str);
       if (mv.swap && wasConn && mv.swapExt) f.opp.stun += mv.swapExt;
+      if (mv.swap && f.opp.state === 'launch' && f.opp.air) { f.opp.vy = Math.min(f.opp.vy, -4.2); f.opp.floatG = 0.32; f.opp.vx *= 0.4; }   // 空中の相手は浮かせ直して拾えるように
       if (slowAdd) f.preD += slowAdd;   // 竜巻P：強P以外からのキャンセルは出るのが遅れる
       // レバー入力の記録は消さない（スト6と同じ。昇竜の入力の後ろ半分をSAの入力に使い回せる＝複合入力）
       f.pendingBtn = null;
@@ -786,6 +788,11 @@ var KF = window.KF || (window.KF = {});
       this.startRush(f, C.RUSH_CANCEL_COST); f.rushLock = true; f.pendingRush = 0;
       this.emit('rushcancel', { side: f.side }); return;
     }
+    // 変身キャンセル：必殺技が当たったら（飛び道具は当たってから）、↓↓Pで変身してもう一方の形態の必殺技につなげられる（1コンボ1回）
+    if ((mv.type === 's' || mv.type === 'x') && !mv.swap && !mv.freeCancel && f.D.moves.change && !f.opp.swapUsed && !f.air &&
+        ((f.connected && t <= a.lastActive + 18) || (mv.proj && f.projHit)) && /hitstun|launch/.test(f.opp.state)) {
+      if (this.trySpecial(f, 's', 'change')) { f.opp.swapUsed = 1; this.emit('swapcancel', { side: f.side }); this.emit('announce', { text: '変身キャンセル', small: 1, side: f.side }); return; }
+    }
     // 昇竜SA：昇穿などは、当たってから飛び上がる前（ヒットストップ中）だけ超必殺でキャンセルできる
     if (f.connected && (mv.cancel || mv.tc) && t <= a.lastActive + (mv.saGround ? 14 : 10) && !(mv.saGround && mv.rootF && !f.rootHit)) {
       if (this.tryCancel(f, cur, dir)) return;
@@ -888,7 +895,7 @@ var KF = window.KF || (window.KF = {});
 
   Battle.prototype.endCombo = function (def) {
     if (def.combo > 0) this.emit('comboEnd', { side: def.opp.side, hits: def.combo, dmg: def.comboDmg });
-    def.combo = 0; def.comboDmg = 0; def.scale = 1; def.juggle = 0; def.bounceUsed = 0; def.wallUsed = 0; def.bounce = 0; def.wallB = 0;
+    def.combo = 0; def.comboDmg = 0; def.scale = 1; def.juggle = 0; def.bounceUsed = 0; def.wallUsed = 0; def.swapUsed = 0; def.bounce = 0; def.wallB = 0;
     def.opp.rushLock = false; def.opp.chain = 0; def.opp.chainUsed = {};
     // トレーニング：コンボが終わったらラッシュゲージを満タンに戻す
     if (this.training) { def.opp.rush = C.RUSH_MAX; def.opp.rushCD = 0; }
