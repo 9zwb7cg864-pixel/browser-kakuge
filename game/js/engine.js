@@ -73,6 +73,8 @@ var KF = window.KF || (window.KF = {});
           f.hit.forEach(function (b) {
             if (fix) { var x1 = Math.max(b[0] + b[2], fix.x1 || 0), y1 = Math.max(b[1] + b[3], fix.y1 || -999); b[0] = Math.min(b[0], fix.x0 != null ? fix.x0 : b[0]); b[2] = x1 - b[0]; b[3] = y1 - b[1]; }
             if (b[0] > 6) { b[2] += b[0] - 6; b[0] = 6; }
+            // 全キャラ共通：打撃の攻撃判定を前へ伸ばす（リーチを長めに）。前に向かって出る判定だけ
+            if (b[0] + b[2] > 24) b[2] += (KF.REACH_ADD != null ? KF.REACH_ADD : 14);
           });
         }
       });
@@ -516,6 +518,9 @@ var KF = window.KF || (window.KF = {});
   //   SP＋強：方向なし・前＝虚空砲(Lv1) / 後ろ＝零界継承(Lv2) / 下＝天地穿(Lv3)
   //   アシスト＋SP＝EX技（EXゲージ1本） / アシストを押しながら弱・中・強を連打＝アシストコンボ
   //   弱＋中＝投げ。SPで出した必殺技・超必殺はダメージが8割（スト6と同じ）
+  // 必殺ゲージのたまり方（与えたダメージに対する割合）。[攻めた側, 受けた側]
+  //  以前は 当てる0.5／食らう0.3／ガード0.18・0.12 で、1ラウンドに2回以上超必殺が出ていた
+  KF.SUPER_GAIN = { hit: [0.12, 0.08], block: [0.05, 0.03] };
   //  アシストコンボ：アシストを押しながら同じボタンを連打すると、この順に技が出る
   //  （前の技が出るまでは次へ進まないので、早く連打しすぎても途切れない。変身キャラ男は途中で変身する）
   KF.MODERN_AUTO = {
@@ -796,7 +801,7 @@ var KF = window.KF || (window.KF = {});
       if (mv.crouch && dir <= 3) { f.state = 'crouch'; f.setAnim('crouch'); }
       else { f.state = 'idle'; f.setAnim('idle'); }
       f.vx = 0;
-      if (!f.connected && (mv.type === 's') && mv.meter) { f.sup = Math.min(C.SUPER_MAX, f.sup + mv.meter * 0.5); f.ex = Math.min(C.EX_MAX, f.ex + mv.meter * 0.8); }
+      if (!f.connected && (mv.type === 's') && mv.meter) { f.sup = Math.min(C.SUPER_MAX, f.sup + mv.meter * 0.1); f.ex = Math.min(C.EX_MAX, f.ex + mv.meter * 0.8); }
     }
   };
 
@@ -1206,7 +1211,7 @@ var KF = window.KF || (window.KF = {});
         def.whiteT = 2; def.flash = 8;
         this.spawnFx('guard', cx, cy, 1.2); this.emit('sfx', { s: 'block' });
         this.emit('announce', { text: 'ARMOR', small: 1, side: def.side });
-        att.sup = Math.min(C.SUPER_MAX, att.sup + baseDmg * 0.1);
+        att.sup = Math.min(C.SUPER_MAX, att.sup + baseDmg * 0.04);
         return;
       }
     }
@@ -1234,8 +1239,8 @@ var KF = window.KF || (window.KF = {});
       def.hs = Math.max(4, hs - 2); if (!proj) att.hs = def.hs;
       def.hitShake = 1.5; def.hitShakeT = def.hs;
       this.push(att, def, mv.push ? mv.push[1] : 5, dirX, proj);
-      att.sup = Math.min(C.SUPER_MAX, att.sup + baseDmg * 0.18);
-      def.sup = Math.min(C.SUPER_MAX, def.sup + baseDmg * 0.12);
+      att.sup = Math.min(C.SUPER_MAX, att.sup + baseDmg * KF.SUPER_GAIN.block[0]);
+      def.sup = Math.min(C.SUPER_MAX, def.sup + baseDmg * KF.SUPER_GAIN.block[1]);
       att.ex = Math.min(C.EX_MAX, att.ex + baseDmg * 0.15); def.ex = Math.min(C.EX_MAX, def.ex + baseDmg * 0.15);
       this.spawnFx('guard', cx, cy, 1);
       this.emit('sfx', { s: 'block' });
@@ -1315,8 +1320,8 @@ var KF = window.KF || (window.KF = {});
     def.hp = Math.max(0, def.hp - dmg);
     def.comboDmg += dmg;
     if (isThrow) { def.combo = 1; }
-    att.sup = Math.min(C.SUPER_MAX, att.sup + (mv.type === 'u' || mv.type === 'gu' ? 0 : dmg * 0.5));
-    def.sup = Math.min(C.SUPER_MAX, def.sup + dmg * 0.3);
+    att.sup = Math.min(C.SUPER_MAX, att.sup + (mv.type === 'u' || mv.type === 'gu' ? 0 : dmg * KF.SUPER_GAIN.hit[0]));
+    def.sup = Math.min(C.SUPER_MAX, def.sup + dmg * KF.SUPER_GAIN.hit[1]);
     if (mv.type !== 'x' && mv.type !== 'u' && mv.type !== 'gu') att.ex = Math.min(C.EX_MAX, att.ex + dmg * 0.3);
     def.ex = Math.min(C.EX_MAX, def.ex + dmg * 0.25);
     def.dmgPop = { v: def.comboDmg, t: 60 };

@@ -43,7 +43,8 @@ function run(o) {
   }
   // 正解：確定した入力で最初から計算
   const A = peers[0], B = peers[1];
-  const upto = Math.min(A.lastRemote, B.lastRemote, A.frame - 1, B.frame - 1);
+  // 最後に届いた入力は次の更新で巻き戻して反映されるので、その1フレーム手前まで比べる
+  const upto = Math.min(A.lastRemote, B.lastRemote, A.frame - 1, B.frame - 1) - 1;
   const ref = mk(); let bad = -1, cmpN = 0; let prev = [0, 0];
   for (let f = 0; f <= upto; f++) {
     const l0 = A.local[f], l1 = B.local[f];

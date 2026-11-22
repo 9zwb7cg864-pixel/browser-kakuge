@@ -129,10 +129,10 @@ KF.CHARS = {
       upper_ex: { anim: 'sp_upper', type: 'x', name: 'EXかち上げ', dmg: 750, adv: ['kd', -32], hs: 13, push: [2, 4], lv: 'm', chip: 0.125, kd: 'launch', hits: 2, rehit: 6,
                jlim: 3, jinc: 3, cancel: 'u', preDelay: 3, inv: [[1, 10]], jump: { vx: [1.6], vy: [-9.5] }, lvy: -10, lvx: 2.2, jg: 1 },
       // 大回転：アーマー（1回）で受けながら2段。最後の1発で画面端へ吹き飛ばして壁で跳ね返す
-      spin: { anim: 'sp_spin', type: 's', name: '大回転', preDelay: 2, dmg: [500, 550, 600], hits: 2, rehit: 9, hs: 12, push: [3, 7], lv: 'm', chip: 0.125, adv: ['kd', -8],
-              armor: [[4, 16]], dash: { vx: [1.2, 2.2, 3.2], vy: 0 }, kdLast: 'wall', lvy: [-5, -5.5, -6], lvx: [6, 7, 8], jset: 1, jlim: 1, cancel: 'u', meter: 40 },
-      spin_ex: { anim: 'sp_spin', type: 'x', name: 'EX大回転', dmg: 420, hits: 3, rehit: 6, hs: 12, push: [3, 7], lv: 'm', chip: 0.125, adv: ['kd', -6],
-              armor: [[4, 20]], armorHits: 2, dash: { vx: [3.0], vy: 0 }, kdLast: 'wall', lvy: -6, lvx: 8, jset: 0, jlim: 2, cancel: 'u' },
+      spin: { anim: 'sp_spin', type: 's', name: '大回転', preDelay: 2, dmg: [380, 420, 460], hits: 3, rehit: 8, hs: 11, push: [2, 7], lv: 'm', chip: 0.125, adv: ['kd', -8],
+              armor: [[4, 22]], dash: { vx: [4.4, 5.4, 6.4], vy: 0 }, kdLast: 'wall', lvy: [-5, -5.5, -6], lvx: [6, 7, 8], jset: 1, jlim: 1, cancel: 'u', meter: 40 },
+      spin_ex: { anim: 'sp_spin', type: 'x', name: 'EX大回転', dmg: 340, hits: 4, rehit: 6, hs: 11, push: [2, 7], lv: 'm', chip: 0.125, adv: ['kd', -6],
+              armor: [[4, 26]], armorHits: 2, dash: { vx: [7.2], vy: 0 }, kdLast: 'wall', lvy: -6, lvx: 8, jset: 0, jlim: 2, cancel: 'u' },
       // 飛び叩き：飛び上がって上から叩く（中段）。当たると床で跳ねる
       leap: { anim: 'sp_leap', type: 's', name: '飛び叩き', dmg: [900, 1000, 1100], adv: [-4, -10], hs: 14, push: [2, 6], lv: 'o', chip: 0.125,
               jump: { vx: [2.6, 3.4, 4.2], vy: [-8.4, -8.4, -8.4] }, kd: 'bounce', lvy: -3, lvx: 1.2, jset: 0, jlim: 0, cancel: 'u', meter: 40 },

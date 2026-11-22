@@ -285,7 +285,7 @@ console.log('■ 空中追撃の決まりとK技の役割');
     ok(slide ? !hit : hit, slide ? '迅閃脚は飛び道具をくぐる' : '（確認）滑らなければ飛び道具に当たる');
   }
   // 強Kのパニッシュカウンターで浮く
-  { const b = mk(); b.p[1].x = 570; let launched = false; play(b, [...Array(8).fill(N()), inp(5, 'hk')], 60, (f) => { if (b.p[1].state === 'launch') launched = true; return f === 0 ? inp(2, 'hp') : f < 7 ? inp(2) : N(); });
+  { const b = mk(); b.p[1].x = 585; let launched = false; play(b, [...Array(8).fill(N()), inp(5, 'hk')], 60, (f) => { if (b.p[1].state === 'launch') launched = true; return f === 0 ? inp(2, 'hp') : f < 7 ? inp(2) : N(); });
     ok(launched, '強Kはパニッシュカウンターで浮く'); }
 }
 
