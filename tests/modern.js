@@ -82,8 +82,8 @@ function freshK(kind, gap) {
   return b;
 }
 for (const [kind, list] of [
-  ['gai_h', [['SP', 5, 'quake'], ['→＋SP', 6, 'upper'], ['↓＋SP', 2, 'leap'], ['←＋SP', 4, 'spin'], ['SP＋強', 5, 'su1', 'sp,h'], ['←＋SP＋強', 4, 'su2', 'sp,h'], ['↓＋SP＋強', 2, 'su3', 'sp,h']]],
-  ['gai_s', [['SP', 5, 'charge'], ['→＋SP', 6, 'lift'], ['↓＋SP', 2, 'reflect'], ['←＋SP', 4, 'counter'], ['SP＋強', 5, 'su1', 'sp,h'], ['←＋SP＋強', 4, 'su2', 'sp,h'], ['↓＋SP＋強', 2, 'su3', 'sp,h']]],
+  ['gai_h', [['SP＋中', 5, 'grab', 'sp,m'], ['SP', 5, 'quake'], ['→＋SP', 6, 'upper'], ['↓＋SP', 2, 'leap'], ['←＋SP', 4, 'spin'], ['SP＋強', 5, 'su1', 'sp,h'], ['←＋SP＋強', 4, 'su2', 'sp,h'], ['↓＋SP＋強', 2, 'su3', 'sp,h']]],
+  ['gai_s', [['SP＋中', 5, 'disc', 'sp,m'], ['SP', 5, 'charge'], ['→＋SP', 6, 'lift'], ['↓＋SP', 2, 'reflect'], ['←＋SP', 4, 'counter'], ['SP＋強', 5, 'su1', 'sp,h'], ['←＋SP＋強', 4, 'su2', 'sp,h'], ['↓＋SP＋強', 2, 'su3', 'sp,h']]],
 ]) {
   const fn = KF.CHARS[kind].form;
   for (const [name, dir, want, btn] of list) {
@@ -102,6 +102,11 @@ for (const [kind, list] of [
   }
 }
 
+// 空中SP：空中叩きつけ／盾落下
+for (const [kind, want] of [['gai_h', 'aslam'], ['gai_s', 'sdrop']]) {
+  const b = freshK(kind, 140); const r = run(b, [M(9)], 14); const r2 = run(b, [M(5, 'sp')], 20);
+  ok(r2.started.includes(want), `${KF.CHARS[kind].form}：空中でSP＝${want}（出た技：${r2.started.join(',') || 'なし'}）`);
+}
 // アシスト＋ボタンを押しっぱなしでも最後まで続けて出る
 for (const kind of ['kokuu', 'gai_h', 'gai_s']) for (const key of ['l', 'm', 'h']) {
   const b = freshK(kind, 50); const q = [M(5, key, 'auto')];

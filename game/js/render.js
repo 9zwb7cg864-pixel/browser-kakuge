@@ -269,6 +269,24 @@ KF.Renderer.prototype.drawShock = function (c, p, x) {
   c.fillStyle = 'rgba(120,90,60,0.5)';
   for (var k = 0; k < 4; k++) { var dx = ((t * 3 + k * 17) % 40) - 20; c.fillRect(x - dir * 20 + dx, G - 4 - (k % 3) * 3, 3, 3); }
 };
+// 光の盾（大盾形態の飛び道具）：横に寝かせた光る盾が回りながら飛ぶ
+KF.Renderer.prototype.drawDisc = function (c, p, x) {
+  var t = p.t, y = p.y, dir = p.vx < 0 ? -1 : 1, sq = Math.abs(Math.cos(t * 0.35));
+  c.save(); c.globalCompositeOperation = 'lighter';
+  for (var i = 4; i >= 1; i--) {   // 残像
+    c.fillStyle = 'rgba(60,245,150,' + (0.10 * (5 - i) / 4) + ')';
+    c.beginPath(); c.ellipse(x - dir * i * 10, y, 30, 9 + 8 * sq, 0, 0, Math.PI * 2); c.fill();
+  }
+  var g = c.createRadialGradient(x, y, 2, x, y, 40);
+  g.addColorStop(0, 'rgba(220,255,235,0.9)'); g.addColorStop(0.45, 'rgba(60,245,150,0.5)'); g.addColorStop(1, 'rgba(20,200,110,0)');
+  c.fillStyle = g; c.fillRect(x - 42, y - 42, 84, 84);
+  c.restore();
+  c.save();
+  c.fillStyle = '#e8fff2'; c.strokeStyle = '#34f594'; c.lineWidth = 3;
+  c.beginPath(); c.ellipse(x, y, 30, 4 + 12 * sq, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+  c.fillStyle = 'rgba(52,245,148,0.6)'; c.beginPath(); c.ellipse(x, y, 12, 2 + 5 * sq, 0, 0, Math.PI * 2); c.fill();
+  c.restore();
+};
 KF.Renderer.prototype.drawSpark = function (c, e, x, y) {
   if (e.t > e.life) return;
   var k = e.t / e.life, C3 = KF.IMPACT_COL[e.col];
@@ -355,6 +373,7 @@ KF.Renderer.prototype.render = function (b) {
   // 飛び道具・ビーム・柱
   b.projs.forEach(function (p) {
     if (p.kind === 'ball' && /^shock/.test(p.fx)) self.drawShock(c, p, p.x + ox);
+    else if (p.kind === 'ball' && /^disc/.test(p.fx)) self.drawDisc(c, p, p.x + ox);
     else if (p.kind === 'ball') self.drawFxFrame(c, p.fx, (p.t >> 2), p.x + ox, p.y, p.vx < 0, 1);
     else if (p.kind === 'beam') {
       var meta = KF.Assets.fx[p.fx], img = KF.Assets.img['fx:' + p.fx];

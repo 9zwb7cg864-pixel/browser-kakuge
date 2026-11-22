@@ -358,7 +358,12 @@ KF.AI.prototype.decideGai = function (s, dist) {
   if (dist > pr[1]) {
     if (H && r < L.fireball * 1.2 && !this.b.projs.some(function (p) { return p.owner === m; })) { this.motion([2, 3, 6], this.pick(['lp', 'mp', 'hp'])); return; }
     if (!H && r < 0.15 && dist < 230) { this.motion([2, 3, 6], 'mp'); return; }   // 盾突進で突っ込む（飛び道具を抜ける）
-    if (r < L.jump && dist < 260) { this.push(9, '', 14); this.push(9, 'hp', 1); return; }
+    if (!H && r < 0.15 + L.fireball && !this.b.projs.some(function (p) { return p.owner === m; })) { this.motion([2, 1, 4], this.pick(['lp', 'mp', 'hp'])); return; }   // 光盾投げ
+    if (r < L.jump && dist < 260) {
+      this.push(9, '', 12);
+      if (L.combo >= 2 && this.rnd() < 0.4) { this.motion([2, 3, 6], H ? 'lp' : 'lk'); return; }   // 空中叩きつけ／盾落下
+      this.push(9, '', 2); this.push(9, 'hp', 1); return;
+    }
     if (m.rush >= 2000 && r < L.rush * 0.6 && dist < 300) { this.push(5, 'rush', 1); this.push(6, '', 10); this.push(5, 'hp', 2); return; }
     this.push(6, '', 6 + Math.floor(this.rnd() * 14));
     return;
@@ -370,10 +375,14 @@ KF.AI.prototype.decideGai = function (s, dist) {
       if (r < 0.55) { this.push(5, 'hk', 2); return; }
       if (r < 0.62 && L.combo >= 2) { this.push(6, 'hp', 2); this.after2 = null; this.jug = { until: this.b.frameNo + 90 }; return; }   // 地響き（中段）→床跳ねに追撃
       if (r < 0.7 && L.combo >= 2) { this.motion([2, 3, 6], 'lk'); return; }   // 飛び叩き
+      if (r < 0.78) { this.push(6, 'mk', 2); if (L.combo >= 2) this.after2 = [[2, 3, 6], 'hp']; return; }   // すくい打ち（下段）＞ 地割れ
+      if (r < 0.84 && L.combo >= 2) { this.push(5, 'mk', 2); this.plan = [[{ d: 5, b: 'hk', n: 2 }], this.mot([6, 2, 3], 'hp')]; this.planLast = null; return; }   // 中K～強K ＞ かち上げ
     } else {
       if (r < 0.35) { this.starter('mp', L.combo >= 2 ? [[2, 3, 6], 'hp'] : null, true, L.combo < 3); return; }   // しゃがみ中P ＞ 盾突進
       if (r < 0.5) { this.push(5, this.pick(['mp', 'mk']), 2); return; }
       if (r < 0.58 && L.combo >= 2) { this.motion([2, 1, 4], 'lk'); return; }   // 盾構え（当て身）
+      if (r < 0.66) { this.push(6, 'mk', 2); return; }   // 盾すべり（下段）
+      if (r < 0.72 && L.combo >= 2) { this.push(5, 'mk', 2); this.plan = [[{ d: 5, b: 'hk', n: 2 }], this.mot([2, 3, 6], 'hp')]; this.planLast = null; return; }   // 中K～強K ＞ 盾突進
     }
     if (L.spacing > this.rnd()) { this.push(this.rnd() < 0.5 ? 6 : 4, '', 8 + Math.floor(this.rnd() * 10)); return; }
     this.push(6, '', 10); return;
@@ -390,6 +399,8 @@ KF.AI.prototype.decideGai = function (s, dist) {
   if (r < 0.42) { this.starter('lk', L.combo >= 2 ? (H ? [[2, 1, 4], 'lp'] : [[2, 3, 6], 'lp']) : null, true, true); return; }
   if (r < 0.52) { this.push(5, 'lp,lk', 1); return; }
   if (!H && r < 0.6) { this.motion([2, 1, 4], 'lk'); return; }   // 盾構え
+  if (H && r < 0.6 && L.combo >= 2) { this.motion([6, 3, 2, 1, 4], 'lp'); return; }   // 担ぎ叩き（コマンド投げ）
+  if (r < 0.64) { this.push(4, 'hp', 2); if (!H && L.combo >= 2) this.after2 = [[2, 1, 4], 'hp']; return; }   // 槌突き／盾押し（＞ 光盾投げ）
   if (r < 0.66 && L.combo >= 3 && m.rush >= 3000) { this.push(5, 'mp', 2); this.combo = { next: [{ d: 5, b: 'rush', n: 1 }, { d: 6, b: '', n: 8 }, { d: 5, b: 'hp', n: 2 }], confirm: true, done: false }; this.after = H ? [[2, 1, 4], 'lp'] : [[2, 3, 6], 'hp']; return; }
   if (r < 0.75) { this.push(4, '', 10); return; }
   if (r < 0.88) { this.push(5, this.pick(['lp', 'mp', 'hp', 'lk']), 2); return; }

@@ -538,8 +538,8 @@ var KF = window.KF || (window.KF = {});
   //  SPの方向ごとの技（なし・前・下・後ろ・空中）。変身キャラ男は ↓↓+SP で変身
   KF.MODERN_SP = {
     kokuu: { n: 'fire', f: 'dp', d: 'tatsu', b: 'palm', air: 'atatsu' },
-    gai_h: { n: 'quake', f: 'upper', d: 'leap', b: 'spin', air: null },
-    gai_s: { n: 'charge', f: 'lift', d: 'reflect', b: 'counter', air: null },
+    gai_h: { n: 'quake', f: 'upper', d: 'leap', b: 'spin', air: 'aslam', m: 'grab' },
+    gai_s: { n: 'charge', f: 'lift', d: 'reflect', b: 'counter', air: 'sdrop', m: 'disc' },
   };
   Battle.prototype.modernConvert = function (f, raw) {
     var H = raw.held || {}, Pp = raw.pressed || {};
@@ -557,6 +557,7 @@ var KF = window.KF || (window.KF = {});
       } else {
         var SPm = KF.MODERN_SP[f.kind] || KF.MODERN_SP.kokuu;
         var mv = inAir ? SPm.air : rel > 0 && !crouch ? SPm.f : crouch ? SPm.d : rel < 0 ? SPm.b : SPm.n;
+        if (SPm.m && !inAir && (H.m || Pp.m)) { mv = SPm.m; atk = atk.filter(function (k) { return k !== 'm'; }); }   // SP＋中：担ぎ叩き／光盾投げ
         if (!inAir && f.D.moves.change && crouch && (f.buf.matchDD(18) || f.buf.matchDDNow(18))) mv = 'change';
         if (mv) req(mv, 1, H.auto && mv !== 'change');
       }

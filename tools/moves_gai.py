@@ -200,6 +200,21 @@ def defs(kind):
         a.k(P(G, px=17, py=-54, lean=40, wa=116, ar=I(64, -40), al=I(54, -46), ll=I(52, -5), lr=I(-12, -5)), 1, 'a', 'back', hold=2)
         a.k(P(G, px=14, py=-56, lean=36, wa=118, ar=I(62, -38)), 12, 'r', 'out').k(P(G, wa=0), 8, 'r', 'io')
 
+        # ============================================================ 特殊技 ←強P 槌突き（発生9・ガードされても有利）
+        #  ハンマーを水平に抱え、頭を前へ突き出して胸を打つ
+        a = add(A('b_hp', hit=TOOL))
+        a.k(G, 1, 's').k(P(G, px=-6, lean=2, tw=0.7, wa=80, ar=I(-4, -96), al=I(-16, -98)), 5, 's', 'in')
+        a.k(P(G, px=12, lean=22, tw=0.2, wa=88, ar=I(44, -100), al=I(30, -100), ll=I(44, -5)), 3, 's', 'snap', lag=0.2)
+        a.k(P(G, px=14, lean=24, tw=0.15, wa=90, ar=I(50, -100), al=I(36, -100), ll=I(46, -5)), 1, 'a', 'back', hold=2)
+        a.k(P(G, px=8, lean=14, wa=70, ar=I(24, -98), al=I(12, -100)), 7, 'r', 'out').k(G, 7, 'r', 'io')
+        # 特殊技 →中K すくい打ち（下段・発生13）：一歩踏み込み、地面すれすれを前へ払う
+        a = add(A('f_mk', hit=TOOL, flags={'low': True}))
+        a.k(G, 1, 's').k(P(G, px=-2, lean=18, tw=0.9, wa=-130, ar=I(-18, -60), al=I(-4, -64)), 6, 's', 'in')
+        a.k(P(G, px=10, py=-60, lean=34, tw=0.6, wa=-170, ar=I(10, -30), al=I(18, -34), ll=I(44, -5)), 4, 's', 'io')
+        a.k(P(G, px=18, py=-54, lean=42, tw=0.15, wa=165, ar=I(64, -24), al=I(52, -28), ll=I(54, -5), lr=I(-14, -5), fr=44), 2, 's', 'snap', lag=0.2)
+        a.k(P(G, px=19, py=-53, lean=43, tw=0.1, wa=170, ar=I(68, -22), al=I(56, -26), ll=I(54, -5), lr=I(-14, -5), fr=44), 1, 'a', 'lin', hold=2)
+        a.k(P(G, px=16, py=-56, lean=40, wa=175, ar=I(60, -24)), 12, 'r', 'out').k(P(G, px=4, lean=16, wa=0), 8, 'r', 'io').k(G, 4, 'r')
+
         # ============================================================ 必殺技
         # 地割れ（↓↘→P）：振りかぶって地面を叩き、衝撃波を走らせる
         a = add(A('sp_quake', hit=('tool', 16, 'hand_r'), flags={'proj': 'tool'}))
@@ -229,6 +244,23 @@ def defs(kind):
         a.k(P(FALL, lean=34, tw=0.2, hd=-14, wa=110, ar=I(56, -60), al=I(46, -66), ll=Fk(40, 60), lr=Fk(10, 50)), 3, 'a', 'snap', lag=0.2)
         a.k(P(FALL, lean=36, wa=118, ar=I(58, -50), al=I(48, -56)), 14, 'a')
         a.k(P(G, px=12, py=-54, lean=36, wa=120, ar=I(58, -34)), 6, 'r').k(P(G, wa=0), 10, 'r', 'io')
+
+        # 担ぎ叩き（→↘↓↙←P）：コマンド投げ。片手でつかんで肩に担ぎ、地面へ落としてハンマーで叩き込む
+        CGH = P(G, lean=26, px=14, tw=0.4, al=I(72, -110), hl='open', ll=I(44, -5), fr=50, wa=-70)
+        a = add(A('sp_grab', hit=('hand_l', 14, 'el_l')))
+        a.k(G, 1, 's').k(P(G, lean=-4, px=-4, tw=0.9, al=I(8, -124)), 3, 's', 'in').k(P(CGH, lean=18), 2, 's', 'snap', lag=0.2)
+        a.k(CGH, 1, 'a', hold=2).k(P(CGH, px=10, lean=18), 10, 'r', 'out').k(G, 16, 'r')
+        a = add(A('sp_grab_do', flags={'throw': True}))
+        a.k(CGH, 2).k(P(CGH, lean=4, al=I(40, -150), hl='fist'), 8, e='in')
+        a.k(P(G, lean=-10, py=-78, hd=10, tw=0.6, al=I(20, -170), hl='fist', wa=-150, ar=I(-10, -150)), 10, e='out', lag=0.2)
+        a.k(P(G, lean=24, px=10, al=I(60, -40), hl='open', wa=-160, ar=I(-14, -156)), 4, e='snap', hold=4)
+        a.k(P(G, px=16, py=-54, lean=38, wa=112, ar=I(62, -40), al=I(52, -46), ll=I(52, -5), lr=I(-12, -5)), 4, e='snap', hold=12)
+        a.k(P(G, px=8, lean=20, wa=40), 10, e='out').k(G, 8)
+        # 空中叩きつけ（空中で↓↘→P）：空中で振りかぶり、斜め下へ落ちながら叩く（中段・床跳ね）
+        a = add(A('sp_aslam', hit=TOOL, flags={'air': True, 'high': True}, wy=6, vx=3))
+        a.k(FALL, 1, 's').k(P(FALL, lean=-14, tw=0.6, hd=8, wa=-150, ar=I(-6, -154), al=I(-14, -150)), 5, 's', 'in')
+        DH = P(FALL, lean=36, tw=0.2, hd=-14, wa=120, ar=I(58, -56), al=I(48, -62), ll=Fk(40, 60), lr=Fk(10, 50))
+        a.k(DH, 2, 'a', 'snap', lag=0.2).k(P(DH, lean=38), 1, 'a', hold=30)
 
         # ============================================================ 超必殺
         # Lv1 大槌連打（↓↘→↓↘→P）：踏み込みながら左右に何度も叩き込み、最後に大振り
@@ -331,6 +363,19 @@ def defs(kind):
         a.k(P(G, px=17, py=-56, lean=38, sa=66, ar=I(62, -58), ll=I(50, -5), lr=I(-12, -5)), 1, 'a', 'back', hold=2)
         a.k(P(G, px=14, py=-58, lean=34, sa=60), 12, 'r', 'out').k(G, 8, 'r', 'io')
 
+        # ============================================================ 特殊技 ←強P 盾押し（発生10・大きく押し出す・ガードさせて有利）
+        a = add(A('b_hp', hit=SH))
+        a.k(G, 1, 's').k(P(G, px=-4, py=-66, lean=10, tw=0.5, sa=0, ar=I(24, -96)), 5, 's', 'in')
+        a.k(P(G, px=18, py=-64, lean=28, tw=0.2, sa=2, ar=I(72, -98), al=I(40, -94), ll=I(52, -5), lr=I(-18, -5), fr=50), 3, 's', 'snap', lag=0.2)
+        a.k(P(G, px=20, py=-64, lean=30, sa=2, ar=I(76, -98), al=I(44, -94), ll=I(54, -5), lr=I(-18, -5)), 1, 'a', 'back', hold=3)
+        a.k(P(G, px=14, lean=22, sa=4, ar=I(58, -96)), 8, 'r', 'out').k(G, 7, 'r', 'io')
+        # 特殊技 →中K 盾すべり（下段・発生12）：盾を前に倒して滑り込み、足元をすくう
+        a = add(A('f_mk', hit=SH, flags={'low': True}))
+        a.k(G, 1, 's').k(P(C, lean=30, sa=40, ar=I(40, -50)), 5, 's', 'in')
+        SLD = P(C, py=C['py'] + 14, lean=46, px=6, tw=0.3, sa=82, ar=I(64, -16), al=I(30, -6), hl='open', ll=Fk(70, 0), fl=96, lr=I(-30, -5))
+        a.k(SLD, 4, 's', 'snap', lag=0.2).k(P(SLD, px=8), 1, 'a', 'lin', hold=5)
+        a.k(P(SLD, px=6, lean=40), 8, 'r', 'out').k(P(C, sa=20), 8, 'r', 'io').k(G, 4, 'r')
+
         # ============================================================ 必殺技
         # 盾構え（↓↙←K）：盾を構えて受け止める（当て身）。受けたら sp_counter_do で反撃
         a = add(A('sp_counter'))
@@ -363,6 +408,18 @@ def defs(kind):
         a.k(P(G, px=10, lean=24, sa=6, ar=I(60, -100), ll=I(40, -5)), 2, 's', 'snap')
         a.k(P(G, px=11, lean=25, sa=8, ar=I(62, -100), ll=I(40, -5)), 1, 'a', hold=5)
         a.k(P(G, px=6, lean=16, sa=4, ar=I(44, -98)), 10, 'r', 'out').k(G, 6, 'r', 'io')
+
+        # 光盾投げ（↓↙←P）：盾を横に寝かせて振りかぶり、光の盾を投げ放つ（飛び道具）
+        a = add(A('sp_disc', hit=SH, flags={'proj': 'shld_t'}))
+        a.k(G, 1, 's').k(P(G, px=-6, lean=0, tw=1.0, sa=90, ar=I(-20, -98), al=I(30, -96)), 6, 's', 'in')
+        a.k(P(G, px=10, lean=26, tw=0.15, sa=90, ar=I(66, -100), al=I(-10, -92), ll=I(42, -5)), 3, 's', 'snap', lag=0.2)
+        a.k(P(G, px=11, lean=27, tw=0.1, sa=90, ar=I(70, -100), al=I(-12, -92), ll=I(42, -5)), 1, 'a', hold=2)
+        a.k(P(G, px=8, lean=20, sa=60, ar=I(50, -98)), 12, 'r', 'out').k(G, 8, 'r', 'io')
+        # 盾落下（空中で↓↘→K）：盾を下に向けて真下気味に急降下し、押しつぶす（中段）
+        a = add(A('sp_sdrop', hit=SH, flags={'air': True, 'high': True}, wy=8, vx=1))
+        a.k(FALL, 1, 's').k(P(FALL, py=-84, lean=-8, sa=-30, ar=I(30, -140)), 5, 's', 'in')
+        DS = P(FALL, lean=24, tw=0.3, sa=100, ar=I(30, -34), al=I(14, -50), ll=Fk(30, 60), lr=Fk(-6, 50))
+        a.k(DS, 2, 'a', 'snap', lag=0.2).k(P(DS, lean=26), 1, 'a', hold=30)
 
         # ============================================================ 超必殺
         # Lv1 フォートレスブレイク（↓↘→↓↘→P）：無敵で踏み込み、盾で何度も打ちすえる
