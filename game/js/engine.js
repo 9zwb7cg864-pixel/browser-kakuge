@@ -651,7 +651,8 @@ var KF = window.KF || (window.KF = {});
       if (this.checkGrab(f, mv)) return;
     }
     // キャンセル（飛び道具を撃った技は、撃った後しばらく超必殺でキャンセルできる）
-    if (mv.proj && mv.cancel && f.spawned && t <= a.firstActive + 14) {
+    // 飛び道具が当たったら（空中の相手に当たったときなど）、技の戻りの最中でも超必殺でキャンセルできる
+    if (mv.proj && mv.cancel && f.spawned && (t <= a.firstActive + 14 || (f.projHit && f.opp.state === 'launch'))) {
       if (this.trySpecial(f, 'u')) return;
     }
     // 飛び道具が当たったら、そのあとはラッシュでキャンセルできる（竜巻P → 波動 → ラッシュ のため）
@@ -937,7 +938,12 @@ var KF = window.KF || (window.KF = {});
       }
       return [p.x - p.r, p.y - p.r, p.r * 2, p.r * 2];
     }
-    if (p.kind === 'beam') { var x0 = p.dir > 0 ? p.x : p.x - p.len; return [x0, p.y - p.h / 2, p.len, p.h]; }
+    if (p.kind === 'beam') {
+      // 根元の判定：撃った本人の体の前から手の先までもビームの判定にする（密着でも当たる）
+      var root = p.owner.x + p.dir * 6, tip = p.x + p.dir * p.len;
+      var bx0 = Math.min(root, tip), bx1 = Math.max(root, tip);
+      return [bx0, p.y - p.h / 2, bx1 - bx0, p.h];
+    }
     if (p.kind === 'pillar') {
       var g = Math.min(1, p.t / 10);
       if (p.t < 6 || p.t > 52) return null; // t<0 は時間差で出る柱

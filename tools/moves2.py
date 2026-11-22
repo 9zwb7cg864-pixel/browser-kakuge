@@ -499,8 +499,8 @@ def defs(kind):
         # 超必殺1 虚空砲：頭上に気を集め、両掌から放つ
         a = A('su_1', flags={'beam': 'hand_r'})
         a.k(G, 1, 's')
-        a.k(P(G, lean=-6, py=-74, hd=10, tw=1.0, al=I(42, -150), ar=I(-32, -150), hl='open', hr='open', ll=I(28, -5), lr=I(-32, -5)), 4, 's', 'out', hold=2)
-        a.k(P(G, lean=-8, px=-10, py=-64, tw=0.95, al=I(-24, -100), ar=I(-30, -94), hl='open', hr='open', ll=I(30, -5)), 3, 's', 'in', hold=1)
+        a.k(P(G, lean=-6, py=-74, hd=10, tw=1.0, al=I(42, -150), ar=I(-32, -150), hl='open', hr='open', ll=I(28, -5), lr=I(-32, -5)), 2, 's', 'out')
+        a.k(P(G, lean=-8, px=-10, py=-64, tw=0.95, al=I(-24, -100), ar=I(-30, -94), hl='open', hr='open', ll=I(30, -5)), 2, 's', 'in')
         SB = P(FB, lean=28, px=15, py=-60, al=I(82, -112), ar=I(80, -100), ll=I(50, -5))
         a.k(SB, 1, 's', 'snap')
         for i in range(6):

@@ -507,5 +507,14 @@ console.log('■ アッパー → 波動 → ラッシュ → パンチ ＞ 昇�
   ok(!bad.length, '波動の強さ・入れる遅れ（2〜14F）、ラッシュ（ボタン・→→）と遅れ、パンチの種類と遅れを変えた ' + tot + ' 通りすべてでつながる' + (bad.length ? '（失敗：' + bad.slice(0, 3).join('／') + ' ほか' + bad.length + '）' : ''));
 }
 
+// 対空の波動が空中の相手に当たったら、技の戻りの最中でも虚空砲でキャンセルしてつながる
+{ const b = new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]);
+  b.p[0].x = 300; b.p[1].x = 580; b.camX = 512; b.p[0].sup = 3000; b.p[0].facing = 1; b.p[1].facing = -1;
+  const q = [], q2 = [inp(7)]; for (let i = 0; i < 8; i++) q.push(N()); [2, 3, 6].forEach((d, i) => q.push(inp(d, i === 2 ? 'hp' : '')));
+  let st = 0; const hs = [];
+  for (let f = 0; f < 200; f++) { const e0 = b.events.length; b.step([q.length ? q.shift() : N(), q2.length ? q2.shift() : N()]);
+    for (const e of b.events.slice(e0)) if (e.type === 'hit' && e.side === 0) hs.push(e.move + '#' + e.combo);
+    if (!st && hs.some(x => /^fire/.test(x))) { st = 1; [2, 3, 6, 2, 3, 6].forEach((d, i) => q.push(inp(d, i === 5 ? 'hp' : ''))); } }
+  ok(hs.some(x => x === 'su1#2'), '遠くで空中の相手に当たった波動から虚空砲がつながる（' + hs.join(' ') + '）'); }
 console.log(`\n結果: ${pass} 件成功 / ${fail} 件失敗`);
 process.exit(fail ? 1 : 0);
