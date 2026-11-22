@@ -289,7 +289,8 @@ var KF = window.KF || (window.KF = {});
     net = null; rb = null; netUI(null); scene = 'title'; KF.Touch && KF.Touch.show(false);
   }
   // 回線の速さに合わせて、入力を何フレーム遅らせるか決める（遅らせるほど巻き戻しが減る）
-  function delayFor(rtt) { return rtt == null ? 2 : rtt < 45 ? 1 : rtt < 110 ? 2 : rtt < 180 ? 3 : 4; }
+  // 片道にかかるフレーム数から2フレーム引いた分だけ遅らせ、残りは巻き戻しで埋める（0〜3F）
+  function delayFor(rtt) { if (rtt == null) return 1; return Math.max(0, Math.min(3, Math.ceil(rtt / 2 / (1000 / 60)) - 2)); }
   function onNetMessage(m) {
     if (m.t === '_status') {
       if (net.status === 'closed' && (scene === 'onlineBattle' || scene === 'onlineResult')) onl.left = true;
@@ -308,7 +309,7 @@ var KF = window.KF || (window.KF = {});
   function startOnlineMatch(g, d) {
     onl.match = g; onl.want = [false, false]; onl.left = false; onl.escT = 0; onl.resSel = 0; onl.delay = d;
     rb = new KF.Rollback({
-      side: net.side, delay: d,
+      side: net.side, delay: d, maxRollback: 10,
       makeBattle: function () { return new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta: KF.Assets.meta }); },
       send: function (msg) { msg.g = g; net.send(msg); },
       onEvent: handleEvent,

@@ -94,6 +94,7 @@ var KF = (typeof window !== 'undefined' ? window : global).KF || {};
     this.ticks = 0; this.stalls = 0; this.rollbacks = 0; this.maxRolled = 0;
     this.desync = null; this.keep = !!o.keepHistory; this.remoteAdv = 0;
     for (var i = 0; i < this.delay; i++) this.local[i] = NEUTRAL;
+    if (!this.delay) this.local[-1] = NEUTRAL;
     this.localSent = this.delay - 1;
   }
   KF.Rollback = Rollback;
@@ -219,7 +220,8 @@ var KF = (typeof window !== 'undefined' ? window : global).KF || {};
     this.setStatus('connecting', '部屋 ' + this.code + ' につないでいます…');
     this.peer = new Peer(this.peerOpts());
     this.peer.on('open', function () {
-      var c = self.peer.connect(PREFIX + self.code, { reliable: true, serialization: 'json' });
+      // 順番を保証しない送り方：1つ遅れても後ろの入力が待たされない（入力は毎回まとめて送り直すので取りこぼしても埋まる）
+      var c = self.peer.connect(PREFIX + self.code, { reliable: false, serialization: 'json' });
       self.attach(c);
       setTimeout(function () { if (self.status === 'connecting') self.setStatus('error', '部屋が見つからないか、つながりませんでした'); }, 15000);
     });

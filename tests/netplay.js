@@ -27,15 +27,15 @@ function run(o) {
   const mk = () => new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta });
   const q = [[], []]; let now = 0;
   const last = [0, 0];
-  const peers = [0, 1].map(side => new R({ side, delay: o.delay, keepHistory: true, makeBattle: mk, send: m => {
-    const lat = o.lat + r() * o.jit; let at = now + lat; at = Math.max(at, last[side]); last[side] = at;   // 順番は保つ（reliable）
+  const peers = [0, 1].map(side => new R({ side, delay: o.delay, keepHistory: true, maxRollback: 10, makeBattle: mk, send: m => {
+    const lat = o.lat + r() * o.jit; let at = now + lat; if (!o.unordered) { at = Math.max(at, last[side]); last[side] = at; }   // 順番を保たない回線もまねる
     q[1 - side].push({ at, m: JSON.parse(JSON.stringify(m)) });
   } }));
   const inp = [player(o.seed * 7 + 1), player(o.seed * 7 + 2)];
   const next = [0, o.startGap || 0], period = [1000 / 60, 1000 / 60 * (o.drift || 1)];
   const T = o.ms;
   for (now = 0; now < T; now += 1) {
-    for (let s = 0; s < 2; s++) { while (q[s].length && q[s][0].at <= now) peers[s].receive(q[s].shift().m); }
+    for (let s = 0; s < 2; s++) { q[s].sort((a, b) => a.at - b.at); while (q[s].length && q[s][0].at <= now) peers[s].receive(q[s].shift().m); }
     for (let s = 0; s < 2; s++) if (now >= next[s]) { next[s] += period[s]; peers[s].tick(inp[s]()); }
   }
   // 正解：確定した入力で最初から計算
@@ -53,6 +53,8 @@ function run(o) {
 }
 
 const cases = [
+  { name: '遅延0F・近い回線（片道15ms）・順番ばらばら', lat: 15, jit: 15, delay: 0, ms: 60000, seed: 5, unordered: 1 },
+  { name: '遅延1F・普通の回線（片道50ms・揺らぎ40ms）・順番ばらばら', lat: 50, jit: 40, delay: 1, ms: 60000, seed: 6, unordered: 1 },
   { name: '近い回線（片道20ms）', lat: 20, jit: 10, delay: 2, ms: 60000, seed: 1 },
   { name: '普通の回線（片道50ms・揺らぎ30ms）', lat: 50, jit: 30, delay: 2, ms: 60000, seed: 2 },
   { name: '遠い回線（片道90ms・揺らぎ60ms）', lat: 90, jit: 60, delay: 3, ms: 60000, seed: 3 },
