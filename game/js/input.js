@@ -129,15 +129,32 @@ KF.Input = (function () {
       var b = KF.BUTTONS[i];
       pressed[b] = h[b] && !this.prev[b];
     }
+    // モダン操作：上の段（弱P・中P・強P）を弱・中・強、弱K／強KをSP、中Kをアシストとして読む
+    if (this.modern && !this.cpu) {
+      var pv = this.prev || {};
+      var mh = { l: h.lp, m: h.mp, h: h.hp, sp: h.lk || h.hk, auto: h.mk };
+      var mp0 = { l: pv.lp, m: pv.mp, h: pv.hp, sp: pv.lk || pv.hk, auto: pv.mk };
+      Object.keys(mh).forEach(function (k) { pressed['_' + k] = mh[k] && !mp0[k]; });
+      this._mh = mh;
+    }
     this.prev = h;
     // トレーニングの位置リセット（1Pのみ：キーボードR / Backspace、パッドのBACK）
     var rs = !this.cpu && this.player === 1 && (isOn('KeyR') || isOn('Backspace') || !!(pad && pad.reset) || !!(this.useTouch && touch.reset));
     if (!this.cpu && this.player === 1) { latch.KeyR = false; latch.Backspace = false; }
     var rsP = rs && !this.prevReset; this.prevReset = rs;
+    if (this.modern && !this.cpu && this._mh) {
+      var mh2 = this._mh;
+      ['l', 'm', 'h', 'sp', 'auto'].forEach(function (k) { h[k] = !!mh2[k]; pressed[k] = !!pressed['_' + k]; delete pressed['_' + k]; });
+    }
     return { x: x, y: y, held: h, pressed: pressed, reset: rsP };
   };
 
+  // 操作タイプ（クラシック／モダン）。1P・2Pそれぞれブラウザに保存
+  var modern = { 1: false, 2: false };
+  try { var md = JSON.parse(localStorage.getItem('kf_modern') || 'null'); if (md) modern = Object.assign(modern, md); } catch (e) { }
   return {
+    modern: modern,
+    setModern: function (pl, v) { modern[pl] = !!v; try { localStorage.setItem('kf_modern', JSON.stringify(modern)); } catch (e) { } },
     Source: Source, keys: keys, touch: touch,
     isDown: function (code) { return !!down[code]; },
     clearLatch: function () { latch = {}; },

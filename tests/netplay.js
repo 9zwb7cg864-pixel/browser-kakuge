@@ -7,9 +7,9 @@ function ok(c, m) { if (c) { pass++; console.log('  ✔ ' + m); } else { fail++;
 
 function rng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 // 人が遊んでいるような入力（方向を数フレーム保持・ボタンをときどき押す・コマンドを入れる）
-function player(seed) {
+function player(seed, modern) {
   const r = rng(seed); let cur = { x: 0, y: 0, held: {} }, left = 0, seq = [];
-  const B = ['lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'rush'];
+  const B = modern ? ['l', 'm', 'h', 'sp', 'auto', 'sp', 'rush'] : ['lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'rush'];
   return () => {
     if (seq.length) { cur = seq.shift(); return cur; }
     if (--left > 0) { const h = {}; for (const k in cur.held) if (r() < 0.6) h[k] = cur.held[k]; cur = { x: cur.x, y: cur.y, held: h }; return cur; }
@@ -24,14 +24,14 @@ function player(seed) {
 
 function run(o) {
   const r = rng(o.seed);
-  const mk = () => new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta });
+  const mk = () => new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta, modern: o.modern || [false, false] });
   const q = [[], []]; let now = 0;
   const last = [0, 0];
   const peers = [0, 1].map(side => new R({ side, delay: o.delay, keepHistory: true, maxRollback: 10, makeBattle: mk, send: m => {
     const lat = o.lat + r() * o.jit; let at = now + lat; if (!o.unordered) { at = Math.max(at, last[side]); last[side] = at; }   // 順番を保たない回線もまねる
     q[1 - side].push({ at, m: JSON.parse(JSON.stringify(m)) });
   } }));
-  const inp = [player(o.seed * 7 + 1), player(o.seed * 7 + 2)];
+  const inp = [player(o.seed * 7 + 1, o.modern && o.modern[0]), player(o.seed * 7 + 2, o.modern && o.modern[1])];
   const next = [0, o.startGap || 0], period = [1000 / 60, 1000 / 60 * (o.drift || 1)];
   const T = o.ms;
   for (now = 0; now < T; now += 1) {
@@ -53,6 +53,8 @@ function run(o) {
 }
 
 const cases = [
+  { name: 'モダン操作どうし・遅延1F（片道40ms）', lat: 40, jit: 30, delay: 1, ms: 60000, seed: 7, unordered: 1, modern: [true, true] },
+  { name: 'モダン対クラシック・遅延1F', lat: 40, jit: 30, delay: 1, ms: 60000, seed: 8, unordered: 1, modern: [true, false] },
   { name: '遅延0F・近い回線（片道15ms）・順番ばらばら', lat: 15, jit: 15, delay: 0, ms: 60000, seed: 5, unordered: 1 },
   { name: '遅延1F・普通の回線（片道50ms・揺らぎ40ms）・順番ばらばら', lat: 50, jit: 40, delay: 1, ms: 60000, seed: 6, unordered: 1 },
   { name: '近い回線（片道20ms）', lat: 20, jit: 10, delay: 2, ms: 60000, seed: 1 },

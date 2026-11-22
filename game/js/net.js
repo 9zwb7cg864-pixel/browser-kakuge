@@ -10,7 +10,7 @@
 var KF = (typeof window !== 'undefined' ? window : global).KF || {};
 
 (function () {
-  var BTN = ['lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'rush'];
+  var BTN = ['lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'rush', 'l', 'm', 'h', 'sp', 'auto'];   // 後ろ5つはモダン操作のボタン
 
   // 入力を1つの数にまとめる：方向(x,y) と押しているボタン
   function pack(inp) {
@@ -234,7 +234,7 @@ var KF = (typeof window !== 'undefined' ? window : global).KF || {};
     this.conn = c;
     c.on('open', function () {
       self.setStatus('connected', 'つながりました');
-      self.send({ t: 'hello', v: 1 });
+      self.send({ t: 'hello', v: 1, modern: !!(KF.Input && KF.Input.modern && KF.Input.modern[1]) });
       self.pingTimer = setInterval(function () { self.send({ t: 'ping', at: performance.now() }); }, 1000);
     });
     c.on('data', function (m) {

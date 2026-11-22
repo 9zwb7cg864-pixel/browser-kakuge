@@ -153,6 +153,7 @@ var KF = window.KF || (window.KF = {});
     this.opts = opts;
     this.meta = opts.meta; // {kokuu: animsMeta, shuuen: ...}
     this.p = [new Fighter(opts.p1, 0, this.meta[opts.p1]), new Fighter(opts.p2, 1, this.meta[opts.p2])];
+    if (opts.modern) { this.p[0].modern = !!opts.modern[0]; this.p[1].modern = !!opts.modern[1]; }
     if (opts.p1 === opts.p2) { this.p[1].alt = true; this.p[1].color = KF.ALT_COLOR || '#ff5a3c'; }
     this.p[0].opp = this.p[1]; this.p[1].opp = this.p[0];
     this.wins = [0, 0]; this.round = 1; this.training = !!opts.training;
@@ -181,7 +182,7 @@ var KF = window.KF || (window.KF = {});
   Battle.prototype.step = function (inputs) {
     this.frameNo++;
     var self = this, P = this.p;
-    for (var i = 0; i < 2; i++) P[i].buf.push(inputs[i], P[i].facing);
+    for (var i = 0; i < 2; i++) P[i].buf.push(P[i].modern ? this.modernConvert(P[i], inputs[i]) : inputs[i], P[i].facing);
 
     if (this.phase === 'intro') {
       this.phaseT++;
@@ -503,6 +504,66 @@ var KF = window.KF || (window.KF = {});
     return false;
   };
 
+
+  // ---------------------------------------------------------- モダン操作（スト6と同じ考え方）
+  //  弱・中・強の3ボタン＋SP（必殺技）＋アシスト。方向と組み合わせて技が決まる
+  //   SP：方向なし＝虚環弾 / 前＝昇穿 / 下＝旋風脚 / 後ろ＝虚掌破 / 空中＝空旋脚
+  //   SP＋強：方向なし・前＝虚空砲(Lv1) / 後ろ＝零界継承(Lv2) / 下＝天地穿(Lv3)
+  //   アシスト＋SP＝EX技（EXゲージ1本） / アシストを押しながら弱・中・強を連打＝アシストコンボ
+  //   弱＋中＝投げ。SPで出した必殺技・超必殺はダメージが8割（スト6と同じ）
+  KF.MODERN_AUTO = {
+    kokuu: {
+      l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'tatsu', str: 0 }, { su: 'su1' }],
+      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'tatsu', str: 2 }, { su: 'su1' }],
+      h: [{ b: 'hp' }, { sp: 'dp', str: 2 }, { su: 'su3' }],
+    },
+  };
+  Battle.prototype.modernConvert = function (f, raw) {
+    var H = raw.held || {}, Pp = raw.pressed || {};
+    var out = { x: raw.x, y: raw.y, held: { rush: !!H.rush, start: !!H.start }, pressed: { rush: !!Pp.rush, start: !!Pp.start } };
+    var st = f.mst || (f.mst = { map: {}, ac: null, acStep: 0, acT: -999 });
+    var rel = raw.x * f.facing, crouch = raw.y > 0, inAir = f.air || f.state === 'prejump';
+    var self = this;
+    function press(b) { out.pressed[b] = true; out.held[b] = true; }
+    function req(move, str, ex) { f.mReq = { move: move, str: str, ex: !!ex, t: self.frameNo }; }
+    var atk = ['l', 'm', 'h'].filter(function (k) { return Pp[k]; });
+    // ---- SP（必殺技・超必殺）
+    if (Pp.sp || (H.sp && Pp.h)) {
+      if (H.h || Pp.h) {
+        req(rel < 0 ? 'su2' : crouch ? 'su3' : 'su1', 0);
+      } else {
+        var mv = inAir ? 'atatsu' : rel > 0 && !crouch ? 'dp' : crouch ? 'tatsu' : rel < 0 ? 'palm' : 'fire';
+        req(mv, 1, H.auto);
+      }
+      atk = atk.filter(function (k) { return k !== 'h'; });
+      st.map = {};
+    }
+    // ---- アシストコンボ（アシストを押しながら弱・中・強）
+    else if (H.auto && atk.length) {
+      var key = Pp.h ? 'h' : Pp.m ? 'm' : 'l';
+      if (st.ac !== key || this.frameNo - st.acT > 45) { st.ac = key; st.acStep = 0; }
+      var seq = (KF.MODERN_AUTO[f.kind] || KF.MODERN_AUTO.kokuu)[key], step = seq[Math.min(st.acStep, seq.length - 1)];
+      st.acStep++; st.acT = this.frameNo;
+      if (step.b) { press(step.b); st.map[key] = step.b; }
+      else if (step.sp) req(step.sp, step.str || 0);
+      else if (step.su) req(step.su, 0);
+      atk = [];
+    }
+    // ---- 弱＋中の同時押しは投げ
+    if (atk.indexOf('l') >= 0 && atk.indexOf('m') >= 0) { press('lp'); press('lk'); atk = []; st.map = {}; }
+    // ---- 通常技：押した瞬間の方向で、パンチかキックかを決める
+    atk.forEach(function (k) {
+      var b;
+      if (inAir) b = k === 'l' ? 'lk' : k === 'm' ? 'mk' : 'hp';
+      else if (crouch) b = k === 'l' ? 'lk' : k === 'm' ? 'mk' : 'hp';
+      else if (k === 'h' && rel < 0) b = 'hk';
+      else b = k === 'l' ? 'lp' : k === 'm' ? 'mp' : 'hp';
+      press(b); st.map[k] = b;
+    });
+    ['l', 'm', 'h'].forEach(function (k) { if (H[k] && st.map[k]) out.held[st.map[k]] = true; else if (!H[k]) delete st.map[k]; });
+    return out;
+  };
+
   Battle.prototype.trySpecial = function (f, cancelLevel) {
     var cmds = KF.COMMANDS[f.kind];
     var P = ['lp', 'mp', 'hp'], K = ['lk', 'mk', 'hk'];
@@ -510,7 +571,9 @@ var KF = window.KF || (window.KF = {});
       var c = cmds[i], set = c.btn === 'P' ? P : K;
       var pressed = null, nPressed = 0;
       var pw = cancelLevel ? Math.min(12, Math.max(3, this.frameNo - (f.moveStartF || 0))) : 5;
-      for (var k = 0; k < 3; k++) if (f.buf.pressedWithin(set[k], pw)) { nPressed++; if (!pressed || k > set.indexOf(pressed)) pressed = set[k]; }
+      var mq = f.mReq && f.mReq.move === c.move && this.frameNo - f.mReq.t < pw ? f.mReq : null;
+      if (mq) { pressed = set[Math.min(2, mq.str)]; nPressed = mq.ex ? 2 : 1; }
+      else for (var k = 0; k < 3; k++) if (f.buf.pressedWithin(set[k], pw)) { nPressed++; if (!pressed || k > set.indexOf(pressed)) pressed = set[k]; }
       if (!pressed) continue;
       var mv = f.D.moves[c.move];
       if (!!c.air !== (cancelLevel === 'air')) continue;
@@ -522,7 +585,7 @@ var KF = window.KF || (window.KF = {});
       var slowAdd = (cancelLevel && cancelLevel !== 'air' && mv.slowFrom && !willEx && f.state === 'attack' && f.move && f.move.type !== 's' && f.move.type !== 'x' && mv.slowFrom.ok.indexOf(f.moveId) < 0) ? mv.slowFrom.add : 0;
       if (cancelLevel === 's' && mv.type !== 'u' && mv.type !== 'gu' && !/[sxg]/.test(mv.type)) continue;
       if (cancelLevel === 'u' && mv.type !== 'u' && mv.type !== 'gu') continue;
-      var okSeq = c.dp ? f.buf.matchDP(c.win) : f.buf.match(c.seq, c.win, c.loose);
+      var okSeq = mq ? true : c.dp ? f.buf.matchDP(c.win) : f.buf.match(c.seq, c.win, c.loose);
       // 簡易入力（昇竜の ↘↓↘ ・ ↓↘→↘ など）
       if (!okSeq && c.alt) for (var q = 0; q < c.alt.length && !okSeq; q++) okSeq = f.buf.matchStrict(c.alt[q], c.win);
       // 超必殺の簡易コマンド（スト6：↓↘→↓→ ・ ↓→↓↘→ でも成立）
@@ -532,6 +595,7 @@ var KF = window.KF || (window.KF = {});
       if (!okSeq) continue;
       var str = set.indexOf(pressed);
       var id = c.move;
+      if (mq) { f.mReq = null; f.nextModern = true; }
       if (mv.type === 'u' || mv.type === 'gu') {
         if (f.sup < mv.bars * C.SUPER_BAR) continue;
         f.sup -= mv.bars * C.SUPER_BAR;
@@ -578,6 +642,7 @@ var KF = window.KF || (window.KF = {});
     var mv = f.D.moves[id];
     if (!mv) return false;
     f.state = 'attack'; f.t = 0; f.move = mv; f.moveId = id; f.str = str || 0; f.moveStartF = this.frameNo; f.moveSerial = (f.moveSerial || 0) + 1;
+    f.modernMv = !!f.nextModern; f.nextModern = false;   // モダンのSPで出した技（ダメージ8割）
     f.mvT = 0; f.preD = mv.preDelay ? pick(mv.preDelay, f.str) : 0;
     // ラッシュから出した技だけ：有利＋4Fと、戻りの短縮（そこからキャンセルした技には引き継がない）
     f.rushBonus = !!f.nextRush; f.nextRush = false; f.projHit = false; f.rushCut = f.rushBonus ? C.RUSH_REC_CUT : 0;
@@ -875,20 +940,20 @@ var KF = window.KF || (window.KF = {});
     var h = f.joint('hand_r'), pr = mv.proj, s = Math.min(f.str, pr.spd.length - 1);
     if (pr.ground) h = [f.x + f.facing * 30, C.GROUND - 16];
     this.projs.push({ kind: 'ball', owner: f, mv: mv, key: f.side + ':' + f.moveSerial, x: h[0] + f.facing * 12, y: h[1], vx: pr.spd[s] * f.facing,
-                      fx: pr.fx, r: pr.r, hits: pr.hits, rehit: pr.rehit || 99, life: pr.life, t: 0, lastHit: -99, alive: true });
+                      fx: pr.fx, r: pr.r, hits: pr.hits, rehit: pr.rehit || 99, life: pr.life, t: 0, lastHit: -99, alive: true, modern: !!f.modernMv });
     this.emit('sfx', { s: 'fire' });
   };
   Battle.prototype.spawnBeam = function (f, mv) {
     var h = f.joint('hand_r');
     this.projs.push({ kind: 'beam', owner: f, mv: mv, key: f.side + ':' + f.moveSerial, x: h[0], y: h[1], fx: mv.beam.fx, head: mv.beam.head, len: 0, maxLen: mv.beam.len,
-                      h: mv.beam.h, hits: mv.hits, rehit: mv.rehit, t: 0, lastHit: -99, alive: true, dir: f.facing });
+                      h: mv.beam.h, hits: mv.hits, rehit: mv.rehit, t: 0, lastHit: -99, alive: true, modern: !!f.modernMv, dir: f.facing });
     this.emit('sfx', { s: 'beam' }); this.shake = 6;
   };
   Battle.prototype.spawnPillar = function (f, mv) {
     var self = this, offs = mv.pillar.offs || [0];
     offs.forEach(function (o, i) {
       self.projs.push({ kind: 'pillar', owner: f, mv: mv, key: f.side + ':' + f.moveSerial, x: f.opp.x + o * f.facing, y: C.GROUND, fx: mv.pillar.fx, w: mv.pillar.w, hits: mv.hits,
-                        rehit: mv.rehit, t: -i * 4, lastHit: -99, alive: true, life: 60 + i * 4 });
+                        rehit: mv.rehit, t: -i * 4, lastHit: -99, alive: true, modern: !!f.modernMv, life: 60 + i * 4 });
     });
     this.emit('sfx', { s: 'pillar' }); this.shake = 8;
   };
@@ -1085,7 +1150,7 @@ var KF = window.KF || (window.KF = {});
     var sc = C.SCALING[Math.min(def.combo - 1, C.SCALING.length - 1)];
     if (att.rushLock && def.combo > 1) sc *= C.RUSH_CANCEL_SCALE;
     if (mv.minScale) sc = Math.max(sc, mv.minScale);
-    var dmg = Math.max(1, Math.round(baseDmg * sc * (counter || punish ? 1.2 : 1)));
+    var dmg = Math.max(1, Math.round(baseDmg * sc * (counter || punish ? 1.2 : 1) * (!proj && att.modernMv || proj && proj.modern ? 0.8 : 1)));
     this.applyDamage(att, def, dmg, mv, false);
     def.counterable = false;
     if (counter) this.emit('announce', { text: 'COUNTER', small: 1, side: att.side });

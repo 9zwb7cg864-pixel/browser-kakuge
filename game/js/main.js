@@ -192,9 +192,16 @@ var KF = window.KF || (window.KF = {});
     if (m.ok) { KF.Audio.play('ok'); cfg.level = LEVELS[sel]; startBattle(); }
   }
 
+  // タッチボタンの文字：モダンのときは 弱・中・強・SP・アシスト
+  function touchLabels(modern) {
+    var L = modern ? { lp: '弱', mp: '中', hp: '強', lk: 'SP', mk: 'アシスト', hk: 'SP' } : { lp: '弱P', mp: '中P', hp: '強P', lk: '弱K', mk: '中K', hk: '強K' };
+    Object.keys(L).forEach(function (k) { var el = document.querySelector('#touch [data-b="' + k + '"]'); if (el) el.textContent = L[k]; });
+  }
   function startBattle() {
     KF.vsMode = cfg.mode === 'vs';
-    game = new KF.Battle({ p1: cfg.p1, p2: cfg.p2, meta: KF.Assets.meta, training: cfg.mode === 'training' });
+    sources[0].modern = !!KF.Input.modern[1]; sources[1].modern = cfg.mode === 'vs' && !!KF.Input.modern[2];
+    game = new KF.Battle({ p1: cfg.p1, p2: cfg.p2, meta: KF.Assets.meta, training: cfg.mode === 'training', modern: [sources[0].modern, sources[1].modern] });
+    touchLabels(sources[0].modern);
     lastEvents = 0;
     sources[1].cpu = null; ai = null;
     if (cfg.mode === 'cpu') { ai = new KF.AI(game, 1, cfg.level, (Date.now() & 0xffff) + 1); sources[1].cpu = ai; }
@@ -275,6 +282,26 @@ var KF = window.KF || (window.KF = {});
     if (mode === 'join') setTimeout(function () { document.getElementById('netcode').focus(); }, 50);
   }
   window.addEventListener('pagehide', function () { if (net) net.send({ t: 'bye' }); });
+  // ---------------------------------------------------------- アプリとして追加（PC・スマホのホーム画面）
+  var installEvt = null, installBtn = null;
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    try { navigator.serviceWorker.register('sw.js').catch(function () { }); } catch (e) { }
+  }
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); installEvt = e; });
+  window.addEventListener('appinstalled', function () { installEvt = null; if (installBtn) installBtn.style.display = 'none'; KF.padNotice = { text: 'アプリとして追加しました', t: 240 }; });
+  function showInstall(on) {
+    if (!installBtn) {
+      installBtn = document.createElement('button');
+      installBtn.textContent = 'アプリとして追加';
+      installBtn.style.cssText = 'position:fixed;right:12px;top:12px;z-index:6;font:900 14px "Noto Sans JP",sans-serif;padding:8px 14px;border-radius:8px;border:2px solid #38d6ff;background:rgba(8,8,26,.85);color:#fff;cursor:pointer;display:none';
+      installBtn.onclick = function () {
+        if (installEvt) { installEvt.prompt(); installEvt.userChoice.then(function () { installEvt = null; installBtn.style.display = 'none'; }); }
+      };
+      document.body.appendChild(installBtn);
+    }
+    var standalone = window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches);
+    installBtn.style.display = on && installEvt && !standalone ? 'block' : 'none';
+  }
   function goOnline() { scene = 'online'; onl.stage = 'menu'; onl.sel = 0; netUI(null); }
   function newSession() {
     if (net) net.close();
@@ -298,19 +325,22 @@ var KF = window.KF || (window.KF = {});
     }
     if (m.t === 'hello' && net.isHost && !rb) {
       // 回線の速さを少し測ってから始める
-      setTimeout(function () { if (!net || rb) return; var d = delayFor(net.rtt); net.send({ t: 'start', g: 1, d: d }); startOnlineMatch(1, d); }, 1500);
+      onl.peerModern = !!m.modern;
+      setTimeout(function () { if (!net || rb) return; var d = delayFor(net.rtt); var md = [!!KF.Input.modern[1], onl.peerModern]; net.send({ t: 'start', g: 1, d: d, modern: md }); startOnlineMatch(1, d, md); }, 1500);
       return;
     }
-    if (m.t === 'start') { startOnlineMatch(m.g, m.d); return; }
+    if (m.t === 'start') { startOnlineMatch(m.g, m.d, m.modern); return; }
     if ((m.t === 'in' || m.t === 'hash') && rb && m.g === onl.match) { rb.receive(m); return; }
     if (m.t === 'rematch') { onl.want[1 - net.side] = true; checkRematch(); return; }
     if (m.t === 'bye') { onl.left = true; return; }
   }
-  function startOnlineMatch(g, d) {
+  function startOnlineMatch(g, d, md) {
+    md = md || [false, false]; onl.modern = md;
+    sources[0].modern = !!md[net.side]; touchLabels(sources[0].modern);
     onl.match = g; onl.want = [false, false]; onl.left = false; onl.escT = 0; onl.resSel = 0; onl.delay = d;
     rb = new KF.Rollback({
       side: net.side, delay: d, maxRollback: 10,
-      makeBattle: function () { return new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta: KF.Assets.meta }); },
+      makeBattle: function () { return new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta: KF.Assets.meta, modern: md }); },
       send: function (msg) { msg.g = g; net.send(msg); },
       onEvent: handleEvent,
     });
@@ -320,7 +350,7 @@ var KF = window.KF || (window.KF = {});
     KF.Touch && KF.Touch.show(isTouch);
   }
   function checkRematch() {
-    if (net && net.isHost && onl.want[0] && onl.want[1]) { var g = onl.match + 1, d = delayFor(net.rtt); net.send({ t: 'start', g: g, d: d }); startOnlineMatch(g, d); }
+    if (net && net.isHost && onl.want[0] && onl.want[1]) { var g = onl.match + 1, d = delayFor(net.rtt), md = onl.modern; net.send({ t: 'start', g: g, d: d, modern: md }); startOnlineMatch(g, d, md); }
   }
   function sceneOnline(m) {
     bg(0.6);
@@ -483,6 +513,7 @@ var KF = window.KF || (window.KF = {});
     if (m.back) { scene = game && paused ? 'battle' : 'title'; }
   }
   var KEY_ACTIONS = ['up', 'down', 'left', 'right', 'lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'rush', 'start'];
+  var KEY_NAMES_M = { lp: '弱', mp: '中', hp: '強', lk: 'SP（必殺技）', mk: 'アシスト', hk: 'SP（必殺技）' };
   var KEY_NAMES = { up: '上', down: '下', left: '左', right: '右', lp: '弱パンチ', mp: '中パンチ', hp: '強パンチ', lk: '弱キック', mk: '中キック', hk: '強キック', rush: 'ラッシュ', start: 'ポーズ', reset: '位置リセット' };
   var keyListener = null;
   var PAD_ACTIONS = ['lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'rush', 'start', 'reset'];
@@ -538,12 +569,18 @@ var KF = window.KF || (window.KF = {});
       var on = keyEdit.i === i;
       R.ctx.fillStyle = on ? 'rgba(0,220,255,0.18)' : 'rgba(10,10,30,0.6)'; R.ctx.fillRect(x, y, 240, 30);
       R.ctx.strokeStyle = on ? '#38d6ff' : '#3a3a6a'; R.ctx.strokeRect(x + 0.5, y + 0.5, 239, 29);
-      R.text(KEY_NAMES[a], x + 12, y + 15, 11, '#ffffff', 'left');
+      R.text((KF.Input.modern[keyEdit.p] && KEY_NAMES_M[a]) || KEY_NAMES[a], x + 12, y + 15, 11, '#ffffff', 'left');
       R.text(keyEdit.wait && on ? 'キーを押してください…' : keys[a].replace(/^Key/, '').replace(/^Digit/, ''), x + 228, y + 15, 11, on ? '#ffe14a' : '#a0a8c8', 'right');
       rects.push([x, y, 240, 30]);
     });
-    R.text('ゲームパッド・レバーレスのボタン設定は Tab キー（またはここをタップ）', 320, 330, 9, '#8890b0', 'center');
-    if (clickPos && clickPos[1] > 318) { keyEdit.p = 'pad'; keyEdit.i = 0; return; }
+    // 操作タイプ（クラシック／モダン）
+    var md = KF.Input.modern[keyEdit.p], mrect = [170, 296, 300, 26];
+    R.ctx.fillStyle = md ? 'rgba(255,210,60,0.18)' : 'rgba(10,10,30,0.6)'; R.ctx.fillRect(mrect[0], mrect[1], mrect[2], mrect[3]);
+    R.ctx.strokeStyle = md ? '#ffd23c' : '#3a3a6a'; R.ctx.strokeRect(mrect[0] + 0.5, mrect[1] + 0.5, mrect[2] - 1, mrect[3] - 1);
+    R.text(keyEdit.p + 'P 操作タイプ：' + (md ? 'モダン' : 'クラシック') + '（Mキー／タップで切替）', 320, mrect[1] + 13, 11, md ? '#ffe14a' : '#ffffff', 'center');
+    if (clicked(mrect)) { KF.Input.setModern(keyEdit.p, !md); KF.Audio.play('cursor'); clickPos = null; }
+    R.text('ゲームパッド・レバーレスのボタン設定は Tab キー（またはここをタップ）', 320, 334, 9, '#8890b0', 'center');
+    if (clickPos && clickPos[1] > 326) { keyEdit.p = 'pad'; keyEdit.i = 0; return; }
     if (keyEdit.wait) return;
     if (m.up) keyEdit.i = (keyEdit.i + KEY_ACTIONS.length - 1) % KEY_ACTIONS.length;
     if (m.down) keyEdit.i = (keyEdit.i + 1) % KEY_ACTIONS.length;
@@ -598,6 +635,7 @@ var KF = window.KF || (window.KF = {});
     else if (scene === 'onlineBattle') { sceneOnlineBattle(); clickPos = null; }
     else {
       var m = menuInput();
+      showInstall(scene === 'title');
       if (scene === 'title') sceneTitle(m);
       else if (scene === 'select') sceneSelect(m);
       else if (scene === 'level') sceneLevel(m);
@@ -613,6 +651,8 @@ var KF = window.KF || (window.KF = {});
   }
   window.addEventListener('keydown', function (e) {
     KF.Audio.init();
+    // 操作設定：Mキーでクラシック／モダンを切り替え（キー割り当て待ちのときは除く）
+    if (e.code === 'KeyM' && scene === 'keys' && keyEdit && keyEdit.p !== 'pad' && !keyEdit.wait) { KF.Input.setModern(keyEdit.p, !KF.Input.modern[keyEdit.p]); KF.Audio.play('cursor'); }
     if (e.code === 'F2') { R && (R.debug = !R.debug); e.preventDefault(); }
     if (e.code === 'F3') { showFps = !showFps; e.preventDefault(); }
   });
