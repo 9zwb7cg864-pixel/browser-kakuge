@@ -13,7 +13,7 @@ for root, _, fs in os.walk(os.path.join(G, 'assets')):
             emb['img'][rel] = 'data:image/png;base64,' + base64.b64encode(open(p, 'rb').read()).decode()
 html = open(os.path.join(G, 'index.html'), encoding='utf-8').read()
 def inline(m):
-    src = m.group(1)
+    src = m.group(1).split('?')[0]
     return '<script>\n' + open(os.path.join(G, src), encoding='utf-8').read().replace('</script', '<\\/script') + '\n</script>'
 html = re.sub(r'<script src="([^"]+)"></script>', inline, html)
 html = html.replace('<script>', '<script>window.KF_EMBED = ' + json.dumps(emb, separators=(',', ':')) + ';</script>\n<script>', 1)

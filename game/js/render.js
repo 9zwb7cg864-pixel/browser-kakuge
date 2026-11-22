@@ -11,6 +11,7 @@ KF.loadAssets = function (onProgress) {
   var EMB = window.KF_EMBED;   // 単体版：素材がHTMLに埋め込まれている
   function img(key, src) {
     if (EMB && EMB.img[src]) src = EMB.img[src];
+    else if (window.KF_VER) src += '?v=' + window.KF_VER;   // 更新したら新しい絵を読み直す
     jobs.push(new Promise(function (res, rej) {
       var im = new Image();
       im.onload = function () { A.img[key] = im; done++; onProgress && onProgress(done / Math.max(1, jobs.length)); res(); };
@@ -20,7 +21,7 @@ KF.loadAssets = function (onProgress) {
   }
   function json(url) {
     if (EMB && EMB.json[url]) return Promise.resolve(JSON.parse(JSON.stringify(EMB.json[url])));
-    return fetch(url).then(function (r) { return r.json(); });
+    return fetch(url + (window.KF_VER ? '?v=' + window.KF_VER : '')).then(function (r) { return r.json(); });
   }
   return Promise.all([json('assets/kokuu/anims.json'), json('assets/shuuen/anims.json'), json('assets/fx/fx.json'), json('assets/stage/stage.json')])
     .then(function (r) {
