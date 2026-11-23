@@ -166,6 +166,24 @@ KF.altImg = function (key) {
   var src = A.img[key]; if (!src) return null;
   var cv = document.createElement('canvas'); cv.width = src.width; cv.height = src.height;
   var c = cv.getContext('2d'); c.drawImage(src, 0, 0);
+  var kn = key.split(':'), am = A.meta[kn[0]] && A.meta[kn[0]].anims[kn[1]];
+  if (am && am.pl) {   // PixelLabの絵：赤いバンテージを青に、黒い服を紺にする（肌の色は変えない）
+    try {
+      var d2 = c.getImageData(0, 0, cv.width, cv.height), q = d2.data;
+      for (var j = 0; j < q.length; j += 4) {
+        if (!q[j + 3]) continue;
+        var R = q[j] / 255, Gc = q[j + 1] / 255, B = q[j + 2] / 255, mx = Math.max(R, Gc, B), mn = Math.min(R, Gc, B), s = mx ? (mx - mn) / mx : 0;
+        if (s > 0.45 && mx > 0.2 && R === mx && (Gc - B) / (mx - mn) < 0.36) {   // 赤（バンテージ）→ 同じ明るさの青
+          var lo = mn * 255, hi = mx * 255; q[j] = lo; q[j + 1] = lo + (hi - lo) * 0.4; q[j + 2] = hi;
+        } else if (s < 0.25 && mx < 0.5) {                                         // 黒・灰色の服 → 紺
+          q[j] = q[j] * 0.75; q[j + 1] = q[j + 1] * 0.85; q[j + 2] = Math.min(255, q[j + 2] * 1.3 + 12);
+        }
+      }
+      c.putImageData(d2, 0, 0);
+    } catch (e) { }
+    A.img[k2] = cv;
+    return cv;
+  }
   try {
     var d = c.getImageData(0, 0, cv.width, cv.height), p = d.data;
     // 色相を約115度回す（シアン→マゼンタ）。明るさはそのまま

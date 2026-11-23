@@ -45,6 +45,7 @@ for name, mv in moves.items():
         n = copy.deepcopy(f); n['d'] = 1; new.append(n)
     a['frames'] = new
     a['file'] = 'kokuu_' + name + '.png'
+    a['pl'] = True     # PixelLabの絵（2Pの色違いの作り方が違う）
     sheet = Image.new('RGBA', (FW * len(new), FH))
     for i, p in enumerate(mv['frames']):
         sheet.paste(place(p, new[i]), (i * FW, 0))
