@@ -24,7 +24,8 @@ KF.CONST = {
 
 KF.CHARS = {
   kokuu: {
-    name: '道着キャラ男', en: 'KOKUU', hp: 10000, walkF: 1.9, walkB: 1.5, dashF: 7.2, dashB: -6.4,
+    name: '道着キャラ男', en: 'KOKUU', hp: 10000, walkF: 3.9, walkB: 2.66,   // 歩きはスト6のリュウと同じ（前0.047・後ろ0.032 × 約83ドット）
+    dashF: 7.2, dashB: -6.4,
     jumpVX: 3.6, color: '#38d6ff', fx: 'k', pushW: 34, prefRange: [110, 190],
     moves: {
       lp:  { anim: 'lp', dmg: 300, adv: [4, 1], hs: 8, push: [3, 4], lv: 'm', cancel: 'csur', light: 1 },
