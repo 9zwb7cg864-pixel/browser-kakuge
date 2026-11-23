@@ -84,15 +84,15 @@ KF.Renderer.prototype.drawStageCity = function (camX, b) {
 // トレーニングステージ：方眼の壁と、遠近のついた方眼の床（距離が測れる）
 KF.Renderer.prototype.drawStage = function (camX, b) {
   // カメラの位置ごとに描いた絵を取っておき、同じ位置なら1枚貼るだけにする（ステージは動かないので毎フレーム描き直さない）
-  var key = Math.round(camX);
-  if (!this.stCache) { this.stCache = document.createElement('canvas'); this.stCache.width = 680; this.stCache.height = 480; this.stKey = null; }   // 上に80ドット余分に描いておく（高く跳んだときカメラが上を向く）
+  var q = KF.RES || 1, key = Math.round(camX * q) / q;
+  if (!this.stCache || this.stQ !== q) { this.stCache = document.createElement('canvas'); this.stCache.width = 680 * q; this.stCache.height = 480 * q; this.stKey = null; this.stQ = q; }   // 上に80ドット余分に描いておく（高く跳んだときカメラが上を向く）
   if (this.stKey !== key) {
     this.stKey = key;
     var sc = this.stCache.getContext('2d');
-    sc.setTransform(1, 0, 0, 1, 0, 0); sc.clearRect(0, 0, 680, 480); sc.translate(20, 80);
+    sc.setTransform(q, 0, 0, q, 0, 0); sc.clearRect(0, 0, 680, 480); sc.translate(20, 80);
     this.drawStageRaw(sc, key);
   }
-  this.ctx.drawImage(this.stCache, -20, -80);
+  this.ctx.drawImage(this.stCache, -20, -80, 680, 480);
 };
 KF.Renderer.prototype.drawStageRaw = function (c, camX) {
   var W = 640, H = 360, C = KF.CONST;
@@ -210,7 +210,8 @@ KF.Renderer.prototype.drawFighterImg = function (ctx, f, x, y, alpha, flipY) {
   var fw = 224, fh = 200, sx = Math.min(f.aF, f.animObj().frames.length - 1) * fw;
   ctx.save();
   ctx.globalAlpha = alpha == null ? 1 : alpha;
-  ctx.translate(Math.round(x), Math.round(y));
+  var q = ctx === this.ctx ? (KF.RES || 1) : 1;   // 画面の細かさに合わせて丸める（2倍なら半ドット単位）
+  ctx.translate(Math.round(x * q) / q, Math.round(y * q) / q);
   ctx.scale(f.facing, flipY ? -1 : 1);
   ctx.drawImage(img, sx, 0, fw, fh, -112, -190, fw, fh);
   ctx.restore();
@@ -226,7 +227,7 @@ KF.Renderer.prototype.drawFighterWhite = function (ctx, f, x, y, alpha) {
   w.drawImage(img, sx, 0, 224, 200, 0, 0, 224, 200);
   w.globalCompositeOperation = 'source-atop'; w.fillStyle = '#ffffff'; w.fillRect(0, 0, 224, 200);
   ctx.save(); ctx.globalAlpha = alpha;
-  ctx.translate(Math.round(x), Math.round(y)); ctx.scale(f.facing, 1);
+  var q = KF.RES || 1; ctx.translate(Math.round(x * q) / q, Math.round(y * q) / q); ctx.scale(f.facing, 1);
   ctx.drawImage(this.wcv, -112, -190);
   ctx.restore();
 };
@@ -330,7 +331,7 @@ KF.Renderer.prototype.render = function (b) {
   // 高く跳んだら、頭が画面の上から出ないようにカメラを少し上へ向ける（見た目だけ）
   var topY = Math.min(b.p[0].y, b.p[1].y), wantY = Math.max(0, Math.min(55, 190 - topY));   // 55まで（立っている相手の足が画面の下に収まる）
   this.camY = (this.camY || 0) + (wantY - (this.camY || 0)) * 0.3;
-  c.translate(Math.round(shx), Math.round(shy + this.camY));
+  var q2 = KF.RES || 1; c.translate(Math.round(shx * q2) / q2, Math.round((shy + this.camY) * q2) / q2);
   this.drawStage(camX, b);
   if (b.bgFlash > 0) { c.fillStyle = 'rgba(255,255,255,' + (b.bgFlash * 0.07) + ')'; c.fillRect(-20, -20, W + 40, H + 40); }
   var ox = W / 2 - camX;

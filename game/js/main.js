@@ -670,15 +670,20 @@ var KF = window.KF || (window.KF = {});
       fpsInfo.fps = Math.round(fpsInfo.n * 1000 / fpsInfo.t); fpsInfo.n = 0; fpsInfo.t = 0; KF.fps = fpsInfo.fps;
       // 3秒続けて画面の更新が50回/秒を下回ったら、飾りを省いて軽くする
       fpsInfo.slow = fpsInfo.fps < 50 && !document.hidden ? (fpsInfo.slow || 0) + 1 : 0;
-      if (fpsInfo.slow >= 3 && !KF.lowFx) KF.lowFx = true;
+      if (fpsInfo.slow >= 3 && !KF.lowFx) { KF.lowFx = true; KF.RES = 1; cv.width = 640; cv.height = 360; }   // 重い端末では元の細かさに戻す
     }
     var steps = 0;
-    while (acc >= 1000 / 60 && steps < 4) { acc -= 1000 / 60; step(); steps++; }
+    // 画面の更新がだいたい60回/秒なら、1回の更新でちょうど1コマ進める（進まない回・2コマ進む回が混ざってガクッとするのを防ぐ）
+    // オンライン対戦は時間どおりに進める
+    var online = scene === 'onlineBattle' || scene === 'online' || scene === 'onlineResult';
+    if (!online && dt > 1000 / 60 - 3.5 && dt < 1000 / 60 + 3.5) { acc = 0; step(); steps = 1; }
+    else while (acc >= 1000 / 60 && steps < 4) { acc -= 1000 / 60; step(); steps++; }
     if (steps >= 4) acc = 0;
     requestAnimationFrame(tick);
   }
   function step() {
     frameT++;
+    R.ctx.setTransform(KF.RES, 0, 0, KF.RES, 0, 0); R.ctx.imageSmoothingEnabled = false;
     if (scene === 'load') return;
     navButtons();
     if (scene === 'battle') { sceneBattle(); clickPos = null; }
@@ -713,6 +718,8 @@ var KF = window.KF || (window.KF = {});
 
   KF.Game = { get battle() { return game; }, get scene() { return scene; }, get net() { return net; }, get rb() { return rb; }, cfg: cfg, start: startBattle, setScene: function (s) { scene = s; } };
 
+  // 画面の中身は2倍の細かさで描く（ドット絵は荒いままで、動く位置だけ半ドット単位になり、移動やカメラがなめらかになる）
+  KF.RES = 2; cv.width = 640 * KF.RES; cv.height = 360 * KF.RES;
   R = new KF.Renderer(cv);
   var bar = document.getElementById('loadbar');
   KF.loadAssets(function (p) { if (bar) bar.style.width = Math.round(p * 100) + '%'; }).then(function () {
