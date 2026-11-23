@@ -570,7 +570,7 @@ var KF = window.KF || (window.KF = {});
     kokuu: {
       l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'tatsu', str: 0 }, { sp: 'dp', str: 2 }, { su: 'su3' }],
       m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'tatsu', str: 1 }, { sp: 'dp', str: 2 }, { su: 'su3' }],
-      h: [{ b: 'hp' }, { sp: 'palm', str: 0 }, { b: 'hp' }, { sp: 'fire', str: 0 }, { b: 'rush' }, { b: 'hp' }, { sp: 'dp', str: 2 }, { su: 'su3' }],
+      h: [{ b: 'hp' }, { sp: 'palm', str: 0 }, { sp: 'fire', str: 0 }, { b: 'rush' }, { b: 'hp' }, { sp: 'dp', str: 2 }, { su: 'su3' }],   // 虚掌破は遠くへ飛ばすので、強Pではなく虚環弾で拾う
     },
     gai_h: {
       l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'change' }, { sp: 'charge', str: 0 }, { su: 'su2' }],
