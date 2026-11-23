@@ -1,6 +1,6 @@
 import sys, json, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import motion4 as motion3
+import motion5 as motion3
 from PIL import Image, ImageDraw, ImageFont
 ROOT = '/home/claude/dairantou-street-fight'
 A = json.load(open(f'{ROOT}/game/assets/kokuu/anims.json'))
@@ -50,6 +50,7 @@ def draw_skel(d, j, ox, oy, sc, hitk=None, active=False):
         x, y = P(hitk); r = 9 * sc; d.ellipse([x - r, y - r, x + r, y + r], outline=(255, 60, 60), width=3)
 
 def frame_img(name, i, oldf, label, speed):
+    global R
     img = Image.new('RGB', (W, H), (14, 16, 26)); d = ImageDraw.Draw(img)
     gy = 600
     for px in (0, 640): d.line([(px + 20, gy), (px + 620, gy)], fill=(70, 80, 110), width=2)
@@ -71,7 +72,7 @@ def frame_img(name, i, oldf, label, speed):
         d.text((900, 60), f"黄色の線＝リーチ {m['reach']}px", font=small, fill=(255, 200, 60))
     d.text((30, 20), '今の動き', font=font, fill=(200, 200, 220))
     d.text((670, 20), '新しい骨組み（本物の人の動き＝Mixamo）', font=font, fill=(120, 235, 255))
-    d.text((30, 640), f"{label}　{speed}", font=font, fill=(255, 255, 255))
+    d.text((30, 640), f"{name}  {label}　{speed}", font=font, fill=(255, 255, 255))
     ph = fr['ph']; tag = {'s': '出始め', 'a': '当たる', 'r': '戻り', '-': ''}[ph]
     d.text((670, 640), f"{i + 1}/{len(m['frames'])}F {tag}", font=small, fill=(255, 90, 90) if ph == 'a' else (180, 190, 210))
     return img
@@ -101,12 +102,12 @@ if __name__ == '__main__':
         k = 0
         for name in R:
             m = R[name]; oldf = old_frames(name); n = max(len(m['frames']), len(oldf))
-            for speed, rep, loops in ((('実際の速さの1/2', 1, 1),) if m['loop'] else (('実際の速さの1/2', 1, 2), ('1/4のスロー', 2, 1))):
+            for speed, rep, loops in (('実際の速さの1/2', 1, 1),):
                 for _ in range(loops):
                     for i in range(n):
                         im = frame_img(name, i, oldf, m['jp'], speed)
                         for _ in range(rep): im.save(f'{tmp}/f{k:05d}.jpg', quality=92); k += 1
-                    for _ in range(10): im.save(f'{tmp}/f{k:05d}.jpg', quality=92); k += 1
+                    for _ in range(8): im.save(f'{tmp}/f{k:05d}.jpg', quality=92); k += 1
         subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-framerate', '30', '-i', f'{tmp}/f%05d.jpg',
-                        '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '/tmp/mv/motion_v4.tmp.mp4'], check=True)
-        os.replace('/tmp/mv/motion_v4.tmp.mp4', '/tmp/mv/motion_v4.mp4')
+                        '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '/tmp/mv/motion_v5.tmp.mp4'], check=True)
+        os.replace('/tmp/mv/motion_v5.tmp.mp4', '/tmp/mv/motion_v5.mp4')
