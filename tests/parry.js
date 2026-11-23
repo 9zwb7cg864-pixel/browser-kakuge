@@ -65,5 +65,9 @@ const ann = (ev, t) => ev.some(e => e.type === 'announce' && e.text === t);
   const ev = []; let fired = false;
   for (let f = 0; f < 30; f++) { const e0 = b.events.length; b.step([fired ? N() : (b.p[0].connected ? (fired = true, inp(5, 'rush')) : (f === 0 ? inp(2, 'mk') : inp(2))), N()]); b.events.slice(e0).forEach(e => ev.push(e)); }
   ok(ev.some(e => e.type === 'rushcancel'), 'しゃがみ中Kを当ててパリィボタンでラッシュキャンセル'); }
+{ for (const [d, btn, want] of [[6, 'mp', 'f_mp'], [6, 'hp', 'f_hp'], [4, 'hk', 'b_hk'], [5, 'hp', 'hp'], [2, 'hp', 'c_hp']]) {
+    const b = fresh(200); const PR = [inp(5, 'rush'), inp(5, 'rush'), inp(6, 'rush'), inp(5, 'rush'), inp(6, 'rush')];
+    run(b, [...PR, N(), N(), N(), N(), N(), N(), N(), inp(d, btn), inp(d), inp(d)], [], 16);
+    ok(b.p[0].moveId === want, `ラッシュから ${d === 6 ? '前＋' : d === 4 ? '後ろ＋' : d === 2 ? '下＋' : ''}${btn} で ${want}（出た技：${b.p[0].moveId}）`); } }
 console.log(`結果: ${pass} 件成功 / ${fail} 件失敗`);
 process.exit(fail ? 1 : 0);

@@ -389,7 +389,8 @@ var KF = window.KF || (window.KF = {});
           if (cur.p.lp && cur.h.lk || cur.p.lk && cur.h.lp) { this.tryThrow(f); return; }
           var rb = f.pendingBtn || f.rushBuf; f.rushBuf = null;
           if (rb) {
-            var id = (down ? 'c_' : '') + rb;
+            // しゃがみ・前・後ろの方向で、しゃがみ技・前特殊技（→中P＝鎚打ちなど）・後ろ特殊技も出る
+            var id = down ? 'c_' + rb : (fwd && D.moves['f_' + rb]) ? 'f_' + rb : (back && D.moves['b_' + rb]) ? 'b_' + rb : rb;
             f.pendingBtn = null;
             f.carry = f.vx;            // ラッシュの勢いを残したまま技を出す（スト6と同じく滑りながら出る）
             f.nextRush = true;
