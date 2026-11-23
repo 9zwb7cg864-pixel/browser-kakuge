@@ -1,7 +1,7 @@
 // アプリとして入れたときの部品の取り置き（2回目からすぐ起動・電波が弱くても遊べる）
 //  ・ページ本体（index.html）は毎回ネットから取り直し、つながらないときだけ取り置きを使う
 //  ・ほかの部品は版番号つきなので、取り置きがあればそれを使う（更新すると版番号が変わり、新しく取り直す）
-var VERSION = '20261123070743';
+var VERSION = '20261123072323';
 var CACHE = 'dsf-' + VERSION;
 self.addEventListener('install', function () { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
