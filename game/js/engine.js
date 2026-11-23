@@ -1451,7 +1451,7 @@ var KF = window.KF || (window.KF = {});
   Battle.prototype.koDefender = function (att, def) {
     if (def.koMarked) return;
     def.koMarked = true;
-    this.slow = 50; this.shake = 10;
+    this.slow = 50; this.shake = 0; def.hitShake = 0;   // 勝負が決まったときは画面も体も揺らさない
     this.emit('ko', { side: def.side });
     this.emit('sfx', { s: 'ko' });
   };
@@ -1512,6 +1512,7 @@ var KF = window.KF || (window.KF = {});
     this.camX = Math.max(lo, Math.min(hi, this.camX));
     this.camX = Math.max(C.W / 2, Math.min(C.WORLD_W - C.W / 2, this.camX));
     if (this.shake > 0) this.shake *= 0.85; if (this.shake < 0.3) this.shake = 0;
+    if (this.p[0].koMarked || this.p[1].koMarked) { this.shake = 0; this.p[0].hitShake = 0; this.p[1].hitShake = 0; }
   };
   Battle.prototype.updateFacing = function () {
     var self = this;

@@ -247,7 +247,9 @@ var KF = window.KF || (window.KF = {});
   // 段の色：上段（立ち・しゃがみどちらでもガードできる）／中段（立ちガードのみ）／下段（しゃがみガードのみ）／投げ（ガードできない）
   var DAN_COL = { '上段': '#7fd0ff', '中段': '#ffd23c', '下段': '#ff7a9a', '投げ': '#c890ff' };
   // キーディス：1Pの入力の移り変わりを、新しい順に左に並べる（数字は続いたフレーム数）
-  var keyLog = [], KEY_ROWS = 14;
+  var keyLog = [], KEY_ROWS = 14, keyDisp = true;
+  try { keyDisp = localStorage.getItem('kf_keydisp') !== '0'; } catch (e) { }
+  function toggleKeyDisp() { keyDisp = !keyDisp; try { localStorage.setItem('kf_keydisp', keyDisp ? '1' : '0'); } catch (e) { } }
   var KEY_NM = { lp: '弱P', mp: '中P', hp: '強P', lk: '弱K', mk: '中K', hk: '強K', rush: 'ラッシュ', l: '弱', m: '中', h: '強', sp: 'SP', auto: 'アシスト' };
   var KEY_COL = { lp: '#7fd0ff', mp: '#ffd23c', hp: '#ff7a5a', lk: '#7fd0ff', mk: '#ffd23c', hk: '#ff7a5a', rush: '#7fffb0', l: '#7fd0ff', m: '#ffd23c', h: '#ff7a5a', sp: '#c890ff', auto: '#7fffb0' };
   var ARROW = { 1: '↙', 2: '↓', 3: '↘', 4: '←', 5: '・', 6: '→', 7: '↖', 8: '↑', 9: '↗' };
@@ -280,8 +282,8 @@ var KF = window.KF || (window.KF = {});
   function drawTrainingInfo() {
     var f = game.p[0], c = R.ctx;
     var info = f.lastMoveInfo, y0 = document.body.classList.contains('touchmode') ? 84 : 56;
-    c.fillStyle = 'rgba(0,0,10,0.6)'; c.fillRect(4, y0, 330, 44);
-    R.text('トレーニング（位置リセット：R / パッドBACK、→←↘↙で画面端　当たり判定：F2）', 8, y0 + 8, 8, '#a0ffd0', 'left');
+    c.fillStyle = 'rgba(0,0,10,0.6)'; c.fillRect(4, y0, 386, 44);
+    R.text('トレーニング（位置リセット：R / パッドBACK、→←↘↙で画面端　当たり判定：F2　キーディス：F3）', 8, y0 + 8, 8, '#a0ffd0', 'left');
     var NN = { lp: '弱P', mp: '中P', hp: '強P', lk: '弱K', mk: '中K', hk: '強K', throw: '投げ' };
     var nmOf = function (id) { var mv = KF.CHARS[game.p[0].kind].moves[id]; if (mv && mv.name && mv.name !== 'ターゲットコンボ') return mv.name; var b = id.replace(/^(c_|j_|tc_|f_|b_)/, ''); var pre = { c_: 'しゃがみ', j_: 'ジャンプ', tc_: 'ターゲットコンボ ', f_: '→', b_: '←' }[(id.match(/^(c_|j_|tc_|f_|b_)/) || [''])[0]] || ''; return pre + (NN[b] || id); };
     if (info) {
@@ -293,7 +295,7 @@ var KF = window.KF || (window.KF = {});
     var adv = KF._lastAdv;
     if (adv === 'ダウン') R.text('硬直差 ダウンを奪った（起き攻めできる）', 8, y0 + 36, 9, '#7fffb0', 'left');
     else if (adv != null) R.text('硬直差 ' + (adv > 0 ? '+' : '') + adv + 'F', 8, y0 + 36, 9, adv >= 0 ? '#7fffb0' : '#ff8080', 'left');
-    drawKeyDisplay(y0 + 48);
+    if (keyDisp) drawKeyDisplay(y0 + 48);
   }
 
   // ------------------------------------------------------------ オンライン対戦
@@ -520,7 +522,7 @@ var KF = window.KF || (window.KF = {});
   }
 
   var PAUSE_BASE = ['再開', '技表', '当たり判定 表示切替', 'やり直す', 'タイトルへ'];
-  var PAUSE_TR = ['位置リセット：中央', '位置リセット：相手を画面端へ', '位置リセット：自分が画面端'];
+  var PAUSE_TR = ['位置リセット：中央', '位置リセット：相手を画面端へ', '位置リセット：自分が画面端', 'キーディス 表示切替'];
   var PAUSE_ITEMS = PAUSE_BASE;
   function drawPause() {
     PAUSE_ITEMS = cfg.mode === 'training' ? [PAUSE_BASE[0]].concat(PAUSE_TR, PAUSE_BASE.slice(1)) : PAUSE_BASE;
@@ -542,6 +544,7 @@ var KF = window.KF || (window.KF = {});
       else if (it === PAUSE_TR[0]) { game.resetTraining('center'); paused = false; }
       else if (it === PAUSE_TR[1]) { game.resetTraining('oRight'); paused = false; }
       else if (it === PAUSE_TR[2]) { game.resetTraining('sLeft'); paused = false; }
+      else if (it === PAUSE_TR[3]) { toggleKeyDisp(); paused = false; }
       else { KF.Touch && KF.Touch.show(false); scene = 'title'; }
     }
   }
@@ -750,6 +753,7 @@ var KF = window.KF || (window.KF = {});
     // 操作設定：Mキーでクラシック／モダンを切り替え（キー割り当て待ちのときは除く）
     if (e.code === 'KeyM' && scene === 'keys' && keyEdit && keyEdit.p !== 'pad' && !keyEdit.wait) { KF.Input.setModern(keyEdit.p, !KF.Input.modern[keyEdit.p]); KF.Audio.play('cursor'); }
     if (e.code === 'F2') { R && (R.debug = !R.debug); e.preventDefault(); }
+    if (e.code === 'F3') { toggleKeyDisp(); e.preventDefault(); }
     if (e.code === 'F3') { showFps = !showFps; e.preventDefault(); }
   });
 
