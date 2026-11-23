@@ -88,8 +88,8 @@ KF.CHARS = {
              inv: [[1, 44]], lock: 1, lockAir: 1, dashS: 7, jump: { vx: [0.8], vy: [-10] }, kdLast: 'launch', lvy: -12, lvx: 2.5, lastDmg: 1800, minScale: 0.7 },
       su1: { anim: 'su_1', type: 'u', bars: 1, name: '虚空砲', dmg: 620, hits: 5, rehit: 8, hs: 6, push: [1.5, 2], lv: 'm', chip: 0.25,
              inv: [[1, 14]], beam: { fx: 'beam_k', head: 'beamhead_k', len: 600, h: 34 }, kdLast: 'launch', lvy: -8, lvx: 4, minScale: 0.7 },
-      su2: { anim: 'su_2', type: 'u', bars: 2, name: '零界継承', dmg: 520, hits: 9, rehit: 6, hs: 6, push: [0.5, 4], lv: 'm', chip: 0.25,
-             inv: [[1, 26]], lock: 1, dashS: 9.0, kdLast: 'launch', lvy: -11, lvx: 3, lastDmg: 1300, minScale: 0.7 },
+      su2: { anim: 'su_2', type: 'u', bars: 2, name: '零界継承', dmg: 390, hits: 9, rehit: 6, hs: 6, push: [0.5, 4], lv: 'm', chip: 0.25,
+             inv: [[1, 26]], lock: 1, dashS: 9.0, kdLast: 'launch', lvy: -11, lvx: 3, lastDmg: 1044, minScale: 0.3, minTotal: 1250 },   // 生当て2400・最低保証1250
     },
   },
 
