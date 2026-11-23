@@ -5,7 +5,7 @@
 
 ## 起動方法
 
-- **公開ページ**：https://9zwb7cg864-pixel.github.io/dairantou-street-fight/ を開く（PC・スマホどちらも可）
+- **公開ページ**：https://9zwb7cg864-pixel.github.io/browser-kakuge/ を開く（PC・スマホどちらも可）
 - **手元で動かす**：`game/` フォルダで `python3 -m http.server 8000` を実行し、`http://localhost:8000/` を開く
   （`index.html` を直接ダブルクリックすると、ブラウザの制限で素材を読み込めません）
 - テスト用URL：`?autostart&level=HARD`（すぐCPU戦）、`?autostart&training`（トレーニング）、`&fps`（FPS表示）
