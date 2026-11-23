@@ -37,6 +37,8 @@ def place(p, f):
 for name, mv in moves.items():
     a = meta['anims'][name]
     ticks = [f for f in a['frames'] for _ in range(f['d'])]
+    if a.get('loop') and len(ticks) != len(mv['frames']):   # くり返す動きは長さを変えてよい（判定は割合で対応させる）
+        ticks = [ticks[k * len(ticks) // len(mv['frames'])] for k in range(len(mv['frames']))]
     assert len(ticks) == len(mv['frames']), (name, len(ticks), len(mv['frames']))
     if 'phase' in mv:
         assert ''.join(f['ph'] for f in ticks) == mv['phase'], name
