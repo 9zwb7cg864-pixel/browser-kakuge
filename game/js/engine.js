@@ -773,7 +773,7 @@ var KF = window.KF || (window.KF = {});
     if (!mv) return false;
     f.state = 'attack'; f.t = 0; f.move = mv; f.moveId = id; f.str = str || 0; f.moveStartF = this.frameNo; f.moveSerial = (f.moveSerial || 0) + 1;
     f.modernMv = !!f.nextModern; f.nextModern = false;   // モダンのSPで出した技（ダメージ8割）
-    f.armorUsed = 0;
+    f.armorUsed = 0; f.holdA = 0;
     f.mvT = 0; f.preD = mv.preDelay ? pick(mv.preDelay, f.str) : 0;
     // ラッシュから出した技だけ：有利＋4Fと、戻りの短縮（そこからキャンセルした技には引き継がない）
     f.rushBonus = !!f.nextRush; f.nextRush = false; f.projHit = false; f.rushCut = f.rushBonus ? C.RUSH_REC_CUT : 0;
@@ -809,7 +809,9 @@ var KF = window.KF || (window.KF = {});
     if (mv.lockAir && f.air && f.hitCount > 0 && f.hitCount < (mv.hits || 1) && f.opp.state === 'launch') {
       var o2 = f.opp; o2.x = f.x + f.facing * 34; o2.y = Math.min(C.GROUND - 2, f.y - 6); o2.vy = Math.min(f.vy, 0); o2.vx = 0; o2.air = true;
     }
-    f.stepAnim();
+    // 持続を伸ばす技（迅閃脚）：持続の最後のコマのまま少し滑り続ける
+    if (mv.holdActive && f.animTime() === a.lastActive && (f.holdA || 0) < pick(mv.holdActive, f.str)) f.holdA = (f.holdA || 0) + 1;
+    else f.stepAnim();
     // ラッシュから出した技は、戻りのはじめを早送りして後すきを短くする
     if (f.rushCut > 0 && f.phase() === 'r' && !f.aDone) { f.stepAnim(); f.rushCut--; }
     var t = f.animTime(), ph = f.phase();
