@@ -211,7 +211,7 @@ var KF = window.KF || (window.KF = {});
     sources[1].cpu = null; ai = null;
     if (cfg.mode === 'cpu') { ai = new KF.AI(game, 1, cfg.level, (Date.now() & 0xffff) + 1); sources[1].cpu = ai; }
     if (cfg.mode === 'training') { ai = null; sources[1].cpu = { output: function () { return { x: 0, y: 0, held: {} }; } }; }
-    scene = 'battle'; paused = false;
+    scene = 'battle'; paused = false; keyLog = [];
     R.ann = []; R.superBanner = null;
     KF.Touch && KF.Touch.show(isTouch);
   }
@@ -228,6 +228,7 @@ var KF = window.KF || (window.KF = {});
         var rm = i1.y > 0 ? (i1.x > 0 ? 'sRight' : i1.x < 0 ? 'oLeft' : 'center') : (i1.x > 0 ? 'oRight' : i1.x < 0 ? 'sLeft' : 'center');
         game.resetTraining(rm);
       }
+      if (cfg.mode === 'training' && !paused) recordKeys(i1);
       if (!paused) game.step([i1, i2]);
       for (; lastEvents < game.events.length; lastEvents++) handleEvent(game.events[lastEvents]);
       if (game.events.length > 400) { game.events.splice(0, 300); lastEvents -= 300; }
@@ -243,6 +244,39 @@ var KF = window.KF || (window.KF = {});
     else if (e.type === 'super') { }   // 超必殺の技名の帯は出さない
     else if (e.type === 'rushcancel') R.announce({ text: 'RUSH CANCEL', small: 1, side: e.side });
   }
+  // 段の色：上段（立ち・しゃがみどちらでもガードできる）／中段（立ちガードのみ）／下段（しゃがみガードのみ）／投げ（ガードできない）
+  var DAN_COL = { '上段': '#7fd0ff', '中段': '#ffd23c', '下段': '#ff7a9a', '投げ': '#c890ff' };
+  // キーディス：1Pの入力の移り変わりを、新しい順に左に並べる（数字は続いたフレーム数）
+  var keyLog = [], KEY_ROWS = 14;
+  var KEY_NM = { lp: '弱P', mp: '中P', hp: '強P', lk: '弱K', mk: '中K', hk: '強K', rush: 'ラッシュ', l: '弱', m: '中', h: '強', sp: 'SP', auto: 'アシスト' };
+  var KEY_COL = { lp: '#7fd0ff', mp: '#ffd23c', hp: '#ff7a5a', lk: '#7fd0ff', mk: '#ffd23c', hk: '#ff7a5a', rush: '#7fffb0', l: '#7fd0ff', m: '#ffd23c', h: '#ff7a5a', sp: '#c890ff', auto: '#7fffb0' };
+  var ARROW = { 1: '↙', 2: '↓', 3: '↘', 4: '←', 5: '・', 6: '→', 7: '↖', 8: '↑', 9: '↗' };
+  function recordKeys(inp) {
+    var fc = game.p[0].facing || 1, rx = (inp.x || 0) * fc, ry = inp.y || 0;
+    var dir = 5 + (rx > 0 ? 1 : rx < 0 ? -1 : 0) + (ry > 0 ? -3 : ry < 0 ? 3 : 0);
+    var H = inp.held || {}, P = inp.pressed || {};
+    var btn = Object.keys(KEY_NM).filter(function (k) { return H[k]; });
+    var fresh = Object.keys(KEY_NM).filter(function (k) { return P[k]; });
+    var top = keyLog[0], sig = dir + ':' + btn.join(',');
+    if (top && top.sig === sig && !fresh.length) { top.n++; return; }
+    keyLog.unshift({ sig: sig, dir: dir, btn: btn, fresh: fresh, n: 1 });
+    if (keyLog.length > KEY_ROWS) keyLog.length = KEY_ROWS;
+  }
+  function drawKeyDisplay(y0) {
+    var c = R.ctx, rowH = 15, h = KEY_ROWS * rowH + 6;
+    c.fillStyle = 'rgba(0,0,10,0.5)'; c.fillRect(4, y0, 132, h);
+    keyLog.forEach(function (e, i) {
+      var y = y0 + 10 + i * rowH, a = i === 0 ? '#ffffff' : '#c8d0f0';
+      R.text(String(Math.min(e.n, 99)), 24, y, 9, '#8890b0', 'right');
+      R.text(ARROW[e.dir], 38, y, 11, e.dir === 5 ? '#606880' : a, 'center');
+      var x = 52;
+      e.btn.forEach(function (k) {
+        var on = e.fresh.indexOf(k) >= 0;
+        R.text(KEY_NM[k], x, y, 9, on ? KEY_COL[k] : '#707890', 'left');
+        x += KEY_NM[k].length * 9 + 5;
+      });
+    });
+  }
   function drawTrainingInfo() {
     var f = game.p[0], c = R.ctx;
     var info = f.lastMoveInfo, y0 = document.body.classList.contains('touchmode') ? 84 : 56;
@@ -250,10 +284,16 @@ var KF = window.KF || (window.KF = {});
     R.text('トレーニング（位置リセット：R / パッドBACK、→←↘↙で画面端　当たり判定：F2）', 8, y0 + 8, 8, '#a0ffd0', 'left');
     var NN = { lp: '弱P', mp: '中P', hp: '強P', lk: '弱K', mk: '中K', hk: '強K', throw: '投げ' };
     var nmOf = function (id) { var mv = KF.CHARS[game.p[0].kind].moves[id]; if (mv && mv.name && mv.name !== 'ターゲットコンボ') return mv.name; var b = id.replace(/^(c_|j_|tc_|f_|b_)/, ''); var pre = { c_: 'しゃがみ', j_: 'ジャンプ', tc_: 'ターゲットコンボ ', f_: '→', b_: '←' }[(id.match(/^(c_|j_|tc_|f_|b_)/) || [''])[0]] || ''; return pre + (NN[b] || id); };
-    if (info) R.text('技 ' + nmOf(info.id) + '  発生 ' + info.startup + 'F  全体 ' + info.total + 'F', 8, y0 + 22, 9, '#ffffff', 'left');
+    if (info) {
+      var imv = KF.CHARS[game.p[0].kind].moves[info.id] || {};
+      var dan = imv.type === 't' ? '投げ' : imv.lv === 'l' ? '下段' : imv.lv === 'o' ? '中段' : imv.lv === 'm' ? '上段' : '';
+      R.text('技 ' + nmOf(info.id) + '  発生 ' + info.startup + 'F  全体 ' + info.total + 'F', 8, y0 + 22, 9, '#ffffff', 'left');
+      if (dan) R.text(dan, 326, y0 + 22, 10, DAN_COL[dan], 'right');
+    }
     var adv = KF._lastAdv;
     if (adv === 'ダウン') R.text('硬直差 ダウンを奪った（起き攻めできる）', 8, y0 + 36, 9, '#7fffb0', 'left');
     else if (adv != null) R.text('硬直差 ' + (adv > 0 ? '+' : '') + adv + 'F', 8, y0 + 36, 9, adv >= 0 ? '#7fffb0' : '#ff8080', 'left');
+    drawKeyDisplay(y0 + 48);
   }
 
   // ------------------------------------------------------------ オンライン対戦
