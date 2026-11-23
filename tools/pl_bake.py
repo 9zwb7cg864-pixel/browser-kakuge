@@ -29,6 +29,7 @@ def place(p, f):
         b = im.getbbox()
         hc = (min(h[1] for h in hs) + max(h[1] + h[3] for h in hs)) / 2
         y = round(AY + hc - (b[1] + b[3]) / 2)
+        y = max(y, 1 - b[1])                           # 頭が絵の枠の上で切れないように
     else:                                              # 地上：足元をそろえる
         y = round(AY - FY * S)
     cell = Image.new('RGBA', (FW, FH))
