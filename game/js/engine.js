@@ -569,7 +569,7 @@ var KF = window.KF || (window.KF = {});
   KF.MODERN_AUTO = {
     kokuu: {
       l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'tatsu', str: 0 }, { sp: 'dp', str: 2 }, { su: 'su3' }],
-      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'tatsu', str: 2 }, { sp: 'dp', str: 2 }, { su: 'su3' }],
+      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'tatsu', str: 1 }, { sp: 'dp', str: 2 }, { su: 'su3' }],
       h: [{ b: 'hp' }, { sp: 'palm', str: 0 }, { b: 'hp' }, { sp: 'fire', str: 0 }, { b: 'rush' }, { b: 'hp' }, { sp: 'dp', str: 2 }, { su: 'su3' }],
     },
     gai_h: {
@@ -808,7 +808,7 @@ var KF = window.KF || (window.KF = {});
     if (mv.inv) { var iv = pick(mv.inv, f.str); if (fn >= iv[0] && fn <= iv[1]) { f.inv = 2; f.thInv = 2; } }
     if (mv.aaInv) { var av = pick(mv.aaInv, f.str); if (fn >= av[0] && fn <= av[1]) f.aaInv = 2; }
     // 強さによる発生の差（スト6の昇龍拳：弱5F・中6F・強7F）。この間は構えの絵のまま待つ
-    if (f.preD > 0) { if (mv.projInv) f.projInv = 2; f.preD--; return; }   // 遅らせた出始めのあいだも、飛び道具をくぐる無敵は付く
+    if (f.preD > 0) { if (pick(mv.projInv, f.str)) f.projInv = 2; f.preD--; return; }   // 遅らせた出始めのあいだも、飛び道具をくぐる無敵は付く
     // 空中で相手を捕まえる超必殺（天地穿）：最後の一撃まで、捕まえた相手を自分の前に固定する
     if (mv.lockAir && f.air && f.hitCount > 0 && f.hitCount < (mv.hits || 1) && f.opp.state === 'launch') {
       var o2 = f.opp; o2.x = f.x + f.facing * 34; o2.y = Math.min(C.GROUND - 2, f.y - 6); o2.vy = Math.min(f.vy, 0); o2.vx = 0; o2.air = true;
@@ -819,7 +819,7 @@ var KF = window.KF || (window.KF = {});
     // ラッシュから出した技は、戻りのはじめを早送りして後すきを短くする
     if (f.rushCut > 0 && f.phase() === 'r' && !f.aDone) { f.stepAnim(); f.rushCut--; }
     var t = f.animTime(), ph = f.phase();
-    if (mv.projInv && ph !== 'r') f.projInv = 2;
+    if (pick(mv.projInv, f.str) && ph !== 'r') f.projInv = 2;
     if (ph !== 's') f.counterable = false;
     // 移動
     if (mv.jump && ph === 'a' && !f.liftoff && t >= a.firstActive + 2) {
@@ -1061,6 +1061,7 @@ var KF = window.KF || (window.KF = {});
       var gap = (f.opp.x - f.x) * f.facing;
       if (gap > 0) f.vx = f.facing * Math.min(f.vx * f.facing, Math.max(0, gap - 30));
     }
+    if (f.lDrag && f.state === 'launch') f.vx *= f.lDrag;
     f.x += f.vx + f.pushV;
     f.pushV *= 0.78; if (Math.abs(f.pushV) < 0.05) f.pushV = 0;
     // 空中から出した天地穿：突き上げながら、相手の少し下（拳が当たる位置）へ吸い寄せられる
@@ -1212,6 +1213,7 @@ var KF = window.KF || (window.KF = {});
       if (f.hitCount >= maxHits) continue;
       if (f.hitCount > 0 && f.animTime() - f.lastHitT < (mv.rehit || 99)) continue;
       if (f.phase() !== 'a') continue;
+      if (f.hitCount === 0 && o.combo > 0 && pick(mv.noCombo, f.str)) continue;   // コンボの途中の相手には当たらない技（強旋風脚）
       var hb = f.boxes('hit');
       if (!hb.length) continue;
       if (!this.hittable(o, mv, f.side + ':' + f.moveSerial, f)) continue;
@@ -1396,6 +1398,7 @@ var KF = window.KF || (window.KF = {});
         def.vy = lvy || -6.5; def.vx = dirX * (lvx == null ? 2.6 : lvx); if (def.y >= C.GROUND) def.y = C.GROUND - 2;
       }
       def.floatG = mv.floatG || null;   // 浮かせ方（次に当たった技で上書き）
+      def.lDrag = pick(mv.lvxDrag, str) || null;   // 横に吹っ飛んだあと、だんだん止まる（強虚掌破）
       def.hangBy = null;
       def.bounce = kd === 'bounce' && !def.bounceUsed ? 1 : 0;   // 床で一度跳ねる
       def.wallB = kd === 'wall' && !def.wallUsed ? 1 : 0;        // 画面端で一度跳ね返る

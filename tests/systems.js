@@ -504,9 +504,9 @@ console.log('■ アッパー → 波動 → ラッシュ → パンチ ＞ 昇�
     }
     return /^palm fire (lp|mp|hp) dp$/.test(seq.join(' ')); };
   let tot = 0, bad = []; 
-  for (const fb of ['lp', 'mp', 'hp']) for (const fd of [2, 6, 10, 14]) for (const rd of [0, 4, 8]) for (const rush of ['btn', '66']) for (const pd of [1, 6, 12]) for (const pb of ['lp', 'mp', 'hp']) {
+  for (const fb of ['lp', 'mp', 'hp']) for (const fd of [2, 6, 10]) for (const rd of [0, 4, 8]) for (const rush of ['btn', '66']) for (const pd of [1, 6, 12]) for (const pb of ['lp', 'mp', 'hp']) {
     tot++; if (!run({ fb, fd, rd, rush, pd, pb })) bad.push(`波動${fb}遅れ${fd} ラッシュ遅れ${rd}${rush} パンチ${pb}遅れ${pd}`); }
-  ok(!bad.length, '波動の強さ・入れる遅れ（2〜14F）、ラッシュ（ボタン・→→）と遅れ、パンチの種類と遅れを変えた ' + tot + ' 通りすべてでつながる' + (bad.length ? '（失敗：' + bad.slice(0, 3).join('／') + ' ほか' + bad.length + '）' : ''));
+  ok(!bad.length, '波動の強さ・入れる遅れ（2〜10F。強虚掌破は相手を遠くへ飛ばすので、14Fも遅れるとラッシュが届かないことがある）、ラッシュ（ボタン・→→）と遅れ、パンチの種類と遅れを変えた ' + tot + ' 通りすべてでつながる' + (bad.length ? '（失敗：' + bad.slice(0, 3).join('／') + ' ほか' + bad.length + '）' : ''));
 }
 
 // 対空の波動が空中の相手に当たったら、技の戻りの最中でも虚空砲でキャンセルしてつながる
