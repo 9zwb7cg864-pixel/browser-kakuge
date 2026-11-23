@@ -100,7 +100,7 @@ var KF = window.KF || (window.KF = {});
     this.state = 'idle'; this.t = 0; this.setAnim('idle');
     this.move = null; this.moveId = null; this.str = 0;
     this.hs = 0; this.stun = 0; this.inv = 0; this.thInv = 0; this.projInv = 0;
-    this.air = false; this.juggle = 0; this.combo = 0; this.comboDmg = 0; this.scale = 1;
+    this.air = false; this.juggle = 0; this.combo = 0; this.comboDmg = 0; this.scale = 1; this.addSc = 1;
     this.rushLock = false; this.rushBonus = false; this.counterable = false;
     this.hitCount = 0; this.lastHitT = -99; this.connected = false; this.whiffed = false;
     this.pendingBtn = null; this.pendingT = 0;
@@ -963,7 +963,7 @@ var KF = window.KF || (window.KF = {});
       f.state = 'idle'; f.setAnim('idle'); f.move = null; f.moveId = null; f.t = 0;
       f.hs = 0; f.stun = 0; f.inv = 0; f.thInv = 0; f.projInv = 0; f.aaInv = 0; f.preD = 0; f.thrower = null; f.grabbed = null;
       f.hp = f.D.hp; f.hpShown = f.hp; f.hpTrail = f.hp; f.rush = C.RUSH_MAX; f.rushCD = 0; f.emptyT = 0; f.rushEmpty = false; f.sup = C.SUPER_MAX;
-      f.combo = 0; f.comboDmg = 0; f.scale = 1; f.juggle = 0; f.rushLock = false; f.chain = 0; f.chainUsed = {};
+      f.combo = 0; f.comboDmg = 0; f.scale = 1; f.addSc = 1; f.juggle = 0; f.rushLock = false; f.chain = 0; f.chainUsed = {};
       f.pendingBtn = null; f.pendingT = 0; f.pendingRush = 0; f.buf.hist.length = 0;
     });
     a.facing = a.x < b.x ? 1 : -1; b.facing = -a.facing;
@@ -972,7 +972,7 @@ var KF = window.KF || (window.KF = {});
 
   Battle.prototype.endCombo = function (def) {
     if (def.combo > 0) this.emit('comboEnd', { side: def.opp.side, hits: def.combo, dmg: def.comboDmg });
-    def.combo = 0; def.comboDmg = 0; def.scale = 1; def.juggle = 0; def.hangBy = null; def.bounceUsed = 0; def.wallUsed = 0; def.swapUsed = 0; def.bounce = 0; def.wallB = 0;
+    def.combo = 0; def.comboDmg = 0; def.scale = 1; def.addSc = 1; def.juggle = 0; def.hangBy = null; def.bounceUsed = 0; def.wallUsed = 0; def.swapUsed = 0; def.bounce = 0; def.wallB = 0;
     def.opp.rushLock = false; def.opp.chain = 0; def.opp.chainUsed = {};
     // トレーニング：コンボが終わったらラッシュゲージを満タンに戻す
     if (this.training) { def.opp.rush = C.RUSH_MAX; def.opp.rushCD = 0; def.opp.emptyT = 0; def.opp.rushEmpty = false; }
@@ -1362,7 +1362,9 @@ var KF = window.KF || (window.KF = {});
     var sc = C.SCALING[Math.min(def.combo - 1, C.SCALING.length - 1)];
     if (att.rushLock && def.combo > 1) sc *= C.RUSH_CANCEL_SCALE;
     if (mv.minScale) sc = Math.max(sc, mv.minScale);
+    sc *= def.addSc || 1;   // 追加補正：前に当てた技（強虚掌破など）のぶん、このコンボの残りがさらに減る
     var dmg = Math.max(1, Math.round(baseDmg * sc * (counter || punish ? 1.2 : 1) * (!proj && att.modernMv || proj && proj.modern ? 0.8 : 1)));
+    if (mv.addScale) def.addSc = (def.addSc || 1) * pick(mv.addScale, att.str);
     this.applyDamage(att, def, dmg, mv, false);
     def.counterable = false;
     if (counter) this.emit('announce', { text: 'COUNTER', small: 1, side: att.side });

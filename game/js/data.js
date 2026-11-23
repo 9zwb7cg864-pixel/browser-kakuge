@@ -79,6 +79,7 @@ KF.CHARS = {
                airSpike: { vy: 7, vx: 0.8 } },   // 浮いた相手に当てると、最後の1発で地面へ叩きつけて床でバウンド
       palm: { anim: 'sp_palm', type: 's', name: '虚掌破', dmg: [900, 1000, 1100], adv: [0, -8], hs: 13, push: [2, 7], lv: 'm', chip: 0.125,
               kd: 'launch', lvy: -6, lvx: 0.3, floatG: 0.25, jset: -1, jlim: 0, cancel: 'u', meter: 40,   // ふわっと浮かせる（波動などで拾いやすい）
+              addScale: [1, 1, 0.7],   // 強だけ追加補正：当てたあとのコンボのダメージが ×0.7
               preDelay: 10 },   // 発生24F。のけぞりの長い強P系からだけつながり、弱・中からは出るがつながらない
       // EX虚掌破：発生7F。弱・中・強どの通常技からでもつながる
       palm_ex: { anim: 'ex_palm', type: 'x', name: 'EX虚掌破', dmg: 1000, adv: [0, -4], hs: 13, push: [2, 6], lv: 'm', chip: 0.125,
