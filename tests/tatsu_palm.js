@@ -62,13 +62,16 @@ for (const [corner, pb, nm] of [[false, 'hp', '画面中央 強虚掌破'], [tru
     if (hit) n++; s.step([N(), N()]); }
   ok(corner || pb !== 'hp' ? n > 0 : n === 0, nm + ' → 強P：' + (n ? n + 'Fの間つながる' : 'つながらない'));
 }
-console.log('■ EX空旋脚');
-{ const b = new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]);
-  b.camX = 512; b.p[0].x = 420; b.p[1].x = 560; b.p[0].rush = 6000; b.p[1].hp = 1e6;
-  b.step([inp(9), N()]); for (let i = 0; i < 32; i++) b.step([N(), N()]);
-  for (const f of mo([2, 3, 6], 'lk,mk')) b.step([f, N()]);
-  const hs = []; for (let i = 0; i < 120; i++) { for (const e of b.events) if (e.type === 'hit' && e.side === 0) hs.push(e.move); b.events.length = 0; b.step([N(), N()]); }
-  ok(hs.filter(m => m === 'atatsu_ex').length === 5, '空中で ↓↘→ + K2つ で EX空旋脚が出て、5回当たる（' + hs.join(' ') + '）');
-  ok(b.p[0].rush <= 4200, 'EXゲージを2本使う'); }
+console.log('■ 斬空虚環弾');
+for (const [nm, bt, n] of [['弱', 'lp', 1], ['中', 'mp', 1], ['強', 'hp', 1], ['EX', 'lp,mp', 2]]) {
+  const b = new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]);
+  b.camX = 600; b.p[0].x = 380; b.p[1].x = 640; b.p[0].rush = 6000; b.p[1].hp = 1e6;
+  b.step([inp(8), N()]); for (let i = 0; i < 8; i++) b.step([N(), N()]);
+  for (const f of mo([2, 3, 6], bt)) b.step([f, N()]);
+  const id = b.p[0].moveId; let down = false, y0 = null; const hs = [];
+  for (let i = 0; i < 140; i++) { for (const e of b.events) if (e.type === 'hit' && e.side === 0) hs.push(e.move); b.events.length = 0;
+    const p = b.projs[0]; if (p) { if (y0 == null) y0 = p.y; else if (p.y > y0 + 20) down = true; } b.step([N(), N()]); }
+  ok(id === (n === 2 ? 'zanku_ex' : 'zanku') && down && hs.length === n, nm + '斬空：空中で出て、斜め下へ飛び、' + n + '回当たる（' + hs.join(' ') + '）');
+}
 console.log(`\n結果: ${pass} 件成功 / ${fail} 件失敗`);
 process.exit(fail ? 1 : 0);

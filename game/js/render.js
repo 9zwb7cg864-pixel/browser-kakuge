@@ -342,7 +342,7 @@ KF.Renderer.prototype.render = function (b) {
   var r = this.refl.getContext('2d');
   r.clearRect(0, 0, W, H); r.imageSmoothingEnabled = false;
   b.p.forEach(function (f) { self.drawFighterImg(r, f, f.x + ox, C.GROUND + (C.GROUND - f.y) + 2, 0.55, true); });
-  b.projs.forEach(function (p) { if (p.kind === 'ball') self.drawFxFrame(r, p.fx, (p.t >> 2), p.x + ox, 2 * C.GROUND - p.y, p.vx < 0, 1, 0.5); });
+  b.projs.forEach(function (p) { if (p.kind === 'ball') self.drawFxFrame(r, p.fx, (p.t >> 2), p.x + ox, 2 * C.GROUND - p.y, p.vx < 0, 1, 0.5, p.vy ? -Math.atan2(p.vy, Math.abs(p.vx)) : 0); });
   r.globalCompositeOperation = 'destination-in';
   var grd = r.createLinearGradient(0, C.GROUND, 0, H);
   grd.addColorStop(0, 'rgba(0,0,0,0.55)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
@@ -400,7 +400,7 @@ KF.Renderer.prototype.render = function (b) {
   b.projs.forEach(function (p) {
     if (p.kind === 'ball' && /^shock/.test(p.fx)) self.drawShock(c, p, p.x + ox);
     else if (p.kind === 'ball' && /^disc/.test(p.fx)) self.drawDisc(c, p, p.x + ox);
-    else if (p.kind === 'ball') self.drawFxFrame(c, p.fx, (p.t >> 2), p.x + ox, p.y, p.vx < 0, 1);
+    else if (p.kind === 'ball') self.drawFxFrame(c, p.fx, (p.t >> 2), p.x + ox, p.y, p.vx < 0, 1, null, p.vy ? Math.atan2(p.vy, Math.abs(p.vx)) : 0);
     else if (p.kind === 'beam') {
       var meta = KF.Assets.fx[p.fx], img = KF.Assets.img['fx:' + p.fx];
       var fr = (p.t >> 1) % meta.n, seg = meta.w;
@@ -471,7 +471,7 @@ KF.Renderer.prototype.drawMoveFx = function (c, f, ox, back) {
   }
 };
 
-KF.Renderer.prototype.drawFxFrame = function (c, name, fi, x, y, flip, s, alpha) {
+KF.Renderer.prototype.drawFxFrame = function (c, name, fi, x, y, flip, s, alpha, rot) {
   var m = KF.Assets.fx[name], img = KF.Assets.img['fx:' + name];
   if (!m || !img) return;
   fi = fi % m.n; s = s || 1;
@@ -479,6 +479,7 @@ KF.Renderer.prototype.drawFxFrame = function (c, name, fi, x, y, flip, s, alpha)
   if (m.blend !== 'normal') c.globalCompositeOperation = 'lighter';
   if (alpha != null) c.globalAlpha = alpha;
   c.translate(Math.round(x), Math.round(y));
+  if (rot) c.rotate(flip ? -rot : rot);   // 斜めに飛ぶ弾（斬空）は進む向きに傾ける
   if (flip) c.scale(-1, 1);
   var w = Math.round(m.w * s), h = Math.round(m.h * s);
   c.drawImage(img, fi * m.w, 0, m.w, m.h, -w / 2, -h / 2, w, h);

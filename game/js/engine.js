@@ -1101,7 +1101,7 @@ var KF = window.KF || (window.KF = {});
     if (this.projs.some(function (p) { return p.owner === f && p.kind === 'ball'; })) return;
     var h = f.joint('hand_r'), pr = mv.proj, s = Math.min(f.str, pr.spd.length - 1);
     if (pr.ground) h = [f.x + f.facing * 30, C.GROUND - 16];
-    this.projs.push({ kind: 'ball', owner: f, mv: mv, key: f.side + ':' + f.moveSerial, x: h[0] + f.facing * 12, y: h[1], vx: pr.spd[s] * f.facing,
+    this.projs.push({ kind: 'ball', owner: f, mv: mv, key: f.side + ':' + f.moveSerial, x: h[0] + f.facing * 12, y: h[1], vx: pr.spd[s] * f.facing, vy: pr.vy ? pr.vy[Math.min(f.str, pr.vy.length - 1)] : 0,
                       fx: pr.fx, r: pr.r, hits: pr.hits, rehit: pr.rehit || 99, life: pr.life, t: 0, lastHit: -99, alive: true, modern: !!f.modernMv });
     this.emit('sfx', { s: 'fire' });
   };
@@ -1132,6 +1132,7 @@ var KF = window.KF || (window.KF = {});
         if (p.stop > 0 || (p.chase && !p.ahead)) { if (p.stop > 0) p.stop--; return; }
         var cs = p.chase && p.mv.proj.chaseSpd;   // 追いかけるときは少し速く
         p.x += cs ? (p.vx > 0 ? cs : -cs) : p.vx; p.life--;
+        if (p.vy) { p.y += p.vy; if (p.y >= C.GROUND - p.r * 0.5) p.alive = false; }   // 斜めに飛ぶ弾（斬空）は地面で消える
         if (p.life <= 0 || p.x < self.camX - 380 || p.x > self.camX + 380) p.alive = false;
       } else if (p.kind === 'beam') {
         var o = p.owner;
