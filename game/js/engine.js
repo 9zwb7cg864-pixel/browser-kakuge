@@ -266,6 +266,10 @@ var KF = window.KF || (window.KF = {});
       // ゲージ
       if (f.rushCD > 0) f.rushCD--;
       else if (f.rush < C.RUSH_MAX && f.state !== 'rush') f.rush = Math.min(C.RUSH_MAX, f.rush + (f.state === 'walk_f' ? C.RUSH_REGEN_FWD : C.RUSH_REGEN));
+      // ゲージを使い切ったら、5秒間は増えない（時間でも、攻撃を当てても）
+      if (f.rush <= 0 && !f.rushEmpty) { f.rushEmpty = true; f.emptyT = C.EMPTY_LOCK; }
+      if (f.emptyT > 0) { f.emptyT--; f.rush = 0; if (!f.emptyT) f.rushCD = 0; }
+      else if (f.rush > 0) f.rushEmpty = false;
       if (f.inv > 0) f.inv--; if (f.thInv > 0) f.thInv--; if (f.projInv > 0) f.projInv--; if (f.aaInv > 0) f.aaInv--;
       if (f.flash > 0) f.flash--;
       // 体力表示の追従
@@ -277,7 +281,7 @@ var KF = window.KF || (window.KF = {});
       if (this.training) {
         f.sup = C.SUPER_MAX;
         // 当たらずに終わった（ガード・空振り）ときも、動ける状態が少し続いたらラッシュゲージを戻す
-        if (f.actionable() && f.opp.combo === 0 && f.opp.actionable()) { f.trIdle = (f.trIdle || 0) + 1; if (f.trIdle > 40 && f.rush < C.RUSH_MAX) { f.rush = C.RUSH_MAX; f.rushCD = 0; } }
+        if (f.actionable() && f.opp.combo === 0 && f.opp.actionable()) { f.trIdle = (f.trIdle || 0) + 1; if (f.trIdle > 40 && f.rush < C.RUSH_MAX) { f.rush = C.RUSH_MAX; f.rushCD = 0; f.emptyT = 0; f.rushEmpty = false; } }
         else f.trIdle = 0;
       }
     }
@@ -958,7 +962,7 @@ var KF = window.KF || (window.KF = {});
       f.x = q[1]; f.y = C.GROUND; f.vx = 0; f.vy = 0; f.air = false; f.pushV = 0;
       f.state = 'idle'; f.setAnim('idle'); f.move = null; f.moveId = null; f.t = 0;
       f.hs = 0; f.stun = 0; f.inv = 0; f.thInv = 0; f.projInv = 0; f.aaInv = 0; f.preD = 0; f.thrower = null; f.grabbed = null;
-      f.hp = f.D.hp; f.hpShown = f.hp; f.hpTrail = f.hp; f.rush = C.RUSH_MAX; f.rushCD = 0; f.sup = C.SUPER_MAX;
+      f.hp = f.D.hp; f.hpShown = f.hp; f.hpTrail = f.hp; f.rush = C.RUSH_MAX; f.rushCD = 0; f.emptyT = 0; f.rushEmpty = false; f.sup = C.SUPER_MAX;
       f.combo = 0; f.comboDmg = 0; f.scale = 1; f.juggle = 0; f.rushLock = false; f.chain = 0; f.chainUsed = {};
       f.pendingBtn = null; f.pendingT = 0; f.pendingRush = 0; f.buf.hist.length = 0;
     });
@@ -971,7 +975,7 @@ var KF = window.KF || (window.KF = {});
     def.combo = 0; def.comboDmg = 0; def.scale = 1; def.juggle = 0; def.hangBy = null; def.bounceUsed = 0; def.wallUsed = 0; def.swapUsed = 0; def.bounce = 0; def.wallB = 0;
     def.opp.rushLock = false; def.opp.chain = 0; def.opp.chainUsed = {};
     // トレーニング：コンボが終わったらラッシュゲージを満タンに戻す
-    if (this.training) { def.opp.rush = C.RUSH_MAX; def.opp.rushCD = 0; }
+    if (this.training) { def.opp.rush = C.RUSH_MAX; def.opp.rushCD = 0; def.opp.emptyT = 0; def.opp.rushEmpty = false; }
   };
 
   // ---------------------------------------------------------- 投げ

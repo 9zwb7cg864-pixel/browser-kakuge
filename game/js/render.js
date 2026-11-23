@@ -595,7 +595,7 @@ KF.Renderer.prototype.drawHUD = function (b) {
         c.fillRect(L ? Math.round(sx) + 1 + (Math.round(seg) - 2 - fw) : Math.round(sx) + 1, ry, fw, 5);
       }
     }
-    self.text('EX/RUSH', L ? rx - 4 : rx + rw + 4, ry + 3, 8, '#4ffff0', L ? 'right' : 'left');
+    self.text('EX/RUSH', L ? rx - 4 : rx + rw + 4, ry + 3, 8, f.emptyT > 0 ? ((t >> 3) % 2 ? '#ff5060' : '#802030') : '#4ffff0', L ? 'right' : 'left');   // 使い切って増えない間は赤く点滅
     // ラウンド取得
     for (var k2 = 0; k2 < 2; k2++) {
       var px = L ? 296 - k2 * 12 : 344 + k2 * 12, py = 44;

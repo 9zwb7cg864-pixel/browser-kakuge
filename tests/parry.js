@@ -71,5 +71,8 @@ const ann = (ev, t) => ev.some(e => e.type === 'announce' && e.text === t);
     const b = fresh(200); const PR = [inp(5, 'rush'), inp(5, 'rush'), inp(6, 'rush'), inp(5, 'rush'), inp(6, 'rush')];
     run(b, [...PR, N(), N(), N(), N(), N(), N(), N(), inp(d, btn), inp(d), inp(d)], [], 16);
     ok(b.p[0].moveId === want, `ラッシュから ${d === 6 ? '前＋' : d === 4 ? '後ろ＋' : d === 2 ? '下＋' : ''}${btn} で ${want}（出た技：${b.p[0].moveId}）`); } }
+{ const b = fresh(); b.p[0].rush = 700; run(b, [inp(2), inp(3), inp(6, 'lp,mp')], [], 4);
+  run(b, [], [], 280); const mid = b.p[0].rush; run(b, [], [], 120);
+  ok(mid === 0 && b.p[0].rush > 0, `ゲージを使い切ったら5秒は増えず、そのあと増えはじめる（4.7秒後 ${Math.round(mid)} → 6.7秒後 ${Math.round(b.p[0].rush)}）`); }
 console.log(`結果: ${pass} 件成功 / ${fail} 件失敗`);
 process.exit(fail ? 1 : 0);

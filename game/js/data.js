@@ -14,6 +14,7 @@ KF.CONST = {
   RUSH_REGEN: 5, RUSH_REGEN_FWD: 7, RUSH_COOLDOWN: 90, RUSH_BONUS_ADV: 4, RUSH_REC_CUT: 5,
   SUPER_MAX: 3000, SUPER_BAR: 1000, EX_COST: 2000, EX_MAX: 6000,   // EX技はラッシュと同じゲージ（6本）を2本使う。2本ないときも、少しでも残っていれば出せる（ゲージは0になる）。超必殺のゲージ（3本）は別
   PARRY_COST: 500, PARRY_DRAIN: 4, PARRY_GAIN: 250, JPARRY_GAIN: 1000, PARRY_MIN: 8, PARRY_WHIFF: 14, JPARRY_WIN: 2, JPARRY_STOP: 22, PARRY_THROW_SCALE: 1.5,
+  EMPTY_LOCK: 300,      // ゲージを使い切ったら5秒（300F）は増えない
   RAW_RUSH_COST: 500,   // パリィ（0.5本）から→→で出すラッシュは、パリィと合わせて1本
   CHORD: 3,             // 同時押しの猶予：技が出て3F以内にもう1つ押せば、EX技・投げに切り替わる
   ROUND_TIME: 99, JUGGLE_LIMIT: 3,
