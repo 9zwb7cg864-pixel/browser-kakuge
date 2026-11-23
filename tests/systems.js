@@ -34,8 +34,8 @@ console.log('■ 必殺技コマンド');
 { const b = fresh('shuuen', 'kokuu', 60); const e = run(b, [[1, 6], [1, 3], [1, 2], [1, 1], [1, 4, 'hp']], N, 120);
   ok(b.p[1].hp < b.p[1].D.hp - 2000, '終縛（→↘↓↙←+P）コマンド投げが決まる（' + (b.p[1].D.hp - b.p[1].hp) + 'ダメージ）'); }
 { const b = fresh(); b.p[0].sup = 0; b.p[0].ex = 1000; b.p[0].rushCD = 999; const e = run(b, [[1, 6], [1, 2], [1, 3, 'lp,mp']]);
-  ok(hits(e).some(x => x.move === 'dp_ex'), 'EX昇穿（P2つ同時）が出る'); ok(b.p[0].ex < 500 && b.p[0].sup >= 0, 'EXはEX/RUSHゲージを1本使い、必殺ゲージは使わない'); }
-{ const b = fresh(); b.p[0].sup = 3000; b.p[0].ex = 0; const e = run(b, [[1, 6], [1, 2], [1, 3, 'lp,mp']]);
+  ok(hits(e).some(x => x.move === 'dp_ex'), 'EX昇穿（P2つ同時）が出る'); ok(b.p[0].ex < 500 && b.p[0].sup >= 0, 'EXはEX/RUSHゲージを使い（足りなければ0まで）、必殺ゲージは使わない'); }
+{ const b = fresh(); b.p[0].sup = 3000; b.p[0].ex = 0; b.p[0].rushCD = 999; const e = run(b, [[1, 6], [1, 2], [1, 3, 'lp,mp']]);
   ok(!hits(e).some(x => x.move === 'dp_ex') && b.p[0].sup >= 3000, 'EX/RUSHゲージが空なら、必殺ゲージが満タンでもEXは出ない'); }
 { const b = fresh('kokuu', 'shuuen', 200); b.p[0].sup = 1000; const e = run(b, [[1, 2], [1, 3], [1, 6], [1, 2], [1, 3], [1, 6, 'hp']], N, 150);
   ok(e.some(x => x.type === 'super'), '超必殺 虚空砲（1本）が発動し暗転演出'); ok(hits(e).filter(x => x.move === 'su1').length >= 3, '虚空砲が多段ヒット（' + hits(e).filter(x => x.move === 'su1').length + 'hit）');
@@ -152,8 +152,8 @@ console.log('■ ゲージ');
   ok(b2.p[0].state !== 'rush' && !e2.some(x => x.type === 'rush'), 'ゲージ不足ではラッシュできない'); }
 { const b = fresh(); b.p[0].sup = 0; b.p[1].sup = 0; run(b, [[3, 5, 'hp']], N, 40);
   ok(b.p[0].sup > 0 && b.p[1].sup > 0, '攻撃を当てた側・食らった側の両方に必殺ゲージが溜まる（' + Math.round(b.p[0].sup) + ' / ' + Math.round(b.p[1].sup) + '）'); }
-{ const b = fresh(); b.p[0].ex = 400; run(b, [[1, 6], [1, 2], [1, 3, 'lp,mp']], N, 60);
-  ok(!(b.events.some(e => e.type === 'hit' && e.move === 'dp_ex')), 'EXゲージ不足ではEXにならない（通常版になる）'); }
+{ const b = fresh(); b.p[0].ex = 400; b.p[0].rushCD = 999; run(b, [[1, 6], [1, 2], [1, 3, 'lp,mp']], N, 60);
+  ok(b.events.some(e => e.type === 'hit' && e.move === 'dp_ex'), 'ゲージが2本なくても少しあればEXが出る'); }
 { const b = fresh(); b.p[0].ex = 0; b.p[1].ex = 0; run(b, [[3, 5, 'hp']], N, 40);
   ok(b.p[0].ex > 0 && b.p[1].ex > 0, '攻撃を当てた側・食らった側の両方にEXゲージが溜まる（' + Math.round(b.p[0].ex) + ' / ' + Math.round(b.p[1].ex) + '）'); }
 { const b = fresh(); b.p[0].sup = 900; const e = run(b, [[1, 2], [1, 3], [1, 6], [1, 2], [1, 3], [1, 6, 'hp']], N, 60);

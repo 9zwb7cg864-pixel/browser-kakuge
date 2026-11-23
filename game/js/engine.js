@@ -238,9 +238,9 @@ var KF = window.KF || (window.KF = {});
     if (f.thUp && !late(f.thUp)) f.thUp = null;
     if (f.exUp) {
       var u = f.exUp, hit2 = u.set.some(function (b) { return b !== u.btn && cur.p[b]; });
-      if (hit2 && f.rush >= C.EX_COST) {
+      if (hit2 && f.rush > 0) {
         f.exUp = null; f.thUp = null;
-        f.rush -= C.EX_COST; f.rushCD = C.RUSH_COOLDOWN;
+        f.rush = Math.max(0, f.rush - C.EX_COST); f.rushCD = C.RUSH_COOLDOWN;
         this.startMove(f, u.id + '_ex', 0);
         f.flash = 12; this.emit('sfx', { s: 'ex' });
         return;
@@ -674,7 +674,7 @@ var KF = window.KF || (window.KF = {});
       var mv = f.D.moves[c.move];
       if (!!c.air !== (cancelLevel === 'air')) continue;
       // キャンセル元を限る技（虚掌破は強Pで出す技からだけ）。EXで出すときは限らない
-      var willEx = nPressed >= 2 && f.D.moves[c.move + '_ex'] && f.rush >= C.EX_COST;
+      var willEx = nPressed >= 2 && f.D.moves[c.move + '_ex'] && f.rush > 0;
       // 昇穿はSA3（天地穿）でだけ、EX昇穿はSA2・SA3でキャンセルできる（スト6と同じ）
       if (cancelLevel && f.state === 'attack' && f.move && f.move.saOnly && f.move.saOnly.indexOf(c.move) < 0) continue;
       if (cancelLevel && cancelLevel !== 'air' && mv.cancelFrom && !willEx && f.state === 'attack' && f.move && f.move.type !== 's' && f.move.type !== 'x' && mv.cancelFrom.indexOf(f.moveId) < 0) continue;
@@ -705,8 +705,8 @@ var KF = window.KF || (window.KF = {});
       if (cancelLevel === 'u') continue;
       if (cancelLevel === 'air' && f.air && f.y > C.GROUND - 40) continue; // 地面すれすれでは出ない
       // EX判定：同系統ボタン2つ
-      if (nPressed >= 2 && f.D.moves[id + '_ex'] && f.rush >= C.EX_COST) {
-        f.rush -= C.EX_COST; f.rushCD = C.RUSH_COOLDOWN; id = id + '_ex'; str = 0;
+      if (nPressed >= 2 && f.D.moves[id + '_ex'] && f.rush > 0) {   // 2本なくても、少しでも残っていればEX（ゲージは0になる）
+        f.rush = Math.max(0, f.rush - C.EX_COST); f.rushCD = C.RUSH_COOLDOWN; id = id + '_ex'; str = 0;
         f.flash = 12; this.emit('sfx', { s: 'ex' });
       }
       var wasConn = f.state === 'attack' && f.connected && f.opp.state === 'hitstun';

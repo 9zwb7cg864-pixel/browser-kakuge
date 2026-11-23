@@ -140,8 +140,8 @@ KF.AI.prototype.update = function () {
   // 通常の昇穿は空中の攻撃にしか無敵がないので、切り返しはゲージがあればEX昇穿（完全無敵）で
   if (m.state === 'getup' && m.aF === m.animObj().frames.length - 2 && dist < 110 && this.rnd() < L.reversal) {
     this.clear();
-    if (m.D.base === 'gai') { if (m.ex >= KF.CONST.EX_COST) this.motion([6, 2, 3], 'lp,mp'); }
-    else if (m.kind !== 'kokuu' || m.ex >= KF.CONST.EX_COST) this.motion([6, 2, 3], m.kind === 'kokuu' ? 'lp,mp' : 'hp');
+    if (m.D.base === 'gai') { if (m.ex > 0) this.motion([6, 2, 3], 'lp,mp'); }
+    else if (m.kind !== 'kokuu' || m.ex > 0) this.motion([6, 2, 3], m.kind === 'kokuu' ? 'lp,mp' : 'hp');
   }
 
   if (!this.q.length && m.actionable()) {
