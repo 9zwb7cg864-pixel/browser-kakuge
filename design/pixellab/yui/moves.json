@@ -1,0 +1,336 @@
+{
+ "idle": {
+  "frames": [
+   "img/idle_00.png",
+   "img/idle_01.png",
+   "img/idle_02.png",
+   "img/idle_03.png",
+   "img/idle_04.png",
+   "img/idle_05.png",
+   "img/idle_06.png",
+   "img/idle_07.png",
+   "img/idle_08.png"
+  ]
+ },
+ "walk_f": {
+  "frames": [
+   "img/walk_f_00.png",
+   "img/walk_f_01.png",
+   "img/walk_f_02.png",
+   "img/walk_f_03.png",
+   "img/walk_f_04.png",
+   "img/walk_f_05.png",
+   "img/walk_f_06.png",
+   "img/walk_f_07.png",
+   "img/walk_f_08.png"
+  ]
+ },
+ "walk_b": {
+  "frames": [
+   "img/walk_b_00.png",
+   "img/walk_b_01.png",
+   "img/walk_b_02.png",
+   "img/walk_b_03.png",
+   "img/walk_b_04.png",
+   "img/walk_b_05.png",
+   "img/walk_b_06.png",
+   "img/walk_b_07.png",
+   "img/walk_b_08.png"
+  ]
+ },
+ "crouch_in": {
+  "frames": [
+   "img/crouch_in_00.png",
+   "img/crouch_in_01.png",
+   "img/crouch_in_02.png",
+   "img/crouch_in_03.png",
+   "img/crouch_in_04.png"
+  ]
+ },
+ "crouch": {
+  "frames": [
+   "img/crouch_00.png",
+   "img/crouch_01.png",
+   "img/crouch_02.png",
+   "img/crouch_03.png",
+   "img/crouch_04.png",
+   "img/crouch_05.png",
+   "img/crouch_06.png",
+   "img/crouch_07.png",
+   "img/crouch_08.png"
+  ]
+ },
+ "crouch_out": {
+  "frames": [
+   "img/crouch_out_00.png",
+   "img/crouch_out_01.png",
+   "img/crouch_out_02.png",
+   "img/crouch_out_03.png",
+   "img/crouch_out_04.png"
+  ]
+ },
+ "jump_up": {
+  "frames": [
+   "img/jump_up_00.png",
+   "img/jump_up_01.png",
+   "img/jump_up_02.png",
+   "img/jump_up_03.png",
+   "img/jump_up_04.png",
+   "img/jump_up_05.png",
+   "img/jump_up_06.png",
+   "img/jump_up_07.png",
+   "img/jump_up_08.png"
+  ]
+ },
+ "jump_down": {
+  "frames": [
+   "img/jump_down_00.png",
+   "img/jump_down_01.png",
+   "img/jump_down_02.png",
+   "img/jump_down_03.png",
+   "img/jump_down_04.png",
+   "img/jump_down_05.png",
+   "img/jump_down_06.png",
+   "img/jump_down_07.png",
+   "img/jump_down_08.png"
+  ]
+ },
+ "jump_f": {
+  "frames": [
+   "img/jump_f_00.png",
+   "img/jump_f_01.png",
+   "img/jump_f_02.png",
+   "img/jump_f_03.png",
+   "img/jump_f_04.png",
+   "img/jump_f_05.png",
+   "img/jump_f_06.png",
+   "img/jump_f_07.png",
+   "img/jump_f_08.png"
+  ]
+ },
+ "jump_b": {
+  "frames": [
+   "img/jump_b_00.png",
+   "img/jump_b_01.png",
+   "img/jump_b_02.png",
+   "img/jump_b_03.png",
+   "img/jump_b_04.png",
+   "img/jump_b_05.png",
+   "img/jump_b_06.png",
+   "img/jump_b_07.png",
+   "img/jump_b_08.png"
+  ]
+ },
+ "land": {
+  "frames": [
+   "img/land_00.png",
+   "img/land_01.png",
+   "img/land_02.png",
+   "img/land_03.png",
+   "img/land_04.png"
+  ]
+ },
+ "dash": {
+  "frames": [
+   "img/dash_00.png",
+   "img/dash_01.png",
+   "img/dash_02.png",
+   "img/dash_03.png",
+   "img/dash_04.png",
+   "img/dash_05.png",
+   "img/dash_06.png",
+   "img/dash_07.png",
+   "img/dash_08.png"
+  ]
+ },
+ "dash_b": {
+  "frames": [
+   "img/dash_b_00.png",
+   "img/dash_b_01.png",
+   "img/dash_b_02.png",
+   "img/dash_b_03.png",
+   "img/dash_b_04.png",
+   "img/dash_b_05.png",
+   "img/dash_b_06.png",
+   "img/dash_b_07.png",
+   "img/dash_b_08.png"
+  ]
+ },
+ "guard": {
+  "frames": [
+   "img/guard_00.png",
+   "img/guard_01.png",
+   "img/guard_02.png",
+   "img/guard_03.png",
+   "img/guard_04.png"
+  ]
+ },
+ "cguard": {
+  "frames": [
+   "img/cguard_00.png",
+   "img/cguard_01.png",
+   "img/cguard_02.png",
+   "img/cguard_03.png",
+   "img/cguard_04.png"
+  ]
+ },
+ "hit_hi": {
+  "frames": [
+   "img/hit_hi_00.png",
+   "img/hit_hi_01.png",
+   "img/hit_hi_02.png",
+   "img/hit_hi_03.png",
+   "img/hit_hi_04.png",
+   "img/hit_hi_05.png",
+   "img/hit_hi_06.png",
+   "img/hit_hi_07.png",
+   "img/hit_hi_08.png"
+  ]
+ },
+ "hit_lo": {
+  "frames": [
+   "img/hit_lo_00.png",
+   "img/hit_lo_01.png",
+   "img/hit_lo_02.png",
+   "img/hit_lo_03.png",
+   "img/hit_lo_04.png",
+   "img/hit_lo_05.png",
+   "img/hit_lo_06.png",
+   "img/hit_lo_07.png",
+   "img/hit_lo_08.png"
+  ]
+ },
+ "hit_c": {
+  "frames": [
+   "img/hit_c_00.png",
+   "img/hit_c_01.png",
+   "img/hit_c_02.png",
+   "img/hit_c_03.png",
+   "img/hit_c_04.png",
+   "img/hit_c_05.png",
+   "img/hit_c_06.png",
+   "img/hit_c_07.png",
+   "img/hit_c_08.png"
+  ]
+ },
+ "tech": {
+  "frames": [
+   "img/tech_00.png",
+   "img/tech_01.png",
+   "img/tech_02.png",
+   "img/tech_03.png",
+   "img/tech_04.png",
+   "img/tech_05.png",
+   "img/tech_06.png",
+   "img/tech_07.png",
+   "img/tech_08.png"
+  ]
+ },
+ "throw_do": {
+  "frames": [
+   "img/throw_do_00.png",
+   "img/throw_do_01.png",
+   "img/throw_do_02.png",
+   "img/throw_do_03.png",
+   "img/throw_do_04.png",
+   "img/throw_do_05.png",
+   "img/throw_do_06.png",
+   "img/throw_do_07.png",
+   "img/throw_do_08.png",
+   "img/throw_do_09.png",
+   "img/throw_do_10.png",
+   "img/throw_do_11.png",
+   "img/throw_do_12.png"
+  ]
+ },
+ "launch": {
+  "frames": [
+   "img/launch_00.png",
+   "img/launch_01.png",
+   "img/launch_02.png",
+   "img/launch_03.png",
+   "img/launch_04.png",
+   "img/launch_05.png",
+   "img/launch_06.png",
+   "img/launch_07.png",
+   "img/launch_08.png"
+  ]
+ },
+ "down": {
+  "frames": [
+   "img/down_00.png",
+   "img/down_01.png",
+   "img/down_02.png",
+   "img/down_03.png",
+   "img/down_04.png"
+  ]
+ },
+ "getup": {
+  "frames": [
+   "img/getup_00.png",
+   "img/getup_01.png",
+   "img/getup_02.png",
+   "img/getup_03.png",
+   "img/getup_04.png",
+   "img/getup_05.png",
+   "img/getup_06.png",
+   "img/getup_07.png",
+   "img/getup_08.png",
+   "img/getup_09.png",
+   "img/getup_10.png",
+   "img/getup_11.png",
+   "img/getup_12.png"
+  ]
+ },
+ "ko": {
+  "frames": [
+   "img/ko_00.png",
+   "img/ko_01.png",
+   "img/ko_02.png",
+   "img/ko_03.png",
+   "img/ko_04.png",
+   "img/ko_05.png",
+   "img/ko_06.png",
+   "img/ko_07.png",
+   "img/ko_08.png",
+   "img/ko_09.png",
+   "img/ko_10.png",
+   "img/ko_11.png",
+   "img/ko_12.png"
+  ]
+ },
+ "win": {
+  "frames": [
+   "img/win_00.png",
+   "img/win_01.png",
+   "img/win_02.png",
+   "img/win_03.png",
+   "img/win_04.png",
+   "img/win_05.png",
+   "img/win_06.png",
+   "img/win_07.png",
+   "img/win_08.png",
+   "img/win_09.png",
+   "img/win_10.png",
+   "img/win_11.png",
+   "img/win_12.png"
+  ]
+ },
+ "intro": {
+  "frames": [
+   "img/intro_00.png",
+   "img/intro_01.png",
+   "img/intro_02.png",
+   "img/intro_03.png",
+   "img/intro_04.png",
+   "img/intro_05.png",
+   "img/intro_06.png",
+   "img/intro_07.png",
+   "img/intro_08.png",
+   "img/intro_09.png",
+   "img/intro_10.png",
+   "img/intro_11.png",
+   "img/intro_12.png"
+  ]
+ }
+}

@@ -87,7 +87,7 @@ KF.AI.prototype.update = function () {
   }
   if (this.after && (m.actionable() && !this.q.length)) this.after = null;
   // 昇竜SA：昇穿が当たったら、飛び上がる前に超必殺でキャンセル
-  if (m.kind === 'kokuu' && m.state === 'attack' && m.moveId === 'dp' && m.connected && m.rootHit && this.saTried !== m.moveSerial) {
+  if (KF.kokuuType(m.kind) && m.state === 'attack' && m.moveId === 'dp' && m.connected && m.rootHit && this.saTried !== m.moveSerial) {
     this.saTried = m.moveSerial;
     var sb = Math.floor(m.sup / 1000);
     if (sb >= 3 && m.rootHit && L.superUse > 0.7 && this.rnd() < 0.5) { this.clear(); this.motion([2, 3, 6, 2, 3, 6], 'hk'); }   // 昇穿はSA3でだけキャンセルできる
@@ -107,7 +107,7 @@ KF.AI.prototype.update = function () {
       this.jug = null;
     }
   }
-  if (m.kind === 'kokuu' && m.state === 'attack' && m.moveId === 'hk' && m.connected && o.state === 'launch' && !this.jug && this.rnd() < L.confirm + 0.2) this.jug = { until: b.frameNo + 60 };
+  if (KF.kokuuType(m.kind) && m.state === 'attack' && m.moveId === 'hk' && m.connected && o.state === 'launch' && !this.jug && this.rnd() < L.confirm + 0.2) this.jug = { until: b.frameNo + 60 };
 
   // 防御判断（キューより優先）
   var threat = this.threat(s, dist);
@@ -117,7 +117,7 @@ KF.AI.prototype.update = function () {
       this.clear(); this.antiAir(dist);
     } else if (threat.kind === 'proj' && m.kind === 'gai_s' && threat.d > 40 && threat.d < 100 && r < L.spacing * 0.8) {
       this.clear(); this.motion([2, 3, 6], 'lk');   // 反射
-    } else if (threat.kind === 'proj' && m.kind === 'kokuu' && threat.d > 55 && threat.d < 110 && dist < 260 && r < L.spacing * 0.7) {
+    } else if (threat.kind === 'proj' && KF.kokuuType(m.kind) && threat.d > 55 && threat.d < 110 && dist < 260 && r < L.spacing * 0.7) {
       this.clear(); this.motion([2, 1, 4], dist > 180 ? 'hk' : (dist > 120 ? 'mk' : 'lk'));
     } else if (threat.kind === 'proj' && L.spacing > 0.5 && threat.d > 130 && r < L.jump * 6) {
       this.clear(); this.push(9, '', 8); this.push(9, 'hk', 1);
@@ -141,7 +141,7 @@ KF.AI.prototype.update = function () {
   if (m.state === 'getup' && m.aF === m.animObj().frames.length - 2 && dist < 110 && this.rnd() < L.reversal) {
     this.clear();
     if (m.D.base === 'gai') { if (m.ex > 0) this.motion([6, 2, 3], 'lp,mp'); }
-    else if (m.kind !== 'kokuu' || m.ex > 0) this.motion([6, 2, 3], m.kind === 'kokuu' ? 'lp,mp' : 'hp');
+    else if (!KF.kokuuType(m.kind) || m.ex > 0) this.motion([6, 2, 3], KF.kokuuType(m.kind) ? 'lp,mp' : 'hp');
   }
 
   if (!this.q.length && m.actionable()) {
@@ -191,7 +191,7 @@ KF.AI.prototype.antiAir = function (dist) {
 
 KF.AI.prototype.punish = function (dist, s) {
   if (this.me().D.base === 'gai') { this.punishGai(dist, s); return; }
-  var m = this.me(), L = this.L, K = m.kind === 'kokuu';
+  var m = this.me(), L = this.L, K = KF.kokuuType(m.kind);
   this.clear();
   var bars = Math.floor(m.sup / 1000);
   if (K) {
@@ -222,7 +222,7 @@ KF.AI.prototype.starter = function (btn, cancel, crouch, confirm) {
 
 // 格ゲーの基本コンボ（弱の連打キャンセル＞必殺技／ターゲットコンボ＞必殺技）。難易度で使う段数が変わる
 KF.AI.prototype.chainCombo = function (light) {
-  var m = this.me(), L = this.L, K = m.kind === 'kokuu';
+  var m = this.me(), L = this.L, K = KF.kokuuType(m.kind);
   var mot = function (seq, btn) { return seq.map(function (x, i, arr) { return { d: x, b: i === arr.length - 1 ? btn : '', n: i === arr.length - 1 ? 2 : 1 }; }); };
   var bars = Math.floor(m.sup / 1000);
   var steps, first;
@@ -249,7 +249,7 @@ KF.AI.prototype.chainCombo = function (light) {
 KF.AI.prototype.parryRush = function () { this.push(5, 'rush', 2); this.push(6, 'rush', 1); this.push(5, 'rush', 1); this.push(6, 'rush', 1); this.push(6, '', 9); };
 
 KF.AI.prototype.rushRoute = function () {
-  var m = this.me(), K = m.kind === 'kokuu';
+  var m = this.me(), K = KF.kokuuType(m.kind);
   var next = [{ d: 5, b: 'rush', n: 1 }, { d: 6, b: '', n: 8 }, { d: 5, b: 'hp', n: 2 }];
   this.push(5, 'mp', 2);
   this.combo = { next: next, confirm: true, done: false };
@@ -261,7 +261,7 @@ KF.AI.prototype.rushRoute = function () {
 
 KF.AI.prototype.decide = function (s, dist) {
   if (this.me().D.base === 'gai') { this.decideGai(s, dist); return; }
-  var m = this.me(), L = this.L, K = m.kind === 'kokuu', r = this.rnd();
+  var m = this.me(), L = this.L, K = KF.kokuuType(m.kind), r = this.rnd();
   var pr = m.D.prefRange;
   var bars = Math.floor(m.sup / 1000);
   // 後続入力（ラッシュルートの続き）

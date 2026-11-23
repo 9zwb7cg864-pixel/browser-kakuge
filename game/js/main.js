@@ -142,12 +142,12 @@ var KF = window.KF || (window.KF = {});
     R.ctx.fillStyle = 'rgba(0,0,10,0.7)'; R.ctx.fillRect(20, y - 9, 600, 18);
     R.text(txt, 320, y, 9, col, 'center');
   }
-  // キャラは道着キャラ男だけなので、キャラ選択は飛ばす
-  function goSelect() { cfg.p1 = 'kokuu'; cfg.p2 = 'kokuu'; if (cfg.mode === 'cpu') { scene = 'level'; sel = LEVELS.indexOf(cfg.level); } else startBattle(); }
+  function goSelect() { scene = 'select'; selStage = 0; selCursor = [0, 1]; }
 
-  var KINDS = ['kokuu'];
+  var KINDS = ['kokuu', 'yui'];
   var DESC = {
     kokuu: ['地上戦が得意なバランス型', '飛び道具・対空・突進技を持つ', '体力 10000 / 動き 速め'],
+    yui: ['今は道着キャラ男と同じ技を使う', '攻撃の絵はまだ仮', '体力 10000 / 動き 速め'],
   };
   function sceneSelect(m) {
     bg(0.6);

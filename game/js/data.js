@@ -513,3 +513,12 @@ KF.HIT_FIX = {
   'kokuu:ex_dp': { y1: -96 },
   'shuuen:ex_dp': { y1: -96 }
 };
+
+// 紺野ユイ：今は道着キャラ男（kokuu）と同じ技・判定を使う（攻撃の絵はまだ無いので、攻撃中は仮の絵）
+KF.CHARS.yui = Object.assign({}, KF.CHARS.kokuu, { name: '紺野ユイ', en: 'YUI', color: '#5c8dff' });
+KF.COMMANDS.yui = KF.COMMANDS.kokuu;
+if (KF.MOVE_LIST.kokuu) KF.MOVE_LIST.yui = KF.MOVE_LIST.kokuu;
+if (KF.COMBOS.kokuu) KF.COMBOS.yui = KF.COMBOS.kokuu;
+KF.HIT_FIX['yui:sp_dp'] = KF.HIT_FIX['kokuu:sp_dp'];
+KF.HIT_FIX['yui:ex_dp'] = KF.HIT_FIX['kokuu:ex_dp'];
+KF.kokuuType = function (k) { return k === 'kokuu' || k === 'yui'; };

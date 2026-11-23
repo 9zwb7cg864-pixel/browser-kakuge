@@ -25,7 +25,7 @@ KF.loadAssets = function (onProgress) {
   }
   // 遊べるキャラは道着キャラ男だけなので、その絵とエフェクトだけ読み込む（もう1人のキャラ・街のステージの絵は読まない）
   // 遊べるキャラ：道着キャラ男（kokuu）
-  var KINDS = ['kokuu'];
+  var KINDS = ['kokuu', 'yui'];
   return Promise.all(KINDS.map(function (k) { return json('assets/' + k + '/anims.json'); }).concat([json('assets/fx/fx.json'), json('assets/kokuu/movefx.json').catch(function () { return {}; })]))
     .then(function (r) {
       A.moveFx = r[KINDS.length + 1] || {};
