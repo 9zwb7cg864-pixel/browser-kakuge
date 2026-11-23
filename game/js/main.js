@@ -74,13 +74,13 @@ var KF = window.KF || (window.KF = {});
     var c = R.ctx, rects = [];
     w = w || 220;
     items.forEach(function (it, i) {
-      var gap = items.length > 8 ? 26 : 30, y = y0 + i * gap, x = 320 - w / 2, on = i === cur;   // 項目が多いときは詰める
+      var gap = items.length > 10 ? 23 : items.length > 8 ? 26 : 30, bh = items.length > 10 ? 21 : 24, y = y0 + i * gap, x = 320 - w / 2, on = i === cur;   // 項目が多いときは詰める
       c.fillStyle = on ? 'rgba(0,220,255,0.18)' : 'rgba(10,10,30,0.6)';
-      c.fillRect(x, y, w, 24);
-      c.strokeStyle = on ? '#38d6ff' : '#3a3a6a'; c.strokeRect(x + 0.5, y + 0.5, w - 1, 23);
-      if (on) { c.fillStyle = '#ff3fe6'; c.fillRect(x, y, 3, 24); }
-      R.text(it, 320, y + 12, 13, on ? '#ffffff' : '#a0a8c8', 'center', on ? '#00c8ff' : null);
-      rects.push([x, y, w, 24]);
+      c.fillRect(x, y, w, bh);
+      c.strokeStyle = on ? '#38d6ff' : '#3a3a6a'; c.strokeRect(x + 0.5, y + 0.5, w - 1, bh - 1);
+      if (on) { c.fillStyle = '#ff3fe6'; c.fillRect(x, y, 3, bh); }
+      R.text(it, 320, y + bh / 2, bh < 24 ? 12 : 13, on ? '#ffffff' : '#a0a8c8', 'center', on ? '#00c8ff' : null);
+      rects.push([x, y, w, bh]);
     });
     return rects;
   }
@@ -211,7 +211,7 @@ var KF = window.KF || (window.KF = {});
     sources[1].cpu = null; ai = null;
     if (cfg.mode === 'cpu') { ai = new KF.AI(game, 1, cfg.level, (Date.now() & 0xffff) + 1); sources[1].cpu = ai; }
     if (cfg.mode === 'training') { ai = null; sources[1].cpu = { output: function () { return { x: 0, y: 0, held: {} }; } }; }
-    scene = 'battle'; paused = false; keyLog = [];
+    scene = 'battle'; paused = false; keyLog = []; rec = []; recCombo = { s: -1, e: -1 }; recPrevCombo = 0;
     R.ann = []; R.superBanner = null;
     KF.Touch && KF.Touch.show(isTouch);
   }
@@ -247,7 +247,7 @@ var KF = window.KF || (window.KF = {});
         var rm = i1.y > 0 ? (i1.x > 0 ? 'sRight' : i1.x < 0 ? 'oLeft' : 'center') : (i1.x > 0 ? 'oRight' : i1.x < 0 ? 'sLeft' : 'center');
         game.resetTraining(rm);
       }
-      if (cfg.mode === 'training' && !paused) recordKeys(i1);
+      if (cfg.mode === 'training' && !paused) { recordKeys(i1); recInput(i1); }
       if (!paused) game.step([i1, i2]);
       for (; lastEvents < game.events.length; lastEvents++) handleEvent(game.events[lastEvents]);
       if (game.events.length > 400) { game.events.splice(0, 300); lastEvents -= 300; }
@@ -255,6 +255,7 @@ var KF = window.KF || (window.KF = {});
     R.render(game);
     if (cfg.mode === 'training') drawTrainingInfo();
     if (paused) drawPause();
+    if (recToast && recToast.t-- > 0) { R.ctx.fillStyle = 'rgba(0,0,10,0.9)'; R.ctx.fillRect(160, 342, 320, 17); R.text(recToast.s, 320, 350, 10, '#7fffb0', 'center'); }
     if (game.phase === 'over' && !paused) { scene = 'result'; resultSel = 0; frameT = 0; KF.Touch && KF.Touch.show(false); }
   }
   function handleEvent(e) {
@@ -282,6 +283,38 @@ var KF = window.KF || (window.KF = {});
     if (top && top.sig === sig && !fresh.length) { top.n++; return; }
     keyLog.unshift({ sig: sig, dir: dir, btn: btn, fresh: fresh, n: 1 });
     if (keyLog.length > KEY_ROWS) keyLog.length = KEY_ROWS;
+  }
+  // 入力の記録：トレモ中の1Pの入力を毎フレーム残し、最後のコンボの分を文字にしてコピーできるようにする
+  //   形式：KFREC1|1Pのx,2Pのx,1Pの向き,1PのEX/RUSH,1Pの超必殺ゲージ,1Pのキャラ,2Pのキャラ|「方向(テンキー)+ボタン x 続いたフレーム数」を空白区切り
+  var rec = [], REC_MAX = 3600, recCombo = { s: -1, e: -1 }, recPrevCombo = 0, recToast = null;
+  function recInput(inp) {
+    var b = game, p0 = b.p[0], p1 = b.p[1];
+    var dir = 5 + (inp.x > 0 ? 1 : inp.x < 0 ? -1 : 0) + (inp.y > 0 ? -3 : inp.y < 0 ? 3 : 0);
+    var H = inp.held || {}, btn = ['lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'rush', 'l', 'm', 'h', 'sp', 'auto'].filter(function (k) { return H[k]; }).join('+');
+    rec.push({ d: dir, b: btn, st: [Math.round(p0.x * 10) / 10, Math.round(p1.x * 10) / 10, p0.facing, p0.rush, p0.sup, p0.kind, p1.kind] });
+    if (rec.length > REC_MAX) { rec.shift(); recCombo.s--; recCombo.e--; }
+    var c = p1.combo;
+    if (c > 0 && recPrevCombo === 0) { recCombo.s = rec.length - 1; recCombo.e = -1; }
+    if (c === 0 && recPrevCombo > 0) recCombo.e = rec.length - 1;
+    recPrevCombo = c;
+  }
+  function recText() {
+    if (recCombo.s < 0) return null;
+    var a = Math.max(0, recCombo.s - 120), z = recCombo.e >= 0 ? Math.min(rec.length, recCombo.e + 20) : rec.length;
+    var out = [], cur = null, n = 0;
+    for (var i = a; i < z; i++) {
+      var t = rec[i].d + (rec[i].b ? rec[i].b : '');
+      if (t === cur) n++; else { if (cur !== null) out.push(cur + 'x' + n); cur = t; n = 1; }
+    }
+    if (cur !== null) out.push(cur + 'x' + n);
+    return 'KFREC1|' + rec[a].st.join(',') + '|' + out.join(' ');
+  }
+  function copyRec() {
+    var t = recText();
+    if (!t) { recToast = { s: 'まだコンボの記録がありません', t: 120 }; return; }
+    var done = function () { recToast = { s: '入力をコピーしました（' + t.split('|')[2].split(' ').length + '個）', t: 150 }; };
+    var fall = function () { window.prompt('この文字をコピーして送ってください', t); done(); };
+    try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, fall); else fall(); } catch (e) { fall(); }
   }
   function drawKeyDisplay(y0) {
     var c = R.ctx, rowH = 15, h = KEY_ROWS * rowH + 6;
@@ -542,14 +575,14 @@ var KF = window.KF || (window.KF = {});
   }
 
   var PAUSE_BASE = ['再開', '技表', '当たり判定 表示切替', 'やり直す', 'タイトルへ'];
-  var PAUSE_TR = ['位置リセット：中央', '位置リセット：相手を画面端へ', '位置リセット：自分が画面端', 'キーディス 表示切替', 'スピード'];
+  var PAUSE_TR = ['位置リセット：中央', '位置リセット：相手を画面端へ', '位置リセット：自分が画面端', 'キーディス 表示切替', 'スピード', '入力をコピー（最後のコンボ）'];
   var PAUSE_ITEMS = PAUSE_BASE;
   function drawPause() {
-    PAUSE_ITEMS = cfg.mode === 'training' ? [PAUSE_BASE[0]].concat(PAUSE_TR.slice(0, 4), [trSpeedLabel()], PAUSE_BASE.slice(1)) : PAUSE_BASE;
+    PAUSE_ITEMS = cfg.mode === 'training' ? [PAUSE_BASE[0]].concat(PAUSE_TR.slice(0, 4), [trSpeedLabel(), PAUSE_TR[5]], PAUSE_BASE.slice(1)) : PAUSE_BASE;
     var c = R.ctx;
     c.fillStyle = 'rgba(0,0,10,0.7)'; c.fillRect(0, 0, 640, 360);
     R.text('PAUSE', 320, 70, 28, '#ffffff', 'center', '#7a5cff');
-    var rects = drawMenu(PAUSE_ITEMS, PAUSE_ITEMS.length > 8 ? 92 : PAUSE_ITEMS.length > 6 ? 96 : 110, pausedSel, 260);
+    var rects = drawMenu(PAUSE_ITEMS, PAUSE_ITEMS.length > 10 ? 90 : PAUSE_ITEMS.length > 8 ? 92 : PAUSE_ITEMS.length > 6 ? 96 : 110, pausedSel, 260);
     var m = menuInput();
     if (m.up) pausedSel = (pausedSel + PAUSE_ITEMS.length - 1) % PAUSE_ITEMS.length;
     if (m.down) pausedSel = (pausedSel + 1) % PAUSE_ITEMS.length;
@@ -565,7 +598,8 @@ var KF = window.KF || (window.KF = {});
       else if (it === PAUSE_TR[1]) { game.resetTraining('oRight'); paused = false; }
       else if (it === PAUSE_TR[2]) { game.resetTraining('sLeft'); paused = false; }
       else if (it === PAUSE_TR[3]) { toggleKeyDisp(); paused = false; }
-      else if (it.indexOf('スピード') === 0) { cycleTrSpeed(); }   // メニューは開いたまま（何度か押して選ぶ）
+      else if (it.indexOf('スピード') === 0) { cycleTrSpeed(); }
+      else if (it === PAUSE_TR[5]) { copyRec(); }   // メニューは開いたまま（何度か押して選ぶ）
       else { KF.Touch && KF.Touch.show(false); scene = 'title'; }
     }
   }
