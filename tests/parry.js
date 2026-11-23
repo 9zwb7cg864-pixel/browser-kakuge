@@ -52,9 +52,9 @@ const ann = (ev, t) => ev.some(e => e.type === 'announce' && e.text === t);
   ok(ann(ev, 'PUNISH COUNTER') && d >= thr * 1.4, `パリィ中に投げられるとパニッシュカウンター（${d} ダメージ）`); }
 { const b = fresh(); const r0 = b.p[0].rush;
   run(b, [inp(2), inp(3), inp(6, 'lp,mp')], [], 4);
-  ok(b.p[0].moveId === 'fire_ex' && Math.abs(r0 - b.p[0].rush - C.EX_COST) < 1, `EX技はゲージを2本使う（${Math.round(r0 - b.p[0].rush)}）`); }
-{ const b = fresh(); b.p[0].rush = 1500; run(b, [inp(2), inp(3), inp(6, 'lp,mp')], [], 4);
-  ok(b.p[0].moveId === 'fire', 'ゲージ2本ないときは普通の虚環弾'); }
+  ok(b.p[0].moveId === 'fire_ex' && Math.abs(r0 - b.p[0].rush - 1000) < 1, `EX技はゲージを1本使う（${Math.round(r0 - b.p[0].rush)}）`); }
+{ const b = fresh(); b.p[0].rush = 900; run(b, [inp(2), inp(3), inp(6, 'lp,mp')], [], 4);
+  ok(b.p[0].moveId === 'fire', 'ゲージ1本ないときは普通の虚環弾'); }
 { const b = fresh(); run(b, [inp(2), inp(3), inp(6, 'lp'), inp(6), inp(5, 'mp')], [], 6);
   ok(b.p[0].moveId === 'fire_ex', '波動の弱Pを押して2F遅れて中Pを押してもEXになる（' + b.p[0].moveId + '）'); }
 { const b = fresh(); run(b, [inp(2), inp(3), inp(6, 'lp'), N(), N(), N(), N(), inp(5, 'mp')], [], 10);

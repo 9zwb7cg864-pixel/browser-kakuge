@@ -804,7 +804,7 @@ var KF = window.KF || (window.KF = {});
     if (mv.inv) { var iv = pick(mv.inv, f.str); if (fn >= iv[0] && fn <= iv[1]) { f.inv = 2; f.thInv = 2; } }
     if (mv.aaInv) { var av = pick(mv.aaInv, f.str); if (fn >= av[0] && fn <= av[1]) f.aaInv = 2; }
     // 強さによる発生の差（スト6の昇龍拳：弱5F・中6F・強7F）。この間は構えの絵のまま待つ
-    if (f.preD > 0) { f.preD--; return; }
+    if (f.preD > 0) { if (mv.projInv) f.projInv = 2; f.preD--; return; }   // 遅らせた出始めのあいだも、飛び道具をくぐる無敵は付く
     // 空中で相手を捕まえる超必殺（天地穿）：最後の一撃まで、捕まえた相手を自分の前に固定する
     if (mv.lockAir && f.air && f.hitCount > 0 && f.hitCount < (mv.hits || 1) && f.opp.state === 'launch') {
       var o2 = f.opp; o2.x = f.x + f.facing * 34; o2.y = Math.min(C.GROUND - 2, f.y - 6); o2.vy = Math.min(f.vy, 0); o2.vx = 0; o2.air = true;

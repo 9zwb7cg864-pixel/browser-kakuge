@@ -33,8 +33,8 @@ console.log('■ 必殺技コマンド');
   ok(hits(e).some(x => x.move === 'rushk'), '迅閃脚（↓↙←+K）が突進してヒット'); }
 { const b = fresh('shuuen', 'kokuu', 60); const e = run(b, [[1, 6], [1, 3], [1, 2], [1, 1], [1, 4, 'hp']], N, 120);
   ok(b.p[1].hp < b.p[1].D.hp - 2000, '終縛（→↘↓↙←+P）コマンド投げが決まる（' + (b.p[1].D.hp - b.p[1].hp) + 'ダメージ）'); }
-{ const b = fresh(); b.p[0].sup = 0; b.p[0].ex = 2000; b.p[0].rushCD = 999; const e = run(b, [[1, 6], [1, 2], [1, 3, 'lp,mp']]);
-  ok(hits(e).some(x => x.move === 'dp_ex'), 'EX昇穿（P2つ同時）が出る'); ok(b.p[0].ex < 1000 && b.p[0].sup >= 0, 'EXはEX/RUSHゲージを2本使い、必殺ゲージは使わない'); }
+{ const b = fresh(); b.p[0].sup = 0; b.p[0].ex = 1000; b.p[0].rushCD = 999; const e = run(b, [[1, 6], [1, 2], [1, 3, 'lp,mp']]);
+  ok(hits(e).some(x => x.move === 'dp_ex'), 'EX昇穿（P2つ同時）が出る'); ok(b.p[0].ex < 500 && b.p[0].sup >= 0, 'EXはEX/RUSHゲージを1本使い、必殺ゲージは使わない'); }
 { const b = fresh(); b.p[0].sup = 3000; b.p[0].ex = 0; const e = run(b, [[1, 6], [1, 2], [1, 3, 'lp,mp']]);
   ok(!hits(e).some(x => x.move === 'dp_ex') && b.p[0].sup >= 3000, 'EX/RUSHゲージが空なら、必殺ゲージが満タンでもEXは出ない'); }
 { const b = fresh('kokuu', 'shuuen', 200); b.p[0].sup = 1000; const e = run(b, [[1, 2], [1, 3], [1, 6], [1, 2], [1, 3], [1, 6, 'hp']], N, 150);
