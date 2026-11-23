@@ -19,6 +19,6 @@ def inline(m):
     return '<script>\n' + open(os.path.join(G, src), encoding='utf-8').read().replace('</script', '<\\/script') + '\n</script>'
 html = re.sub(r'<script src="([^"]+)"></script>', inline, html)
 html = html.replace('<script>', '<script>window.KF_EMBED = ' + json.dumps(emb, separators=(',', ':')) + ';</script>\n<script>', 1)
-fn = os.path.join(OUT, 'dairantou_street_fight.html')
+fn = os.path.join(OUT, 'browser_kakuge.html')
 open(fn, 'w', encoding='utf-8').write(html)
 print(fn, round(os.path.getsize(fn) / 1e6, 1), 'MB')

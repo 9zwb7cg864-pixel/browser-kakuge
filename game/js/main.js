@@ -106,8 +106,7 @@ var KF = window.KF || (window.KF = {});
     drawFighterBig('kokuu', 'idle', 150, 330, 1.25, 1, frameT);
     drawFighterBig('kokuu', 'idle', 490, 330, 1.25, -1, frameT, true);
     c.fillStyle = 'rgba(0,0,10,0.45)'; c.fillRect(0, 40, 640, 86);
-    R.text('大乱闘スマッシュ', 320, 64, 30, '#ffe14a', 'center', '#ff8a00');
-    R.text('ストリート行動ファイト', 320, 104, 38, '#ffffff', 'center', '#00d8ff');
+    R.text('ブラウザ格ゲー', 320, 84, 44, '#ffffff', 'center', '#00d8ff');
     var rects = drawMenu(TITLE_ITEMS, 134, titleSel, 200);
     if (m.up) { titleSel = (titleSel + TITLE_ITEMS.length - 1) % TITLE_ITEMS.length; KF.Audio.play('cursor'); }
     if (m.down) { titleSel = (titleSel + 1) % TITLE_ITEMS.length; KF.Audio.play('cursor'); }
