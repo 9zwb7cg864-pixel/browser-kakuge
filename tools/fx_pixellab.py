@@ -28,5 +28,24 @@ sheet('mv_aura', [hollow(f) for f in frames('aura')[:8]])
 sheet('mv_speed', frames('speed')[:8])
 sheet('mv_pillar', frames('pillar'))
 sheet('mv_exflare', frames('exflare')[:6])
+
+# 波動（飛び道具）：白い玉の真ん中が当たり判定の中心に来るようにずらして並べる。光の足し算はせず普通に描く
+def centered(k):
+    fr = [Image.open(f'{SRC}/hb_{k}/img_{i}.png').convert('RGBA') for i in range(1, 9)]
+    xs = ys = n = 0
+    for f in fr:
+        px = f.load()
+        for y in range(f.height):
+            for x in range(f.width):
+                r, g, b, a = px[x, y]
+                if a > 200 and min(r, g, b) > 215: xs += x; ys += y; n += 1
+    cx, cy = round(xs / n), round(ys / n); w, h = fr[0].size
+    W = 2 * max(cx, w - cx); H = 2 * max(cy, h - cy)
+    out = []
+    for f in fr:
+        c = Image.new('RGBA', (W, H)); c.paste(f, (W // 2 - cx, H // 2 - cy)); out.append(c)
+    return out
+sheet('ball_k', centered('an')); meta['ball_k']['blend'] = 'normal'
+sheet('ball_k_ex', centered('ae')); meta['ball_k_ex']['blend'] = 'normal'
 json.dump(meta, open(OUT + '/fx.json', 'w'), ensure_ascii=False)
 print('ok')

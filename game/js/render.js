@@ -471,7 +471,7 @@ KF.Renderer.prototype.drawFxFrame = function (c, name, fi, x, y, flip, s, alpha)
   if (!m || !img) return;
   fi = fi % m.n; s = s || 1;
   c.save();
-  c.globalCompositeOperation = 'lighter';
+  if (m.blend !== 'normal') c.globalCompositeOperation = 'lighter';
   if (alpha != null) c.globalAlpha = alpha;
   c.translate(Math.round(x), Math.round(y));
   if (flip) c.scale(-1, 1);
