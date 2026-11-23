@@ -1,0 +1,321 @@
+{
+"sp_fire": [
+{
+"fx": "mv_charge",
+"at": [
+16,
+-84
+],
+"from": 0,
+"to": "a",
+"rate": 2
+},
+{
+"fx": "mv_burst",
+"at": [
+60,
+-100
+],
+"from": "a",
+"len": 12,
+"rate": 2
+}
+],
+"ex_fire": [
+{
+"fx": "mv_charge",
+"at": [
+16,
+-84
+],
+"from": 0,
+"to": "a",
+"rate": 2
+},
+{
+"fx": "mv_burst",
+"at": [
+60,
+-100
+],
+"from": "a",
+"len": 12,
+"rate": 2
+}
+],
+"sp_dp": [
+{
+"fx": "mv_burst",
+"at": [
+34,
+-60
+],
+"from": 0,
+"len": 6,
+"rate": 1,
+"s": 0.6
+},
+{
+"fx": "mv_slash_up",
+"at": "hit",
+"off": [
+-8,
+46
+],
+"from": "a",
+"len": 16,
+"rate": 2
+}
+],
+"ex_dp": [
+{
+"fx": "mv_burst",
+"at": [
+34,
+-60
+],
+"from": 0,
+"len": 6,
+"rate": 1,
+"s": 0.6
+},
+{
+"fx": "mv_slash_up",
+"at": "hit",
+"off": [
+-8,
+46
+],
+"from": "a",
+"len": 16,
+"rate": 2
+}
+],
+"sp_palm": [
+{
+"fx": "mv_slash_up",
+"at": "hit",
+"off": [
+-14,
+52
+],
+"from": "a",
+"len": 16,
+"rate": 2
+},
+{
+"fx": "mv_burst",
+"at": "hit",
+"from": "a",
+"len": 12,
+"rate": 2
+}
+],
+"ex_palm": [
+{
+"fx": "mv_slash_up",
+"at": "hit",
+"off": [
+-14,
+52
+],
+"from": "a",
+"len": 16,
+"rate": 2
+},
+{
+"fx": "mv_burst",
+"at": "hit",
+"from": "a",
+"len": 12,
+"rate": 2
+}
+],
+"sp_tatsu": [
+{
+"fx": "mv_swirl",
+"at": [
+0,
+-78
+],
+"from": "a",
+"to": "r",
+"rate": 2
+}
+],
+"sp_atatsu": [
+{
+"fx": "mv_swirl",
+"at": [
+0,
+-78
+],
+"from": "a",
+"to": "r",
+"rate": 2
+}
+],
+"sp_slide": [
+{
+"fx": "dust",
+"at": [
+-20,
+-14
+],
+"from": "a",
+"len": 18,
+"rate": 3
+},
+{
+"fx": "dust",
+"at": [
+30,
+-14
+],
+"from": "a",
+"len": 18,
+"rate": 3,
+"delay": 6
+}
+],
+"ex_rush": [
+{
+"fx": "mv_speed",
+"at": [
+-50,
+-80
+],
+"from": "a",
+"to": "r",
+"rate": 2
+},
+{
+"fx": "mv_burst",
+"at": "hit",
+"from": "a",
+"len": 12,
+"rate": 2
+}
+],
+"su_1": [
+{
+"fx": "mv_aura",
+"at": [
+0,
+-86
+],
+"from": 0,
+"to": "end",
+"rate": 2,
+"back": 1
+},
+{
+"fx": "mv_charge",
+"at": [
+44,
+-98
+],
+"from": 0,
+"to": "a",
+"rate": 1,
+"s": 1.4
+}
+],
+"su_2": [
+{
+"fx": "mv_aura",
+"at": [
+0,
+-86
+],
+"from": 0,
+"to": "end",
+"rate": 2,
+"back": 1
+},
+{
+"fx": "mv_slash_h",
+"at": "hit",
+"off": [
+-20,
+-18
+],
+"from": "a",
+"to": "r",
+"rate": 2,
+"every": 12
+}
+],
+"su_3": [
+{
+"fx": "mv_aura",
+"at": [
+0,
+-86
+],
+"from": 0,
+"to": "end",
+"rate": 2,
+"back": 1
+},
+{
+"fx": "mv_pillar",
+"at": [
+10,
+-128
+],
+"from": "a",
+"len": 40,
+"rate": 4,
+"back": 1
+},
+{
+"fx": "mv_slash_up",
+"at": "hit",
+"off": [
+-8,
+46
+],
+"from": "a",
+"to": "r",
+"rate": 2,
+"every": 10
+}
+],
+"f_mp": [
+{
+"fx": "mv_slash_down",
+"at": "hit",
+"off": [
+-30,
+-6
+],
+"from": "a",
+"len": 16,
+"rate": 2
+}
+],
+"f_hp": [
+{
+"fx": "mv_burst",
+"at": "hit",
+"from": "a",
+"len": 12,
+"rate": 2,
+"s": 0.8
+}
+],
+"b_hk": [
+{
+"fx": "mv_slash_h",
+"at": "hit",
+"off": [
+-50,
+-14
+],
+"from": "a",
+"len": 16,
+"rate": 2
+}
+]
+}

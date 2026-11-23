@@ -26,8 +26,9 @@ KF.loadAssets = function (onProgress) {
   // 遊べるキャラは道着キャラ男だけなので、その絵とエフェクトだけ読み込む（もう1人のキャラ・街のステージの絵は読まない）
   // 遊べるキャラ：道着キャラ男（kokuu）
   var KINDS = ['kokuu'];
-  return Promise.all(KINDS.map(function (k) { return json('assets/' + k + '/anims.json'); }).concat([json('assets/fx/fx.json')]))
+  return Promise.all(KINDS.map(function (k) { return json('assets/' + k + '/anims.json'); }).concat([json('assets/fx/fx.json'), json('assets/kokuu/movefx.json').catch(function () { return {}; })]))
     .then(function (r) {
+      A.moveFx = r[KINDS.length + 1] || {};
       KINDS.forEach(function (k, i) { A.meta[k] = KF.prepAnims(r[i]); });
       A.fx = r[KINDS.length]; A.stage = {};
       KINDS.forEach(function (k) { Object.keys(A.meta[k].anims).forEach(function (n) { img(k + ':' + n, 'assets/' + k + '/' + A.meta[k].anims[n].file); }); });
@@ -379,7 +380,9 @@ KF.Renderer.prototype.render = function (b) {
     if (f.hs > 0 && f.hitShake && (f.state === 'hitstun' || f.state === 'launch' || f.state === 'blockstun')) {
       vib = (f.hs & 1 ? 1 : -1) * f.hitShake * Math.min(1, 0.35 + f.hs / (f.hitShakeT || 1));
     }
+    self.drawMoveFx(c, f, ox, true);
     self.drawFighterImg(c, f, f.x + ox + vib, f.y, 1);
+    self.drawMoveFx(c, f, ox, false);
     if (f.whiteT > 0) self.drawFighterWhite(c, f, f.x + ox + vib, f.y, f.whiteT >= 2 ? 0.9 : 0.5);
     else if (f.flash > 0) { // EX・被弾時の発光
       c.save(); c.globalCompositeOperation = 'lighter';
@@ -426,6 +429,41 @@ KF.Renderer.prototype.render = function (b) {
   if (this.debug) this.drawBoxes(c, b, ox);
   c.restore();
   this.drawHUD(b);
+};
+
+// コマンド技のエフェクト：技の何コマ目から何コマ目に、どのエフェクトをどこに重ねるか（assets/kokuu/movefx.json）
+// at が 'hit' なら、そのコマの攻撃判定の真ん中（off だけずらす）に出す。back なら体の後ろに描く
+KF.Renderer.prototype.drawMoveFx = function (c, f, ox, back) {
+  var specs = f.state === 'attack' && KF.Assets.moveFx && KF.Assets.moveFx[f.anim];
+  if (!specs) return;
+  var a = f.animObj(); if (!a || !a.frames) return;
+  var fr = a.frames, t = Math.min(f.aF, fr.length - 1);
+  if (a.firstActive == null) return;
+  var fa = a.firstActive, la = a.lastActive + 1, n = a.total;
+  for (var i = 0; i < specs.length; i++) {
+    var sp = specs[i];
+    if (!!sp.back !== back) continue;
+    var from = sp.from === 'a' ? fa : sp.from;
+    var to = sp.len ? from + sp.len : sp.to === 'a' ? fa : sp.to === 'r' ? la : n;
+    var st = from + (sp.delay || 0);
+    if (t < st || t >= to) continue;
+    var lt = t - st;
+    if (sp.every) lt = lt % sp.every;
+    var m = KF.Assets.fx[sp.fx]; if (!m) continue;
+    var fi = Math.floor(lt / (sp.rate || 2));
+    if (!sp.loop && (sp.len || sp.every) && fi >= m.n) continue;
+    var x, y;
+    if (sp.at === 'hit') {
+      var hb = null;
+      for (var j = t; j >= 0 && !hb; j--) if (fr[j].hit && fr[j].hit.length) hb = fr[j].hit;
+      if (!hb) continue;
+      var x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+      hb.forEach(function (b) { x0 = Math.min(x0, b[0]); x1 = Math.max(x1, b[0] + b[2]); y0 = Math.min(y0, b[1]); y1 = Math.max(y1, b[1] + b[3]); });
+      var o = sp.off || [0, 0];
+      x = (x0 + x1) / 2 + o[0]; y = (y0 + y1) / 2 + o[1];
+    } else { x = sp.at[0]; y = sp.at[1]; }
+    this.drawFxFrame(c, sp.fx, fi, f.x + ox + x * f.facing, f.y + y, f.facing < 0, sp.s || 1);
+  }
 };
 
 KF.Renderer.prototype.drawFxFrame = function (c, name, fi, x, y, flip, s, alpha) {
