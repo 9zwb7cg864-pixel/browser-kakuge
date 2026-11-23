@@ -111,4 +111,4 @@ if __name__ == '__main__':
                     for _ in range(8): im.save(f'{tmp}/f{k:05d}.jpg', quality=92); k += 1
         subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-framerate', '30', '-i', f'{tmp}/f%05d.jpg',
                         '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', OUT + '.tmp.mp4'], check=True)
-        os.replace(OUT + '.tmp.mp4', '/tmp/mv/motion_v5.mp4')
+        os.replace(OUT + '.tmp.mp4', OUT)
