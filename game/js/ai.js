@@ -245,6 +245,9 @@ KF.AI.prototype.chainCombo = function (light) {
   this.push(first.d, first.b, 2);
 };
 
+// その場からのラッシュ：パリィを押して、押したまま →→
+KF.AI.prototype.parryRush = function () { this.push(5, 'rush', 2); this.push(6, 'rush', 1); this.push(5, 'rush', 1); this.push(6, 'rush', 1); this.push(6, '', 9); };
+
 KF.AI.prototype.rushRoute = function () {
   var m = this.me(), K = m.kind === 'kokuu';
   var next = [{ d: 5, b: 'rush', n: 1 }, { d: 6, b: '', n: 8 }, { d: 5, b: 'hp', n: 2 }];
@@ -280,7 +283,7 @@ KF.AI.prototype.decide = function (s, dist) {
     }
     if (!K && r < L.fireball * 0.4) { this.motion([2, 3, 6], this.pick(['lp', 'mp'])); return; }
     if (r < L.jump && dist < 260) { this.push(9, '', 14); this.push(9, this.pick(['hk', 'hp']), 1); return; }
-    if (m.rush >= 2000 && r < L.rush * 0.6 && dist < 300) { this.push(5, 'rush', 1); this.push(6, '', 10); this.push(5, K ? 'mk' : 'hp', 2); return; }
+    if (m.rush >= 2000 && r < L.rush * 0.6 && dist < 300) { this.parryRush(); this.push(5, K ? 'mk' : 'hp', 2); return; }
     this.push(6, '', 6 + Math.floor(this.rnd() * 14));
     return;
   }
@@ -371,7 +374,7 @@ KF.AI.prototype.decideGai = function (s, dist) {
       if (L.combo >= 2 && this.rnd() < 0.4) { this.motion([2, 3, 6], H ? 'lp' : 'lk'); return; }   // 空中叩きつけ／盾落下
       this.push(9, '', 2); this.push(9, 'hp', 1); return;
     }
-    if (m.rush >= 2000 && r < L.rush * 0.6 && dist < 300) { this.push(5, 'rush', 1); this.push(6, '', 10); this.push(5, 'hp', 2); return; }
+    if (m.rush >= 2000 && r < L.rush * 0.6 && dist < 300) { this.parryRush(); this.push(5, 'hp', 2); return; }
     this.push(6, '', 6 + Math.floor(this.rnd() * 14));
     return;
   }

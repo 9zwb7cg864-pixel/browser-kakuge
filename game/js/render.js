@@ -383,6 +383,7 @@ KF.Renderer.prototype.render = function (b) {
     self.drawMoveFx(c, f, ox, true);
     self.drawFighterImg(c, f, f.x + ox + vib, f.y, 1);
     self.drawMoveFx(c, f, ox, false);
+    if (f.state === 'parry') self.drawFxFrame(c, 'parry', (b.frameNo >> 2) % 8, f.x + ox + f.facing * 24, f.y - 80, f.facing < 0, 1, 0.55);   // パリィの光の膜
     if (f.whiteT > 0) self.drawFighterWhite(c, f, f.x + ox + vib, f.y, f.whiteT >= 2 ? 0.9 : 0.5);
     else if (f.flash > 0) { // EX・被弾時の発光
       c.save(); c.globalCompositeOperation = 'lighter';
@@ -419,7 +420,7 @@ KF.Renderer.prototype.render = function (b) {
     if (e.name === 'impact') { self.drawImpact(c, e, e.x + ox, e.y); return; }
     if (e.name === 'spk') { self.drawSpark(c, e, e.x + ox, e.y); return; }
     var m = KF.Assets.fx[e.name]; if (!m) return;
-    var fi = Math.floor(e.t / (e.name === 'dust' ? 3 : e.name.indexOf('ring') === 0 ? 4 : 2));
+    var fi = Math.floor(e.t / (e.name === 'dust' ? 3 : e.name.indexOf('ring') === 0 || e.name === 'jparry' ? 4 : 2));
     if (fi >= m.n) return;
     self.drawFxFrame(c, e.name, fi, e.x + ox, e.y - (e.name === 'dust' ? m.h / 2 - 4 : 0), e.flip, e.s);
   });
@@ -578,7 +579,7 @@ KF.Renderer.prototype.drawHUD = function (b) {
     self.text(f.D.name, L ? x0 + 2 : x0 + w - 2, y + h + 11, 11, '#ffffff', L ? 'left' : 'right', col);
     if (f.D.form) self.text(f.D.form, L ? x0 + 2 : x0 + w - 2, y + h + 23, 9, '#ffffff', L ? 'left' : 'right', f.D.color);   // 今の形態
     if (f.modern) self.text('M', L ? x0 + 2 + 76 : x0 + w - 2 - 76, y + h + 11, 10, '#ffe14a', 'center', '#ff8a00');   // モダン操作
-    // ラッシュゲージ（6分割）
+    // ラッシュ・EXのゲージ（6分割。EX技2本・ラッシュキャンセル3本・パリィ）
     var rx = L ? x0 + w - 150 : x0, ry = y + h + 5, rw = 150, seg = rw / 6;
     for (var s = 0; s < 6; s++) {
       var fill = Math.max(0, Math.min(1, (f.rush - s * C.RUSH_SEG) / C.RUSH_SEG));
@@ -590,7 +591,7 @@ KF.Renderer.prototype.drawHUD = function (b) {
         c.fillRect(L ? Math.round(sx) + 1 + (Math.round(seg) - 2 - fw) : Math.round(sx) + 1, ry, fw, 5);
       }
     }
-    self.text('RUSH', L ? rx - 4 : rx + rw + 4, ry + 3, 8, '#4ffff0', L ? 'right' : 'left');
+    self.text('EX/RUSH', L ? rx - 4 : rx + rw + 4, ry + 3, 8, '#4ffff0', L ? 'right' : 'left');
     // ラウンド取得
     for (var k2 = 0; k2 < 2; k2++) {
       var px = L ? 296 - k2 * 12 : 344 + k2 * 12, py = 44;
@@ -615,21 +616,6 @@ KF.Renderer.prototype.drawHUD = function (b) {
     }
     self.text(String(bars), L ? bx + 196 : bx - 10, by + 2, 18, bars ? '#ffffff' : '#666', L ? 'left' : 'right', bars ? col : null);
     self.text('必殺', L ? bx : bx + 186, by - 9, 9, '#c9b0ff', L ? 'left' : 'right');
-    // EXゲージ（必殺ゲージとは別枠・2本）
-    var touch = document.body.classList.contains('touchmode');
-    var ew = 46, ex0 = L ? bx + 40 : bx + 186 - 40 - ew * 2 - 4, ey = touch ? by + 14 : by - 13;
-    c.fillStyle = '#04040c'; c.fillRect(ex0 - 2, ey - 2, ew * 2 + 8, 8);
-    var exN = Math.floor((f.ex || 0) / C.EX_COST);
-    for (var e2 = 0; e2 < 2; e2++) {
-      var efr = Math.max(0, Math.min(1, ((f.ex || 0) - e2 * C.EX_COST) / C.EX_COST));
-      var exx = L ? ex0 + e2 * (ew + 4) : ex0 + (1 - e2) * (ew + 4);
-      c.fillStyle = '#1e1806'; c.fillRect(exx, ey, ew, 4);
-      c.fillStyle = efr >= 1 ? '#ffd23c' : '#9a7a20';
-      var eww = Math.round(ew * efr);
-      c.fillRect(L ? exx : exx + ew - eww, ey, eww, 4);
-      if (efr >= 1 && (t >> 2) % 8 === e2) { c.fillStyle = 'rgba(255,255,255,0.55)'; c.fillRect(exx, ey, ew, 4); }
-    }
-    self.text('EX', L ? ex0 + ew * 2 + 10 : ex0 - 8, ey - 2, 9, exN ? '#ffd23c' : '#7a6a40', L ? 'left' : 'right');
     // コンボ数・ダメージ
     var def = f.opp;
     if (def.combo >= 2 || (def.dmgPop && def.dmgPop.t > 0 && def.combo >= 2)) f._comboShow = { n: def.combo, d: def.comboDmg, t: 70 };

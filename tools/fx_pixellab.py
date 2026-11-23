@@ -47,5 +47,16 @@ def centered(k):
     return out
 sheet('ball_k', centered('an')); meta['ball_k']['blend'] = 'normal'
 sheet('ball_k_ex', centered('ae')); meta['ball_k_ex']['blend'] = 'normal'
+
+# パリィ：体の前の光の膜（ループ）と、ジャストパリィの閃光。閃光の後半に紛れ込んだ小さな人影（青白以外の色）は消す
+sheet('parry', [Image.open(f'{SRC}/py_ab/img_{i}.png').convert('RGBA') for i in range(1, 9)])
+def bluewhite(f):
+    px = f.load()
+    for y in range(f.height):
+        for x in range(f.width):
+            r, g, b, a = px[x, y]
+            if a and (r > b + 10 or max(r, g, b) < 90): px[x, y] = (0, 0, 0, 0)
+    return f
+sheet('jparry', [bluewhite(Image.open(f'{SRC}/py_aj/img_{i}.png').convert('RGBA')) for i in range(0, 6)])
 json.dump(meta, open(OUT + '/fx.json', 'w'), ensure_ascii=False)
 print('ok')

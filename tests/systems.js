@@ -33,10 +33,10 @@ console.log('■ 必殺技コマンド');
   ok(hits(e).some(x => x.move === 'rushk'), '迅閃脚（↓↙←+K）が突進してヒット'); }
 { const b = fresh('shuuen', 'kokuu', 60); const e = run(b, [[1, 6], [1, 3], [1, 2], [1, 1], [1, 4, 'hp']], N, 120);
   ok(b.p[1].hp < b.p[1].D.hp - 2000, '終縛（→↘↓↙←+P）コマンド投げが決まる（' + (b.p[1].D.hp - b.p[1].hp) + 'ダメージ）'); }
-{ const b = fresh(); b.p[0].sup = 0; b.p[0].ex = 1000; const e = run(b, [[1, 6], [1, 2], [1, 3, 'lp,mp']]);
-  ok(hits(e).some(x => x.move === 'dp_ex'), 'EX昇穿（P2つ同時）が出る'); ok(b.p[0].ex < 1000 && b.p[0].sup >= 0, 'EXはEXゲージを1本使い、必殺ゲージは使わない'); }
+{ const b = fresh(); b.p[0].sup = 0; b.p[0].ex = 2000; b.p[0].rushCD = 999; const e = run(b, [[1, 6], [1, 2], [1, 3, 'lp,mp']]);
+  ok(hits(e).some(x => x.move === 'dp_ex'), 'EX昇穿（P2つ同時）が出る'); ok(b.p[0].ex < 1000 && b.p[0].sup >= 0, 'EXはEX/RUSHゲージを2本使い、必殺ゲージは使わない'); }
 { const b = fresh(); b.p[0].sup = 3000; b.p[0].ex = 0; const e = run(b, [[1, 6], [1, 2], [1, 3, 'lp,mp']]);
-  ok(!hits(e).some(x => x.move === 'dp_ex') && b.p[0].sup >= 3000, 'EXゲージが空なら、必殺ゲージが満タンでもEXは出ない'); }
+  ok(!hits(e).some(x => x.move === 'dp_ex') && b.p[0].sup >= 3000, 'EX/RUSHゲージが空なら、必殺ゲージが満タンでもEXは出ない'); }
 { const b = fresh('kokuu', 'shuuen', 200); b.p[0].sup = 1000; const e = run(b, [[1, 2], [1, 3], [1, 6], [1, 2], [1, 3], [1, 6, 'hp']], N, 150);
   ok(e.some(x => x.type === 'super'), '超必殺 虚空砲（1本）が発動し暗転演出'); ok(hits(e).filter(x => x.move === 'su1').length >= 3, '虚空砲が多段ヒット（' + hits(e).filter(x => x.move === 'su1').length + 'hit）');
   ok(b.p[0].sup < 1000, '必殺ゲージ1本を消費'); }
@@ -57,7 +57,7 @@ console.log('■ コンボ成立');
 { const b = fresh(); const e = run(b, [[2, 5, 'mp'], [6, 5], [1, 5, 'rush'], [9, 6], [1, 5, 'hp'], [7, 5], [1, 6], [1, 2], [1, 3, 'hp']], N, 90);
   ok(e.some(x => x.type === 'rushcancel'), '中P → ラッシュキャンセル が発動');
   ok(maxCombo(e) >= 3, 'ラッシュキャンセルから強P→昇穿までつながる（' + maxCombo(e) + 'hit）');
-  ok(b.p[0].rush <= C.RUSH_MAX - C.RUSH_CANCEL_COST + 100, 'ラッシュキャンセルでゲージを3本消費（残り' + b.p[0].rush + '）'); }
+  ok(b.p[0].rush <= C.RUSH_MAX - C.RUSH_CANCEL_COST + 800, 'ラッシュキャンセルでゲージを3本消費（そのあと当てた分が少し溜まる。残り' + Math.round(b.p[0].rush) + '）'); }
 
 console.log('■ 永久コンボの防止');
 { // ラッシュキャンセルを繰り返そうとしても、ゲージ（6本・1回3本）が尽きるので2回まで
@@ -143,8 +143,9 @@ console.log('■ 追加した技');
 { const b = fresh(); const e = run(b, [[3, 5, 'mk'], [7, 5], [1, 5, 'hk']], N, 60); ok(hits(e).some(x => x.move === 'tc_hk'), '1P ターゲットコンボ2（中K～強K）'); }
 
 console.log('■ ゲージ');
-{ const b = fresh('kokuu', 'shuuen', 300); b.p[0].rush = C.RUSH_MAX; run(b, [[1, 5, 'rush']], N, 2);
-  ok(b.p[0].rush === C.RUSH_MAX - C.RUSH_NEUTRAL_COST, 'その場ラッシュでラッシュゲージ1本消費（' + b.p[0].rush + '）');
+{ const b = fresh('kokuu', 'shuuen', 300); b.p[0].rush = C.RUSH_MAX; run(b, [[2, 5, 'rush'], [1, 6, 'rush'], [1, 5, 'rush'], [1, 6, 'rush']], N, 2);
+  const used = C.RUSH_MAX - b.p[0].rush;
+  ok(b.p[0].state === 'rush' && used >= 1000 && used <= 1050, 'パリィ→→のラッシュでゲージ1本消費（' + Math.round(used) + '）');
   const r0 = b.p[0].rush; run(b, [], N, 60); ok(b.p[0].rush === r0, '使用直後はゲージ回復が止まる（クールダウン）');
   run(b, [], N, 100); ok(b.p[0].rush > r0, 'クールダウン後に自然回復（' + r0 + '→' + b.p[0].rush + '）');
   const b2 = fresh('kokuu', 'shuuen', 300); b2.p[0].rush = 500; const e2 = run(b2, [[1, 5, 'rush']], N, 2);
@@ -456,7 +457,8 @@ console.log('■ ラッシュから出した技（勢いが残る・後すきが
 {
   const mk = () => { const b = new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]); b.camX = 400; b.p[0].x = 200; b.p[1].x = 900; b.p[0].facing = 1; b.p[1].facing = -1; return b; };
   // 勢い：ラッシュ強Pは止まらずに滑る
-  let b = mk(); const A = b.p[0]; b.step([inp(5, 'rush'), N()]); for (let i = 0; i < 7; i++) b.step([N(), N()]); b.step([inp(5, 'hp'), N()]); const x0 = A.x; for (let i = 0; i < 40; i++) b.step([N(), N()]);
+  const PR = [inp(5, 'rush'), inp(5, 'rush'), inp(6, 'rush'), inp(5, 'rush'), inp(6, 'rush')];
+  let b = mk(); const A = b.p[0]; PR.forEach(x => b.step([x, N()])); for (let i = 0; i < 7; i++) b.step([N(), N()]); b.step([inp(5, 'hp'), N()]); const x0 = A.x; for (let i = 0; i < 40; i++) b.step([N(), N()]);
   ok(A.x - x0 >= 50, 'ラッシュ強Pは勢いを残したまま滑りながら出る（' + Math.round(A.x - x0) + 'px）');
   // 後すき：同じ強Pでも、ラッシュから出すと早く動けるようになる
   const recov = (rush) => { const b2 = mk(); if (rush) { b2.step([inp(5, 'rush'), N()]); for (let i = 0; i < 7; i++) b2.step([N(), N()]); } b2.step([inp(5, 'hp'), N()]); let n = 0; while (!b2.p[0].actionable() && n < 80) { b2.step([N(), N()]); n++; } return n; };
@@ -464,7 +466,7 @@ console.log('■ ラッシュから出した技（勢いが残る・後すきが
   ok(r1 <= r0 - KF.CONST.RUSH_REC_CUT, 'ラッシュから出した強Pは後すきが短い（' + r0 + 'F → ' + r1 + 'F）');
   // 有利はラッシュから出した技にだけ：そこからキャンセルした旋風脚には付かない
   b = new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]); b.camX = 512; b.p[0].x = 380; b.p[1].x = 520; b.p[0].facing = 1; b.p[1].facing = -1;
-  const q = [inp(5, 'rush'), ...Array(7).fill(N()), inp(5, 'hp')]; let tatsuBonus = null;
+  const q = [...PR, ...Array(7).fill(N()), inp(5, 'hp')]; let tatsuBonus = null;
   for (let f = 0; f < 120; f++) { const e0 = b.events.length; if (b.p[0].moveId === 'hp' && b.p[0].connected && !q.length) q.push(inp(2), inp(3), inp(6, 'mk')); b.step([q.length ? q.shift() : N(), N()]); if (b.p[0].moveId === 'tatsu' && tatsuBonus == null) tatsuBonus = b.p[0].rushBonus; }
   ok(tatsuBonus === false, 'ラッシュの有利は、ラッシュから出した技にだけ付く（キャンセルした旋風脚には付かない）');
 }

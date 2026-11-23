@@ -554,7 +554,7 @@ var KF = window.KF || (window.KF = {});
   }
   var KEY_ACTIONS = ['up', 'down', 'left', 'right', 'lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'rush', 'start'];
   var KEY_NAMES_M = { lp: '弱', mp: '中', hp: '強', lk: 'SP（必殺技）', mk: 'アシスト', hk: 'SP（必殺技）' };
-  var KEY_NAMES = { up: '上', down: '下', left: '左', right: '右', lp: '弱パンチ', mp: '中パンチ', hp: '強パンチ', lk: '弱キック', mk: '中キック', hk: '強キック', rush: 'ラッシュ', start: 'ポーズ', reset: '位置リセット' };
+  var KEY_NAMES = { up: '上', down: '下', left: '左', right: '右', lp: '弱パンチ', mp: '中パンチ', hp: '強パンチ', lk: '弱キック', mk: '中キック', hk: '強キック', rush: 'パリィ', start: 'ポーズ', reset: '位置リセット' };
   var keyListener = null;
   var PAD_ACTIONS = ['lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'rush', 'start', 'reset'];
   function scenePad(m) {

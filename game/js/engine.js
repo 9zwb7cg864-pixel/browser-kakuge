@@ -97,7 +97,6 @@ var KF = window.KF || (window.KF = {});
     this.hp = this.D.hp; this.hpShown = this.hp; this.hpTrail = this.hp;
     this.rush = C.RUSH_MAX; this.rushCD = 0;
     if (this.sup === undefined) this.sup = 0;
-    if (this.ex === undefined) this.ex = 0;
     this.state = 'idle'; this.t = 0; this.setAnim('idle');
     this.move = null; this.moveId = null; this.str = 0;
     this.hs = 0; this.stun = 0; this.inv = 0; this.thInv = 0; this.projInv = 0;
@@ -146,6 +145,8 @@ var KF = window.KF || (window.KF = {});
   Fighter.prototype.isCrouching = function () {
     return /^(crouch|crouch_in|cguard|hit_c)$/.test(this.anim) || (this.move && this.move.crouch);
   };
+  // 昔のEXゲージは、いまはラッシュと同じゲージ（f.ex は f.rush を見る）
+  Object.defineProperty(Fighter.prototype, 'ex', { get: function () { return this.rush; }, set: function (v) { this.rush = v; }, configurable: true });
   Fighter.prototype.actionable = function () {
     return ['idle', 'walk_f', 'walk_b', 'crouch', 'guardpose'].indexOf(this.state) >= 0;
   };
@@ -174,7 +175,7 @@ var KF = window.KF || (window.KF = {});
     a.state = b.state = 'intro'; a.setAnim('intro'); b.setAnim('intro');
     this.timer = C.ROUND_TIME; this.timerSub = 0;
     this.phase = this.training ? 'fight' : 'intro'; this.phaseT = 0;
-    if (this.training) { a.state = b.state = 'idle'; a.setAnim('idle'); b.setAnim('idle'); a.sup = b.sup = C.SUPER_MAX; a.ex = b.ex = C.EX_MAX; }
+    if (this.training) { a.state = b.state = 'idle'; a.setAnim('idle'); b.setAnim('idle'); a.sup = b.sup = C.SUPER_MAX; }
     this.freeze = 0; this.freezeBy = null; this.slow = 0; this.projs = []; this.fx = []; this.zoom = 0; this.bgFlash = 0;
     this.camX = C.WORLD_W / 2; this.result = null;
     this.emit('round', { n: this.round });
@@ -230,10 +231,29 @@ var KF = window.KF || (window.KF = {});
     else if (this.frameNo - m.f0 > 200) this.adv = null;
   };
 
+  // 同時押しの猶予（C.CHORD フレーム）：1つ目のボタンで技が出ても、まだ当たっていなければ、2つ目でEX技・投げに切り替える
+  Battle.prototype.chordUpgrade = function (f) {
+    var cur = f.buf.cur(), late = function (u) { return u && f.state === 'attack' && f.moveId === u.id && this.frameNo - u.t <= C.CHORD && !f.connected && !f.spawned; }.bind(this);
+    if (f.exUp && !late(f.exUp)) f.exUp = null;
+    if (f.thUp && !late(f.thUp)) f.thUp = null;
+    if (f.exUp) {
+      var u = f.exUp, hit2 = u.set.some(function (b) { return b !== u.btn && cur.p[b]; });
+      if (hit2 && f.rush >= C.EX_COST) {
+        f.exUp = null; f.thUp = null;
+        f.rush -= C.EX_COST; f.rushCD = C.RUSH_COOLDOWN;
+        this.startMove(f, u.id + '_ex', 0);
+        f.flash = 12; this.emit('sfx', { s: 'ex' });
+        return;
+      }
+    }
+    if (f.thUp && cur.p[f.thUp.need] && !f.air) { f.thUp = null; f.exUp = null; this.tryThrow(f); }
+  };
+
   Battle.prototype.updateFighters = function (ending) {
     for (var i = 0; i < 2; i++) {
       var f = this.p[i];
       this.trackPending(f);
+      if (!ending) this.chordUpgrade(f);
       if (f.hs > 0) {
         f.hs--;
         // ヒットストップ中もキャンセル入力は受け付ける
@@ -255,7 +275,7 @@ var KF = window.KF || (window.KF = {});
       if (f.hpTrail < f.hp) f.hpTrail = f.hp;
       if (this.training && f.combo === 0 && f.actionable() && f.hp < f.D.hp) { f.hp = f.D.hp; f.hpShown = f.hp; f.hpTrail = f.hp; }
       if (this.training) {
-        f.sup = C.SUPER_MAX; f.ex = C.EX_MAX;
+        f.sup = C.SUPER_MAX;
         // 当たらずに終わった（ガード・空振り）ときも、動ける状態が少し続いたらラッシュゲージを戻す
         if (f.actionable() && f.opp.combo === 0 && f.opp.actionable()) { f.trIdle = (f.trIdle || 0) + 1; if (f.trIdle > 40 && f.rush < C.RUSH_MAX) { f.rush = C.RUSH_MAX; f.rushCD = 0; } }
         else f.trIdle = 0;
@@ -273,7 +293,7 @@ var KF = window.KF || (window.KF = {});
     if (f.state === 'win') { f.t++; f.stepAnim(); return; }
     if (this.result && this.phaseT > 60 && f.grounded() && f.actionable() && this.result.winner === f.side) {
       f.state = 'win'; f.setAnim('win'); f.vx = 0;
-    } else if (f.state === 'launch' || f.state === 'down' || f.state === 'getup' || f.state === 'attack' || f.state === 'hitstun' || f.state === 'blockstun' || f.state === 'land' || f.state === 'air' || f.state === 'dash' || f.state === 'rush' || f.state === 'prejump' || f.state === 'throwing' || f.state === 'thrown' || f.state === 'tech') {
+    } else if (f.state === 'launch' || f.state === 'down' || f.state === 'getup' || f.state === 'attack' || f.state === 'hitstun' || f.state === 'blockstun' || f.state === 'land' || f.state === 'air' || f.state === 'dash' || f.state === 'rush' || f.state === 'prejump' || f.state === 'throwing' || f.state === 'thrown' || f.state === 'tech' || f.state === 'parry' || f.state === 'parry_end') {
       this.think(f);
     } else if (f.actionable()) {
       if (f.state !== 'idle') { f.state = 'idle'; f.setAnim('idle'); f.vx = 0; }
@@ -347,6 +367,18 @@ var KF = window.KF || (window.KF = {});
         var da = f.animObj(), k = f.animTime() / da.total;
         f.vx = (f.dashBack ? D.dashB : D.dashF) * f.facing * Math.max(0, Math.sin(Math.PI * Math.min(1, k * 1.15)));
         if (f.aDone) { f.state = 'idle'; f.setAnim('idle'); f.vx = 0; }
+        return;
+      case 'parry':   // パリィ：押している間は打撃・飛び道具を受け止める。ゲージが少しずつ減る。→→でラッシュ
+        f.vx = 0; f.rush = Math.max(0, f.rush - C.PARRY_DRAIN); f.rushCD = C.RUSH_COOLDOWN;
+        if (this.saw66(f) && f.rush >= C.RAW_RUSH_COST) { this.startRush(f, C.RAW_RUSH_COST); this.emit('announce', { text: 'PARRY RUSH', small: 1, side: f.side }); return; }
+        if ((!cur.h.rush && f.t >= C.PARRY_MIN) || f.rush <= 0) {
+          if (f.parried) { f.state = 'idle'; f.setAnim('idle'); }
+          else { f.state = 'parry_end'; f.t = 0; }   // 何も受け止めずに離したら、少し隙がある
+        }
+        return;
+      case 'parry_end':
+        f.vx = 0;
+        if (f.t >= C.PARRY_WHIFF) { f.state = 'idle'; f.setAnim('idle'); }
         return;
       case 'rush':
         f.stepAnim();
@@ -427,7 +459,10 @@ var KF = window.KF || (window.KF = {});
     var pb = this.strongestPressed(cur.p);
     if (pb) { f.pendingBtn = pb; f.pendingT = 6; f.lastBtn = { b: pb, t: this.frameNo }; } else if (f.pendingT > 0) { f.pendingT--; if (!f.pendingT) f.pendingBtn = null; }
     // ラッシュ：RUSHボタンはいつでも。→→は技をキャンセルするときだけ（何もしていないときの→→は普通のダッシュ）
-    if (cur.p.rush) { f.pendingRush = 6; f.rush66 = false; } else if (f.state === 'attack' && this.saw66(f)) { f.pendingRush = 6; f.rush66 = true; } else if (f.pendingRush > 0) f.pendingRush--;
+    // パリィボタン：技の途中ならラッシュキャンセル、それ以外ならパリィ（押してすぐ動けるようになったときにも出るよう少し覚えておく）
+    if (cur.p.rush) { f.pendingParry = 6; if (f.state === 'attack') { f.pendingRush = 6; f.rush66 = false; } }
+    else if (f.state === 'attack' && this.saw66(f)) { f.pendingRush = 6; f.rush66 = true; }
+    else { if (f.pendingRush > 0) f.pendingRush--; if (f.pendingParry > 0) f.pendingParry--; }
   };
   // →→（前・ニュートラル・前）を12F以内に入れたか。ラッシュの入力として使う
   Battle.prototype.saw66 = function (f) {
@@ -495,7 +530,8 @@ var KF = window.KF || (window.KF = {});
     if (this.trySpecial(f, false)) return true;
     // 投げ：弱P+弱K（2フレーム以内）
     if ((cur.p.lp || cur.p.lk) && f.buf.pressedWithin('lp', 2) && f.buf.pressedWithin('lk', 2)) { this.tryThrow(f); return true; }
-    if (f.pendingRush && f.rush >= C.RUSH_NEUTRAL_COST && f.grounded()) { this.startRush(f, C.RUSH_NEUTRAL_COST); f.buf.hist.length = 0; f.pendingRush = 0; return true; }
+    if (f.pendingParry && f.rush >= C.PARRY_COST && f.grounded()) { this.startParry(f); return true; }
+    f.pendingRush = 0;
     if (f.pendingBtn) {
       var b = f.pendingBtn;
       // 弱P/弱Kは投げとの同時押し猶予として1フレーム待つ
@@ -506,6 +542,8 @@ var KF = window.KF || (window.KF = {});
       f.pendingBtn = null; f.pendingT = 0;
       f.chain = 0; f.chainUsed = {};
       this.startMove(f, id, 0);
+      // 同時押しの猶予：弱P（弱K）を押してすぐ弱K（弱P）を押したら投げにする
+      if (b === 'lp' || b === 'lk') f.thUp = { id: id, need: b === 'lp' ? 'lk' : 'lp', t: this.frameNo };
       return true;
     }
     return false;
@@ -635,7 +673,7 @@ var KF = window.KF || (window.KF = {});
       var mv = f.D.moves[c.move];
       if (!!c.air !== (cancelLevel === 'air')) continue;
       // キャンセル元を限る技（虚掌破は強Pで出す技からだけ）。EXで出すときは限らない
-      var willEx = nPressed >= 2 && f.D.moves[c.move + '_ex'] && f.ex >= C.EX_COST;
+      var willEx = nPressed >= 2 && f.D.moves[c.move + '_ex'] && f.rush >= C.EX_COST;
       // 昇穿はSA3（天地穿）でだけ、EX昇穿はSA2・SA3でキャンセルできる（スト6と同じ）
       if (cancelLevel && f.state === 'attack' && f.move && f.move.saOnly && f.move.saOnly.indexOf(c.move) < 0) continue;
       if (cancelLevel && cancelLevel !== 'air' && mv.cancelFrom && !willEx && f.state === 'attack' && f.move && f.move.type !== 's' && f.move.type !== 'x' && mv.cancelFrom.indexOf(f.moveId) < 0) continue;
@@ -666,12 +704,14 @@ var KF = window.KF || (window.KF = {});
       if (cancelLevel === 'u') continue;
       if (cancelLevel === 'air' && f.air && f.y > C.GROUND - 40) continue; // 地面すれすれでは出ない
       // EX判定：同系統ボタン2つ
-      if (nPressed >= 2 && f.D.moves[id + '_ex'] && f.ex >= C.EX_COST) {
-        f.ex -= C.EX_COST; id = id + '_ex'; str = 0;
+      if (nPressed >= 2 && f.D.moves[id + '_ex'] && f.rush >= C.EX_COST) {
+        f.rush -= C.EX_COST; f.rushCD = C.RUSH_COOLDOWN; id = id + '_ex'; str = 0;
         f.flash = 12; this.emit('sfx', { s: 'ex' });
       }
       var wasConn = f.state === 'attack' && f.connected && f.opp.state === 'hitstun';
       this.startMove(f, id, str);
+      // 同時押しの猶予：EX版がある必殺技を1つのボタンで出したら、少しの間もう1つ押すのを待つ
+      f.exUp = (id === c.move && f.D.moves[id + '_ex'] && !mq) ? { id: id, set: set, btn: pressed, t: this.frameNo, str: str } : null;
       if (mv.swap && wasConn && mv.swapExt) f.opp.stun += mv.swapExt;
       if (mv.swap && f.opp.state === 'launch' && f.opp.air) { f.opp.vy = Math.min(f.opp.vy, -4.2); f.opp.floatG = 0.32; f.opp.vx *= 0.4; }   // 空中の相手は浮かせ直して拾えるように
       if (slowAdd) f.preD += slowAdd;   // 竜巻P：強P以外からのキャンセルは出るのが遅れる
@@ -688,6 +728,33 @@ var KF = window.KF || (window.KF = {});
     this.spawnFx('ring_' + f.D.fx, ch[0], ch[1] - 30, 1);
     this.emit('super', { side: f.side, name: mv.name });
     this.emit('sfx', { s: 'super' });
+  };
+
+  Battle.prototype.startParry = function (f) {
+    f.rush -= C.PARRY_COST; f.rushCD = C.RUSH_COOLDOWN;
+    f.state = 'parry'; f.t = 0; f.vx = 0; f.parried = false; f.pendingParry = 0; f.pendingBtn = null; f.pendingT = 0;
+    f.setAnim('guard'); f.aF = Math.min(10, f.animObj().frames.length - 1);
+    f.buf.hist.length = 0;   // 押した後の→→だけをパリィラッシュとして読む
+    this.emit('sfx', { s: 'dash' });
+  };
+  // 打撃・飛び道具をパリィで受けた。出始め（C.JPARRY_WIN F以内）ならジャストパリィ
+  Battle.prototype.doParry = function (att, def, mv, proj, cx, cy) {
+    var just = def.t <= C.JPARRY_WIN + (proj ? 1 : 0);
+    var hs = mv.hs || 10, dirX = proj ? Math.sign(proj.vx || att.facing) : att.facing;
+    if (proj) { proj.hits = 0; proj.alive = false; }
+    if (just) {
+      def.state = 'idle'; def.setAnim('idle'); def.vx = 0; def.hs = hs;
+      if (!proj) { att.hs = hs + C.JPARRY_STOP; att.connected = false; att.pushV = 0; }   // 攻めた側は長く止まる（キャンセルもできない）
+      def.rush = Math.min(C.RUSH_MAX, def.rush + C.JPARRY_GAIN); def.rushCD = 0;
+      this.spawnFx('jparry', cx, cy, 1.2); this.shake = 6; this.bgFlash = 8;
+      this.emit('sfx', { s: 'tech' }); this.emit('announce', { text: 'JUST PARRY', side: def.side });
+    } else {
+      def.hs = Math.max(4, hs - 2); if (!proj) att.hs = def.hs;
+      def.parried = true; def.rush = Math.min(C.RUSH_MAX, def.rush + C.PARRY_GAIN);
+      this.push(att, def, mv.push ? mv.push[1] : 5, dirX, proj);
+      this.spawnFx('jparry', cx, cy, 0.6);
+      this.emit('sfx', { s: 'block' }); this.emit('announce', { text: 'PARRY', small: 1, side: def.side });
+    }
   };
 
   Battle.prototype.startRush = function (f, cost) {
@@ -808,7 +875,7 @@ var KF = window.KF || (window.KF = {});
       if (mv.crouch && dir <= 3) { f.state = 'crouch'; f.setAnim('crouch'); }
       else { f.state = 'idle'; f.setAnim('idle'); }
       f.vx = 0;
-      if (!f.connected && (mv.type === 's') && mv.meter) { f.sup = Math.min(C.SUPER_MAX, f.sup + mv.meter * 0.1); f.ex = Math.min(C.EX_MAX, f.ex + mv.meter * 0.8); }
+      if (!f.connected && (mv.type === 's') && mv.meter) { f.sup = Math.min(C.SUPER_MAX, f.sup + mv.meter * 0.1); f.rush = Math.min(C.RUSH_MAX, f.rush + mv.meter * 0.8); }
     }
   };
 
@@ -887,7 +954,7 @@ var KF = window.KF || (window.KF = {});
       f.x = q[1]; f.y = C.GROUND; f.vx = 0; f.vy = 0; f.air = false; f.pushV = 0;
       f.state = 'idle'; f.setAnim('idle'); f.move = null; f.moveId = null; f.t = 0;
       f.hs = 0; f.stun = 0; f.inv = 0; f.thInv = 0; f.projInv = 0; f.aaInv = 0; f.preD = 0; f.thrower = null; f.grabbed = null;
-      f.hp = f.D.hp; f.hpShown = f.hp; f.hpTrail = f.hp; f.rush = C.RUSH_MAX; f.rushCD = 0; f.sup = C.SUPER_MAX; f.ex = C.EX_MAX;
+      f.hp = f.D.hp; f.hpShown = f.hp; f.hpTrail = f.hp; f.rush = C.RUSH_MAX; f.rushCD = 0; f.sup = C.SUPER_MAX;
       f.combo = 0; f.comboDmg = 0; f.scale = 1; f.juggle = 0; f.rushLock = false; f.chain = 0; f.chainUsed = {};
       f.pendingBtn = null; f.pendingT = 0; f.pendingRush = 0; f.buf.hist.length = 0;
     });
@@ -926,6 +993,8 @@ var KF = window.KF || (window.KF = {});
     // 後ろ投げ：後ろ入力で相手を反対側へ
     var d = f.buf.cur().dir;
     f.backThrow = mv.type === 't' && (d === 4 || d === 1 || d === 7);
+    f.throwPC = o.state === 'parry' || o.state === 'parry_end';   // パリィ中を投げたらパニッシュカウンター
+    if (f.throwPC) this.emit('announce', { text: 'PUNISH COUNTER', small: 1, side: f.side });
     o.state = 'thrown'; o.t = 0; o.setAnim('hit_hi'); o.move = null; o.vx = 0; o.thrower = f;
     o.techable = mv.type === 't'; o.techT = 0;
     this.endCombo(o);
@@ -961,6 +1030,7 @@ var KF = window.KF || (window.KF = {});
     if (!f.grabHit && f.aF >= f.slamF) {
       f.grabHit = true;
       var mv = f.grabMove, dmg = Array.isArray(mv.dmg) ? mv.dmg[Math.min(f.str, mv.dmg.length - 1)] : mv.dmg;
+      if (f.throwPC) { dmg = Math.round(dmg * C.PARRY_THROW_SCALE); f.throwPC = false; }
       if (f.backThrow) { f.facing = -f.facing; }
       this.applyDamage(f, o, dmg, mv, true);
       o.state = 'launch'; o.air = true; o.y = Math.min(o.y, C.GROUND - 20);
@@ -1212,6 +1282,7 @@ var KF = window.KF || (window.KF = {});
     }
     var lastHit = false;
     if (!proj) { att.hitCount++; att.lastHitT = att.animTime(); att.connected = true; }
+    if (def.state === 'parry') { this.doParry(att, def, mv, proj, cx, cy); return; }
     // 当て身（大盾の盾構えなど）：受けた打撃・飛び道具を止めて、反撃の技に移る（超必殺・投げは止められない）
     if (def.state === 'attack' && def.move && def.move.gp && mv.type !== 'u' && mv.type !== 'gu') {
       var gw = pick(def.move.gp, def.str);
@@ -1266,7 +1337,7 @@ var KF = window.KF || (window.KF = {});
       this.push(att, def, mv.push ? mv.push[1] : 5, dirX, proj);
       att.sup = Math.min(C.SUPER_MAX, att.sup + baseDmg * KF.SUPER_GAIN.block[0]);
       def.sup = Math.min(C.SUPER_MAX, def.sup + baseDmg * KF.SUPER_GAIN.block[1]);
-      att.ex = Math.min(C.EX_MAX, att.ex + baseDmg * 0.15); def.ex = Math.min(C.EX_MAX, def.ex + baseDmg * 0.15);
+      att.rush = Math.min(C.RUSH_MAX, att.rush + baseDmg * 0.15); def.rush = Math.min(C.RUSH_MAX, def.rush + baseDmg * 0.15);
       this.spawnFx('guard', cx, cy, 1);
       this.emit('sfx', { s: 'block' });
       this.emit('block', { side: att.side, move: att.moveId });
@@ -1353,8 +1424,8 @@ var KF = window.KF || (window.KF = {});
     if (isThrow) { def.combo = 1; }
     att.sup = Math.min(C.SUPER_MAX, att.sup + (mv.type === 'u' || mv.type === 'gu' ? 0 : dmg * KF.SUPER_GAIN.hit[0]));
     def.sup = Math.min(C.SUPER_MAX, def.sup + dmg * KF.SUPER_GAIN.hit[1]);
-    if (mv.type !== 'x' && mv.type !== 'u' && mv.type !== 'gu') att.ex = Math.min(C.EX_MAX, att.ex + dmg * 0.3);
-    def.ex = Math.min(C.EX_MAX, def.ex + dmg * 0.25);
+    if (mv.type !== 'x' && mv.type !== 'u' && mv.type !== 'gu') att.rush = Math.min(C.RUSH_MAX, att.rush + dmg * 0.3);
+    def.rush = Math.min(C.RUSH_MAX, def.rush + dmg * 0.25);
     def.dmgPop = { v: def.comboDmg, t: 60 };
     def.flash = 6;
     if (def.hp <= 0) this.koDefender(att, def);
@@ -1521,9 +1592,9 @@ var KF = window.KF || (window.KF = {});
       return;
     }
     this.round++;
-    var keepSup = [this.p[0].sup, this.p[1].sup], keepEx = [this.p[0].ex, this.p[1].ex];
+    var keepSup = [this.p[0].sup, this.p[1].sup];   // 超必殺のゲージは持ち越し、ラッシュ・EXのゲージはラウンドごとに満タン
     this.startRound();
-    this.p[0].sup = keepSup[0]; this.p[1].sup = keepSup[1]; this.p[0].ex = keepEx[0]; this.p[1].ex = keepEx[1];
+    this.p[0].sup = keepSup[0]; this.p[1].sup = keepSup[1];
     this.p[0].koMarked = this.p[1].koMarked = false;
   };
 })();
