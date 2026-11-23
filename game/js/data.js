@@ -69,9 +69,9 @@ KF.CHARS = {
             preDelay: 3, inv: [[1, 9]], jump: { vx: [2.4], vy: [-12.4] }, lvy: -6, lvx: 0.6, floatG: 0.14, jugAfter: 1, jg: 1 },   // 当てたら相手がふわっと漂い、着地後の昇穿がどんな時もつながる   // EX：発生は中と同じ6F・完全無敵
       // 迅閃脚：下段スライディング。飛び道具をくぐり、当たるとダウン。ガードされると大きく不利。間合いは弱＜中＜強
       rushk: { anim: 'sp_slide', type: 's', name: '迅閃脚', dmg: [800, 900, 1000], adv: ['kd', -10], hs: 12, push: [3, 6], lv: 'l', chip: 0.125,
-               kd: 'sweep', projInv: 1, jlim: 0, dash: { vx: [4.6, 5.8, 7.0], vy: 0 }, holdActive: 8, meter: 40 },   // 発生8F・持続21F（8F伸ばした）。弱中強で遠くまで滑る
+               kd: 'sweep', projInv: 1, jlim: 0, dash: { vx: [4.6, 5.8, 7.0], vy: 0 }, meter: 40 },   // 発生8F・持続13F。弱中強で遠くまで滑る
       rushk_ex: { anim: 'ex_rush', type: 'x', name: 'EX迅閃脚', dmg: 700, hs: 12, push: [4, 7], lv: 'm', chip: 0.125, hits: 2, rehit: 9,
-               dash: { vx: [8.5], vy: -3.5 }, projInv: 1, kd: 'launch', lvy: -7, lvx: 3 },
+               dash: { vx: [8.5], vy: -3.5, g: 0.36 }, projInv: 1, kd: 'launch', lvy: -7, lvx: 3 },   // 低く長く飛ぶ（持続18F・進む距離 約1.7倍）
       // 旋風脚：コンボの部品。最後の1発で浮かせ、昇穿や超必殺で追撃できる。弱＝その場で高く／中＝運ぶ／強＝画面端まで運ぶ
       tatsu: { anim: 'sp_tatsu', type: 's', name: '旋風脚', dmg: [300, 320, 340], hits: 3, rehit: 7, hs: 8, push: [1.2, 3], lv: 'm', chip: 0.125,
                dash: { vx: [2.0, 3.6, 5.2], vy: 0 }, kdLast: 'launch', lvy: [-9.0, -8.6, -8.2], lvx: [0.8, 1.6, 2.4], jset: 1, jlim: 1, cancel: 'u', meter: 40 },

@@ -789,7 +789,7 @@ var KF = window.KF || (window.KF = {});
       f.liftoff = false; f.airSA = 1; f.vy = 0; f.vx = 0; f.aF = 2; f.aT = 0;   // 溜めを短くして、すぐ突き上げに入る
     }
     f.setAnim(mv.anim);
-    f.hitCount = 0; f.lastHitT = -99; f.connected = false; f.spawned = false; f.liftoff = false;
+    f.hitCount = 0; f.lastHitT = -99; f.connected = false; f.spawned = false; f.liftoff = false; f.moveG = 0;
     f.counterable = true;
     if (!f.air) f.vx = f.carry || 0;
     f.carry = 0;
@@ -830,7 +830,7 @@ var KF = window.KF || (window.KF = {});
     if (mv.dash) {
       var s2 = Math.min(f.str, mv.dash.vx.length - 1);
       if (ph === 'a') {
-        if (!f.liftoff && mv.dash.vy) { f.liftoff = true; f.air = true; f.vy = mv.dash.vy; }
+        if (!f.liftoff && mv.dash.vy) { f.liftoff = true; f.air = true; f.vy = mv.dash.vy; f.moveG = mv.dash.g || 0; }   // g：この技の間だけの重さ（低く長く飛ぶ）
         f.vx = mv.dash.vx[s2] * f.facing;
       } else if (ph === 'r' && !f.air) f.vx *= 0.8;
     }
@@ -1072,14 +1072,14 @@ var KF = window.KF || (window.KF = {});
     }
     else if (f.air) {
       if (f.state === 'launch' || f.state === 'thrown') f.jumpG = false;
-      f.vy += (f.state === 'launch' ? (f.floatG || 0.5) : f.jumpG ? C.JUMP_G : C.GRAVITY);   // ふわっと浮かせる技（アッパー）は落ちるのが遅い／普通のジャンプはジャンプの重さで落ちる
+      f.vy += (f.state === 'launch' ? (f.floatG || 0.5) : f.jumpG ? C.JUMP_G : (f.moveG && f.state === 'attack') ? f.moveG : C.GRAVITY);   // ふわっと浮かせる技（アッパー）は落ちるのが遅い／普通のジャンプはジャンプの重さで落ちる
       // EX昇穿を当てた相手は、当てた側が空中にいるあいだはゆっくりしか落ちない（着地後の昇穿が届くように）
       if (f.state === 'launch' && f.hangBy != null) {
         if (f.opp.air && f.opp.state === 'attack') f.vy = Math.min(f.vy, 0.5); else f.hangBy = null;
       }
       f.y += f.vy;
       if (f.y >= C.GROUND && f.vy > 0) {
-        f.y = C.GROUND; f.air = false; f.vy = 0; f.jumpG = false;
+        f.y = C.GROUND; f.air = false; f.vy = 0; f.jumpG = false; f.moveG = 0;
         this.onLand(f);
       }
     }
