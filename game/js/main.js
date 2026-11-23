@@ -74,7 +74,7 @@ var KF = window.KF || (window.KF = {});
     var c = R.ctx, rects = [];
     w = w || 220;
     items.forEach(function (it, i) {
-      var y = y0 + i * 30, x = 320 - w / 2, on = i === cur;
+      var gap = items.length > 8 ? 26 : 30, y = y0 + i * gap, x = 320 - w / 2, on = i === cur;   // 項目が多いときは詰める
       c.fillStyle = on ? 'rgba(0,220,255,0.18)' : 'rgba(10,10,30,0.6)';
       c.fillRect(x, y, w, 24);
       c.strokeStyle = on ? '#38d6ff' : '#3a3a6a'; c.strokeRect(x + 0.5, y + 0.5, w - 1, 23);
@@ -216,10 +216,29 @@ var KF = window.KF || (window.KF = {});
     KF.Touch && KF.Touch.show(isTouch);
   }
 
+  // トレーニングのスピード（スロー）：100% / 75% / 50% / 25%。遅いときは、何コマかに1回だけ試合を進める
+  var TR_SPEEDS = [1, 0.75, 0.5, 0.25], trSpeedI = 0, trAcc = 0;
+  function trSpeedLabel() { return 'スピード：' + Math.round(TR_SPEEDS[trSpeedI] * 100) + '%'; }
+  var trPend = null;
+  function mergePress(a, b) {   // aでためた「押した瞬間」をbに足す（押しっぱなし・方向はbの今の状態）
+    if (!a) return b;
+    Object.keys(a.pressed || {}).forEach(function (k) { if (a.pressed[k]) { b.pressed[k] = true; b.held[k] = true; } });
+    if (a.reset) b.reset = true;
+    return b;
+  }
+  function cycleTrSpeed() { trSpeedI = (trSpeedI + 1) % TR_SPEEDS.length; trAcc = 0; }
   function sceneBattle() {
-    var m = null;
-    if (!paused) {
+    var m = null, doStep = true;
+    if (cfg.mode === 'training' && !paused && TR_SPEEDS[trSpeedI] < 1) { trAcc += TR_SPEEDS[trSpeedI]; if (trAcc >= 1) trAcc -= 1; else doStep = false; }
+    if (!paused && !doStep) {   // スロー中で試合を進めないコマ：押されたボタンはためておき、次に進めるコマで使う
+      var s1 = sources[0].sample(), s2 = sources[1].sample();
+      trPend = [mergePress(trPend && trPend[0], s1), mergePress(trPend && trPend[1], s2)];
+      if (KF.Input.isDown('Escape') && !menuPrev.escB) { paused = true; pausedSel = 0; menuPrev.esc = true; menuPrev.ent = KF.Input.isDown('Enter'); }
+      menuPrev.escB = KF.Input.isDown('Escape');
+    }
+    if (!paused && doStep) {
       var i1 = sources[0].sample(), i2 = sources[1].sample();
+      if (trPend) { i1 = mergePress(trPend[0], i1); i2 = mergePress(trPend[1], i2); trPend = null; }
       if (i1.pressed.start || KF.Input.isDown('Escape') && !menuPrev.escB) { paused = true; pausedSel = 0; menuPrev.esc = KF.Input.isDown('Escape'); menuPrev.ent = KF.Input.isDown('Enter'); }
       menuPrev.escB = KF.Input.isDown('Escape');
       if (ai) ai.update();
@@ -283,7 +302,7 @@ var KF = window.KF || (window.KF = {});
     var f = game.p[0], c = R.ctx;
     var info = f.lastMoveInfo, y0 = document.body.classList.contains('touchmode') ? 84 : 56;
     c.fillStyle = 'rgba(0,0,10,0.6)'; c.fillRect(4, y0, 386, 44);
-    R.text('トレーニング（位置リセット：R / パッドBACK、→←↘↙で画面端　当たり判定：F2　キーディス：F3）', 8, y0 + 8, 8, '#a0ffd0', 'left');
+    R.text('トレーニング（位置リセット：R / パッドBACK、→←↘↙で画面端　当たり判定：F2　キーディス：F3　スピード：F4）', 8, y0 + 8, 8, '#a0ffd0', 'left');
     var NN = { lp: '弱P', mp: '中P', hp: '強P', lk: '弱K', mk: '中K', hk: '強K', throw: '投げ' };
     var nmOf = function (id) { var mv = KF.CHARS[game.p[0].kind].moves[id]; if (mv && mv.name && mv.name !== 'ターゲットコンボ') return mv.name; var b = id.replace(/^(c_|j_|tc_|f_|b_)/, ''); var pre = { c_: 'しゃがみ', j_: 'ジャンプ', tc_: 'ターゲットコンボ ', f_: '→', b_: '←' }[(id.match(/^(c_|j_|tc_|f_|b_)/) || [''])[0]] || ''; return pre + (NN[b] || id); };
     if (info) {
@@ -295,6 +314,7 @@ var KF = window.KF || (window.KF = {});
     var adv = KF._lastAdv;
     if (adv === 'ダウン') R.text('硬直差 ダウンを奪った（起き攻めできる）', 8, y0 + 36, 9, '#7fffb0', 'left');
     else if (adv != null) R.text('硬直差 ' + (adv > 0 ? '+' : '') + adv + 'F', 8, y0 + 36, 9, adv >= 0 ? '#7fffb0' : '#ff8080', 'left');
+    if (TR_SPEEDS[trSpeedI] < 1) R.text('スロー ' + Math.round(TR_SPEEDS[trSpeedI] * 100) + '%', 386, y0 + 36, 10, '#ffd23c', 'right');
     if (keyDisp) drawKeyDisplay(y0 + 48);
   }
 
@@ -522,14 +542,14 @@ var KF = window.KF || (window.KF = {});
   }
 
   var PAUSE_BASE = ['再開', '技表', '当たり判定 表示切替', 'やり直す', 'タイトルへ'];
-  var PAUSE_TR = ['位置リセット：中央', '位置リセット：相手を画面端へ', '位置リセット：自分が画面端', 'キーディス 表示切替'];
+  var PAUSE_TR = ['位置リセット：中央', '位置リセット：相手を画面端へ', '位置リセット：自分が画面端', 'キーディス 表示切替', 'スピード'];
   var PAUSE_ITEMS = PAUSE_BASE;
   function drawPause() {
-    PAUSE_ITEMS = cfg.mode === 'training' ? [PAUSE_BASE[0]].concat(PAUSE_TR, PAUSE_BASE.slice(1)) : PAUSE_BASE;
+    PAUSE_ITEMS = cfg.mode === 'training' ? [PAUSE_BASE[0]].concat(PAUSE_TR.slice(0, 4), [trSpeedLabel()], PAUSE_BASE.slice(1)) : PAUSE_BASE;
     var c = R.ctx;
     c.fillStyle = 'rgba(0,0,10,0.7)'; c.fillRect(0, 0, 640, 360);
     R.text('PAUSE', 320, 70, 28, '#ffffff', 'center', '#7a5cff');
-    var rects = drawMenu(PAUSE_ITEMS, PAUSE_ITEMS.length > 6 ? 96 : 110, pausedSel, 260);
+    var rects = drawMenu(PAUSE_ITEMS, PAUSE_ITEMS.length > 8 ? 92 : PAUSE_ITEMS.length > 6 ? 96 : 110, pausedSel, 260);
     var m = menuInput();
     if (m.up) pausedSel = (pausedSel + PAUSE_ITEMS.length - 1) % PAUSE_ITEMS.length;
     if (m.down) pausedSel = (pausedSel + 1) % PAUSE_ITEMS.length;
@@ -545,6 +565,7 @@ var KF = window.KF || (window.KF = {});
       else if (it === PAUSE_TR[1]) { game.resetTraining('oRight'); paused = false; }
       else if (it === PAUSE_TR[2]) { game.resetTraining('sLeft'); paused = false; }
       else if (it === PAUSE_TR[3]) { toggleKeyDisp(); paused = false; }
+      else if (it.indexOf('スピード') === 0) { cycleTrSpeed(); }   // メニューは開いたまま（何度か押して選ぶ）
       else { KF.Touch && KF.Touch.show(false); scene = 'title'; }
     }
   }
@@ -754,6 +775,7 @@ var KF = window.KF || (window.KF = {});
     if (e.code === 'KeyM' && scene === 'keys' && keyEdit && keyEdit.p !== 'pad' && !keyEdit.wait) { KF.Input.setModern(keyEdit.p, !KF.Input.modern[keyEdit.p]); KF.Audio.play('cursor'); }
     if (e.code === 'F2') { R && (R.debug = !R.debug); e.preventDefault(); }
     if (e.code === 'F3') { toggleKeyDisp(); e.preventDefault(); }
+    if (e.code === 'F4' && cfg.mode === 'training') { cycleTrSpeed(); e.preventDefault(); }
     if (e.code === 'F3') { showFps = !showFps; e.preventDefault(); }
   });
 
