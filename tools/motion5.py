@@ -84,8 +84,8 @@ TABLE = {
     'rush': S(clip='walk_f', kind='loop', jp='走り（突進中）', inplace='x', speed=2.0),
     'sp_fire': S(clip='hadouken', kind='atk', jp='虚環弾（波動）', hit=HANDS, noreach=True),
     'ex_fire': S(clip='hadouken', kind='atk', jp='EX虚環弾', hit=HANDS, noreach=True),
-    'sp_dp': S(clip='up_lead', kind='atk', jp='昇穿（昇竜）', hit=HANDS, up=True),
-    'ex_dp': S(clip='up_lead', kind='atk', jp='EX昇穿', hit=HANDS, up=True),
+    'sp_dp': S(kind='old', jp='昇穿（昇竜）（今の動き）', hit='handR'),
+    'ex_dp': S(kind='old', jp='EX昇穿（今の動き）', hit='handR'),
     'sp_rush': S(clip='slide', kind='atk', jp='突進', hit=FEET, inplace='x'),
     'sp_slide': S(clip='slide', kind='atk', jp='迅閃脚（スライディング）', hit=FEET, inplace='x'),
     'ex_rush': S(clip='slide', kind='atk', jp='EX迅閃脚', hit=FEET, inplace='x'),
@@ -263,9 +263,9 @@ def build(name):
     if sp['kind'] == 'old':
         out = [(F, ph) for F, ph in zip(old_frames(name), [c for c in game_ph(name)])]
         st = P['stand']
-        ends = dict(crouch_in=(st, None), jump_up=(st, None), crouch_out=(None, st), land=(None, st))
+        ends = dict(crouch_in=(st, None), jump_up=(st, None), crouch_out=(None, st), land=(None, st), sp_dp=(st, st), ex_dp=(st, st))
         a_, b_ = ends.get(name, (None, None))
-        return ease_ends(out, a_, b_, 2, 3), gd
+        return ease_ends(out, a_, b_, 2, 3), dict(gd, hit=sp.get('hit'))
     fr = clip(sp['clip'])
     if sp.get('legs'): fr = [legs_from(f, P[sp['legs']]) for f in fr]
     if sp.get('low'): fr = [lower(f, P['crouch']['pel'][1]) for f in fr]

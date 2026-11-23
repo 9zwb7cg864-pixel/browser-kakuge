@@ -6,6 +6,7 @@ ROOT = '/home/claude/dairantou-street-fight'
 A = json.load(open(f'{ROOT}/game/assets/kokuu/anims.json'))
 FW, FH = A['frameW'], A['frameH']
 R = motion3.bake()
+OUT = os.environ.get('OUT', '/tmp/mv/motion_v5.mp4')
 W, H = 1280, 720
 SC = 2.3
 FB = '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc'
@@ -100,7 +101,7 @@ if __name__ == '__main__':
         import subprocess, shutil
         tmp = '/tmp/mv/v3'; shutil.rmtree(tmp, ignore_errors=True); os.makedirs(tmp)
         k = 0
-        for name in R:
+        for name in (sys.argv[2:] or list(R)):
             m = R[name]; oldf = old_frames(name); n = max(len(m['frames']), len(oldf))
             for speed, rep, loops in (('実際の速さの1/2', 1, 1),):
                 for _ in range(loops):
@@ -109,5 +110,5 @@ if __name__ == '__main__':
                         for _ in range(rep): im.save(f'{tmp}/f{k:05d}.jpg', quality=92); k += 1
                     for _ in range(8): im.save(f'{tmp}/f{k:05d}.jpg', quality=92); k += 1
         subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-framerate', '30', '-i', f'{tmp}/f%05d.jpg',
-                        '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '/tmp/mv/motion_v5.tmp.mp4'], check=True)
-        os.replace('/tmp/mv/motion_v5.tmp.mp4', '/tmp/mv/motion_v5.mp4')
+                        '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', OUT + '.tmp.mp4'], check=True)
+        os.replace(OUT + '.tmp.mp4', '/tmp/mv/motion_v5.mp4')
