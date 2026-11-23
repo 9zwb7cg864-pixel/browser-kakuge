@@ -17,7 +17,7 @@ STYLE = {
         acc=['#e6fdff', '#ffffff'], scarf=['#1b7fb8', '#56e0ff', '#c8f8ff'],
         outline='#020a14', glow='#00c8ff', smear='#c8f8ff',
         limb=2.7, leg=3.1, torso=(4.4, 3.4), head=9.6, neck=1.9, fist=3.7, foot=3.0,
-        joints=3.4, bloom=1.35),
+        joints=3.4, bloom=1.35, pixel=3),
     'shuuen': dict(
         near=['#a0108e', '#ff3fe6', '#ffb0f6'], far=['#560a50', '#8a1680', '#c02cb4'],
         acc=['#ffe0fb', '#ffffff'], scarf=['#5a0a52', '#a8169a', '#ff5ae8'],
@@ -198,7 +198,10 @@ def render(kind, J, P, cloth_pts=(), smears=()):
         a = J['shld_ang']; f = vdir(a - 90)
         cv.cone(J['shld_b'], J['shld_t'], 11.0, 11.0, 24, G_WEAP, 8)
         cv.merge().sphere(J['shld'] + f * 6, 6.0, 25, G_WEAP, 8)
-    return shade(cv, S)
+    out = shade(cv, S)
+    if S.get('pixel'):
+        out = pixelate(out, S)
+    return out
 
 
 def shade(cv, S):
@@ -261,3 +264,35 @@ def shade(cv, S):
     gsel = ~body & ~ring & (a > 0) & ~sm
     out[gsel, :3] = gc.astype(np.uint8); out[gsel, 3] = (a[gsel] * 255).astype(np.uint8)
     return out
+
+
+def pixelate(img, S, k=None):
+    """ドット絵にする：k×k画素を1ドットにまとめ、色を少ない色数に寄せ、透明度も段階にする。
+       大きさは元のまま（k倍に拡大して戻す）なので、ゲーム側の位置や当たり判定はそのまま"""
+    k = k or S['pixel']
+    h, w = img.shape[:2]
+    H, W = (h + k - 1) // k, (w + k - 1) // k
+    pad = np.zeros((H * k, W * k, 4), np.float32); pad[:h, :w] = img
+    blk = pad.reshape(H, k, W, k, 4).transpose(0, 2, 1, 3, 4).reshape(H, W, k * k, 4)
+    a = blk[..., 3] / 255.0
+    cov = a.mean(axis=2)                                   # どれだけ埋まっているか
+    wsum = a.sum(axis=2, keepdims=True) + 1e-6
+    col = (blk[..., :3] * a[..., None]).sum(axis=2) / wsum  # 透明でない画素の平均色
+    solid = (blk[..., 3] >= 250).mean(axis=2)              # 体（不透明）の割合
+    # 使う色：体の明暗3色×手前/奥＋白い芯＋縁の明るい色＋発光の色
+    gc = np.array(hexc(S['glow']), np.float32)
+    pal = [hexc(c) for c in S['near']] + [hexc(c) for c in S['far']] + [hexc(S['acc'][1])]
+    pal = [tuple(int(v + (255 - v) * 0.32) for v in c) for c in pal]
+    pal += [tuple(int(v) for v in (gc + (255 - gc) * 0.55)), tuple(int(v) for v in gc)]
+    pal = np.array(pal, np.float32)
+    d = ((col[..., None, :] - pal[None, None]) ** 2).sum(-1)
+    q = pal[d.argmin(-1)]
+    out = np.zeros((H, W, 4), np.uint8)
+    body = solid >= 0.34
+    out[body, :3] = q[body]; out[body, 3] = 255
+    # 発光は3段階の透明度（ドット絵らしく）
+    glow = ~body & (cov > 0.08)
+    lv = np.where(cov > 0.5, 170, np.where(cov > 0.25, 110, 55))
+    out[glow, :3] = gc.astype(np.uint8); out[glow, 3] = lv[glow]
+    big = out.repeat(k, 0).repeat(k, 1)[:h, :w]
+    return np.ascontiguousarray(big)
