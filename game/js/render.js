@@ -158,8 +158,8 @@ KF.Renderer.prototype.drawStageRaw = function (c, camX) {
   c.fillStyle = vg; c.fillRect(-20, -20, W + 40, H + 40);
 };
 
-// 2Pの色違い：青い絵の色相を回した絵を、初めて使うときに作って取っておく
-KF.ALT_COLOR = '#ff5a3c';
+// 2Pの色違い：シアンの絵の色相を回してマゼンタにした絵を、初めて使うときに作って取っておく（デザイン画どおり）
+KF.ALT_COLOR = '#ff3ce0';
 KF.altImg = function (key) {
   var A = KF.Assets, k2 = key + '~alt';
   if (A.img[k2]) return A.img[k2];
@@ -168,8 +168,8 @@ KF.altImg = function (key) {
   var c = cv.getContext('2d'); c.drawImage(src, 0, 0);
   try {
     var d = c.getImageData(0, 0, cv.width, cv.height), p = d.data;
-    // 色相を約170度回す（水色→朱色）。明るさはそのまま
-    var a = 170 * Math.PI / 180, co = Math.cos(a), si = Math.sin(a);
+    // 色相を約115度回す（シアン→マゼンタ）。明るさはそのまま
+    var a = 115 * Math.PI / 180, co = Math.cos(a), si = Math.sin(a);
     var m = [0.213 + co * 0.787 - si * 0.213, 0.715 - co * 0.715 - si * 0.715, 0.072 - co * 0.072 + si * 0.928,
              0.213 - co * 0.213 + si * 0.143, 0.715 + co * 0.285 + si * 0.140, 0.072 - co * 0.072 - si * 0.283,
              0.213 - co * 0.213 - si * 0.787, 0.715 - co * 0.715 + si * 0.715, 0.072 + co * 0.928 + si * 0.072];

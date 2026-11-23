@@ -11,11 +11,13 @@ from scipy import ndimage
 from art import Canvas, Rig, vdir, AX, AY, FW, FH, hexc, BAYER
 
 STYLE = {
+    # 道着キャラ男：デザイン画（光るシアンの棒人間・8頭身・丸い頭・細い手足・小さな関節の玉）
     'kokuu': dict(
-        near=['#1590c8', '#38d0ff', '#9ff0ff'], far=['#0a4a78', '#126ea6', '#2496cc'],
-        acc=['#d8fbff', '#ffffff'], scarf=['#1b7fb8', '#56e0ff', '#c8f8ff'],
-        outline='#020a14', glow='#00b4ff', smear='#bff6ff',
-        limb=3.6, leg=4.2, torso=(6.2, 5.0), head=8.4, neck=2.8, fist=4.4, foot=3.5),
+        near=['#1aa8f0', '#5ce4ff', '#dcfcff'], far=['#0a5590', '#168ac8', '#46c0f0'],
+        acc=['#e6fdff', '#ffffff'], scarf=['#1b7fb8', '#56e0ff', '#c8f8ff'],
+        outline='#020a14', glow='#00c8ff', smear='#c8f8ff',
+        limb=2.7, leg=3.1, torso=(4.4, 3.4), head=9.6, neck=1.9, fist=3.7, foot=3.0,
+        joints=3.4, bloom=1.35),
     'shuuen': dict(
         near=['#a0108e', '#ff3fe6', '#ffb0f6'], far=['#560a50', '#8a1680', '#c02cb4'],
         acc=['#ffe0fb', '#ffffff'], scarf=['#5a0a52', '#a8169a', '#ff5ae8'],
@@ -130,16 +132,22 @@ def render(kind, J, P, cloth_pts=(), smears=()):
             w1 = S['limb'] * (1.05 - 0.55 * (i + 1) / n)
             cv.cone(pts[i], pts[i + 1], w0, w1, -10 + i * 0.1, G_SCARF, 7, 1.0)
 
+    JR = S.get('joints')   # 関節の玉の半径（デザイン画のキャラだけ）
+
     def leg(side, zb, g, mat):
         H, K, A, T = J['hip_' + side], J['kn_' + side], J['an_' + side], J['toe_' + side]
         cv.cone(H, K, Lg, Lg * 0.92, zb, g, mat)
         cv.merge().cone(K, A, Lg * 0.92, Lg * 0.8, zb, g, mat)
         cv.merge().cone(A, T, S['foot'], S['foot'] * 0.75, zb + 0.5, g, mat)
+        if JR:
+            cv.merge().sphere(K, JR, zb + 0.6, g, mat)
 
     def arm(side, zb, g, mat):
         Sh, E, W, Hd = J['sh_' + side], J['el_' + side], J['wr_' + side], J['hand_' + side]
         cv.cone(Sh, E, L, L * 0.9, zb, g, mat)
         cv.merge().cone(E, W, L * 0.9, L * 0.8, zb, g, mat)
+        if JR:
+            cv.merge().sphere(E, JR * 0.92, zb + 0.6, g, mat)
         hs = P.get('h' + side, 'fist')
         fa = J['farm_ang_' + side]
         if hs == 'open':
@@ -161,6 +169,8 @@ def render(kind, J, P, cloth_pts=(), smears=()):
     cv.merge().cone(mid, neck, tw1 * 1.02, tw0, 10, G_BODY, 1)
     cv.merge().cone(J['sh_l'], J['sh_r'], L * 1.05, L * 1.05, 10, G_BODY, 1)
     cv.merge().cone(neck, J['head'], S['neck'], S['neck'], 10, G_BODY, 1)
+    if JR:
+        cv.merge().ellipse(pel, JR * 1.6, JR * 1.15, 180 - ang_of(u), 10.5, G_BODY, 1)   # 腰の円盤
     ha = J['head_ang']
     tilt = 180 - ha
     if kind == 'kokuu':
@@ -243,9 +253,10 @@ def shade(cv, S):
     out[ring, :3] = (gc + (255 - gc) * 0.55).astype(np.uint8); out[ring, 3] = 255   # 明るい縁取り
     # 外側の発光：近くの強い光 ＋ 広くにじむ光
     b = body.astype(np.float32)
-    inner = np.clip(ndimage.gaussian_filter(b, 2.2) * 2.2, 0, 1)
-    outer = np.clip(ndimage.gaussian_filter(b, 6.0) * 2.4, 0, 1)
-    a = np.maximum(inner * 0.75, outer * 0.42)
+    bl = S.get('bloom', 1.0)
+    inner = np.clip(ndimage.gaussian_filter(b, 2.2 * bl) * 2.2 * bl, 0, 1)
+    outer = np.clip(ndimage.gaussian_filter(b, 6.0 * bl) * 2.4 * bl, 0, 1)
+    a = np.maximum(inner * 0.8, outer * 0.46)
     a = np.floor(a * 8) / 8
     gsel = ~body & ~ring & (a > 0) & ~sm
     out[gsel, :3] = gc.astype(np.uint8); out[gsel, 3] = (a[gsel] * 255).astype(np.uint8)

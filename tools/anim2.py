@@ -104,7 +104,7 @@ def make_cloths(kind):
     if kind.startswith('gai'):
         return [stick.Cloth(8, 5.5, grav=0.34, drag=0.86)]
     if kind == 'kokuu':
-        return [stick.Cloth(9, 5.0, grav=0.30, drag=0.88)]
+        return []   # デザイン画のキャラはマフラーなし
     return [stick.Cloth(8, 6.0, grav=0.36, drag=0.86), stick.Cloth(9, 6.5, grav=0.4, drag=0.84)]
 
 
