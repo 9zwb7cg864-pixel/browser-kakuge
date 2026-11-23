@@ -22,6 +22,10 @@ LOWER = ('pel', 'hipL', 'hipR', 'knL', 'knR', 'anL', 'anR', 'toeL', 'toeR')
 HANDS, FEET = ('handL', 'handR'), ('toeL', 'toeR')
 
 
+def game_ph(name):
+    return ''.join(f['ph'] * f['d'] for f in ANIMS[name]['frames']).replace('-', '-')
+
+
 def game_data(name):
     a = ANIMS[name]
     ph = ''.join(f['ph'] * f['d'] for f in a['frames'])
@@ -39,14 +43,14 @@ TABLE = {
     'walk_b': S(clip='walk_b', kind='loop', jp='後ろ歩き', inplace='x'),
     'dash': S(clip='dash', kind='plain', jp='前ダッシュ', inplace='x'),
     'dash_b': S(clip='dash_b', kind='plain', jp='後ろダッシュ', inplace='x'),
-    'jump_up': S(clip='jump', kind='plain', jp='垂直ジャンプ（上り）', seg='up', inplace='xy', end=None),
-    'jump_down': S(clip='jump', kind='plain', jp='垂直ジャンプ（下り）', seg='down', inplace='xy', start=None, end=None),
-    'land': S(clip='jump', kind='plain', jp='着地', seg='land', inplace='x', start=None),
-    'jump_f': S(clip='jump_f', kind='plain', jp='前ジャンプ', seg='air', inplace='xy', start=None, end=None),
-    'jump_b': S(clip='jump', kind='plain', jp='後ろジャンプ', seg='air', inplace='xy', start=None, end=None),
-    'crouch_in': S(clip='crouch_in', kind='plain', jp='しゃがみ始め', seg='drop', end='crouch'),
-    'crouch': S(clip='crouch', kind='loop', jp='しゃがみ'),
-    'crouch_out': S(clip='crouch_out', kind='plain', jp='立ち上がり', seg='rise', start='crouch'),
+    'jump_up': S(kind='old', jp='垂直ジャンプ（上り）（今の動き）'),
+    'jump_down': S(kind='old', jp='垂直ジャンプ（下り）（今の動き）'),
+    'land': S(kind='old', jp='着地（今の動き）'),
+    'jump_f': S(kind='old', jp='前ジャンプ（今の動き）'),
+    'jump_b': S(kind='old', jp='後ろジャンプ（今の動き）'),
+    'crouch_in': S(kind='old', jp='しゃがみ始め（今の動き）'),
+    'crouch': S(kind='old', jp='しゃがみ（今の動き）'),
+    'crouch_out': S(kind='old', jp='立ち上がり（今の動き）'),
     'guard': S(clip='guard', kind='plain', jp='ガード', win=(0, 0.22), end=None),
     'cguard': S(clip='cguard', kind='plain', jp='しゃがみガード', win=(0, 0.22), legs='crouch', start='crouch', end=None),
     'lp': S(clip='lp', kind='atk', jp='弱P', hit=('handL',)),
@@ -122,14 +126,84 @@ def feet_mid(F): return (F['anL'] + F['anR']) / 2
 def poses():
     if 'P' in _clips: return _clips['P']
     st = clip('idle')[0]
-    cr = clip('crouch')[0]
-    cr = shift(cr, [feet_mid(st)[0] - feet_mid(cr)[0], 0, 0])
-    jf = clip('jump')
-    i = int(np.argmax([f['pel'][1] for f in jf]))            # 一番高いところ（脚をたたんだ形）
-    air = jf[i]
-    air = shift(air, [st['pel'][0] - air['pel'][0], st['pel'][1] - air['pel'][1] + 6, 0])
+    cr = old_frames('crouch')[0]                              # しゃがみ・ジャンプは今の動きの形を使う
+    ju = old_frames('jump_up')
+    air = ju[int(np.argmax([min(f['anL'][1], f['anR'][1]) for f in ju]))]
     _clips['P'] = dict(stand=st, crouch=cr, air=air)
     return _clips['P']
+
+
+# ------------------------------------------------------------------ 今の動き（ジャンプ・しゃがみ）を新しい骨の長さで読み直す
+_old = {}
+
+
+def old_frames(name):
+    """今のゲームの骨組み（2D）を、新しい骨の長さに合わせて読み直す。1コマずつ（表示コマ数ぶん並べる）"""
+    if name in _old: return _old[name]
+    import moves2, anim2
+    from art import AX, AY
+    if 'defs' not in _old: _old['defs'] = {a.name: a for a in moves2.defs('kokuu')}
+    a = _old['defs'][name]
+    B = m4.B
+    def conv(J):
+        g = {k: np.array([float(J[k][0] - AX), -float(J[k][1] - AY)]) for k in J if k in OLDMAP}
+        return g
+    if 'scale' not in _old:
+        P0 = _old['defs']['idle'].frames()[0][0]
+        J0 = conv(anim2.RIG.solve(dict(P0)))
+        leg = np.linalg.norm(J0['hip_l'] - J0['kn_l']) + np.linalg.norm(J0['kn_l'] - J0['an_l'])
+        _old['scale'] = (B['thigh'] + B['shin']) / leg
+    s = _old['scale']
+    out = []
+    for (P, d, ph, vx) in a.frames():
+        g = conv(anim2.RIG.solve(dict(P)))
+        u = lambda a_, b_: (g[b_] - g[a_]) / max(np.linalg.norm(g[b_] - g[a_]), 1e-6)
+        F = {}
+        pel = g['pelvis'] * s
+        F['pel'] = np.array([pel[0], pel[1], 0.0])
+        def put(k, base, a_, b_, L, z):
+            v = u(a_, b_) * L
+            F[k] = F[base] + np.array([v[0], v[1], 0.0]) + np.array([0, 0, z])
+        put('neck', 'pel', 'pelvis', 'neck', B['torso'], 0)
+        put('head', 'neck', 'neck', 'head', B['head'], 0)
+        for sd, z in (('l', -1), ('r', 1)):
+            S_ = sd.upper()
+            sh = (g['sh_' + sd] - g['neck']) * s
+            F['sh' + S_] = F['neck'] + np.array([sh[0], sh[1], z * B['sho']])
+            put('el' + S_, 'sh' + S_, 'sh_' + sd, 'el_' + sd, B['uarm'], 0)
+            put('hand' + S_, 'el' + S_, 'el_' + sd, 'hand_' + sd, B['farm'], 0)
+            hp = (g['hip_' + sd] - g['pelvis']) * s
+            F['hip' + S_] = F['pel'] + np.array([hp[0], hp[1], z * B['hip']])
+            put('kn' + S_, 'hip' + S_, 'hip_' + sd, 'kn_' + sd, B['thigh'], 0)
+            put('an' + S_, 'kn' + S_, 'kn_' + sd, 'an_' + sd, B['shin'], 0)
+            put('toe' + S_, 'an' + S_, 'an_' + sd, 'toe_' + sd, B['foot'], 0)
+        # 足が地面についているコマは、足首の高さを今の動きに合わせる（骨の長さが違う分のずれを直す）
+        low = min(g['an_l'][1], g['an_r'][1])
+        if low < 9:
+            k = 'anL' if g['an_l'][1] <= g['an_r'][1] else 'anR'
+            dy = low * s - F[k][1]
+            F = {kk: v + np.array([0, dy, 0]) for kk, v in F.items()}
+        for _ in range(int(d)): out.append((F, ph))
+    # 構え（Mixamo）と前後の位置をそろえる：最初のコマの足の中点
+    st = clip('idle')[0]
+    f0 = out[0][0]
+    if name == 'idle':
+        dx = feet_mid(st)[0] - feet_mid(f0)[0]
+    else:
+        ref = old_frames('idle')[0]
+        dx = feet_mid(st)[0] - feet_mid(ref)[0] + (ref['pel'][0] - feet_mid(ref)[0]) * 0  # 今の構えと同じずらし幅
+        dx = feet_mid(st)[0] - feet_mid(ref)[0]
+    if name == 'idle':
+        res = [{k: v + np.array([dx, 0, 0]) for k, v in F.items()} for F, ph in out]
+        _old[name] = res
+        return res
+    res = [{k: v + np.array([dx, 0, 0]) for k, v in F.items()} for F, ph in out]
+    _old[name] = res
+    return res
+
+
+OLDMAP = ('pelvis', 'neck', 'head', 'sh_l', 'sh_r', 'el_l', 'el_r', 'hand_l', 'hand_r', 'hip_l', 'hip_r',
+          'kn_l', 'kn_r', 'an_l', 'an_r', 'toe_l', 'toe_r')
 
 
 def legs_from(F, P):
@@ -186,6 +260,12 @@ def segment(fr, kind):
 # ------------------------------------------------------------------ 作る
 def build(name):
     sp = TABLE[name]; gd = game_data(name); P = poses()
+    if sp['kind'] == 'old':
+        out = [(F, ph) for F, ph in zip(old_frames(name), [c for c in game_ph(name)])]
+        st = P['stand']
+        ends = dict(crouch_in=(st, None), jump_up=(st, None), crouch_out=(None, st), land=(None, st))
+        a_, b_ = ends.get(name, (None, None))
+        return ease_ends(out, a_, b_, 2, 3), gd
     fr = clip(sp['clip'])
     if sp.get('legs'): fr = [legs_from(f, P[sp['legs']]) for f in fr]
     if sp.get('low'): fr = [lower(f, P['crouch']['pel'][1]) for f in fr]
