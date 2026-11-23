@@ -240,7 +240,7 @@ var KF = window.KF || (window.KF = {});
   function handleEvent(e) {
     if (e.type === 'sfx') KF.Audio.play(e.s);
     else if (e.type === 'announce') R.announce(e);
-    else if (e.type === 'super') R.superBanner = { name: e.name, side: e.side, t: 0, color: game.p[e.side].color || game.p[e.side].D.color };
+    else if (e.type === 'super') { }   // 超必殺の技名の帯は出さない
     else if (e.type === 'rushcancel') R.announce({ text: 'RUSH CANCEL', small: 1, side: e.side });
   }
   function drawTrainingInfo() {

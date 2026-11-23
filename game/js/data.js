@@ -55,8 +55,8 @@ KF.CHARS = {
               lvy: -3.5, lvx: 0.5, floatG: 0.35 },   // 浮いた相手に当たると、近くにふわっと浮かせ直す。当たったらラッシュでキャンセルできる
       // EX虚環弾：ゆっくり飛ぶ。1発目で相手を少し浮かせて後ろへ飛ばし、弾は少し止まってから追いかけて、飛んだ先で2発目が当たる
       fire_ex: { anim: 'ex_fire', type: 'x', name: 'EX虚環弾', dmg: 450, adv: [6, 0], hs: 10, push: [6, 6], lv: 'm', chip: 0.125,
-              proj: { fx: 'ball_k_ex', spd: [5.0, 5.0, 5.0], life: 200, hits: 2, r: 18, rehit: 8, stop: 10, lead: 44, chaseSpd: 6.2 }, cancel: 'u',
-              kd: 'launch', lvy: -5.5, lvx: 4.2, floatG: 0.25 },
+              proj: { fx: 'ball_k_ex', spd: [5.0, 5.0, 5.0], life: 200, hits: 2, r: 18, rehit: 8, stop: 10, lead: 20, chaseSpd: 5.0 }, cancel: 'u',
+              kd: 'launch', lvy: -5.5, lvx: 2.0, floatG: 0.25 },
       // 昇穿：スト6の昇龍拳と同じ。発生 弱5F・中6F・強7F／空中の攻撃にだけ無敵 弱1-14F・中1-9F・強1-8F／ガード -23・-32・-39F
       dp: { anim: 'sp_dp', type: 's', name: '昇穿', dmg: [1000, 1200, 1400], adv: ['kd', [-31, -36, -39]], hs: 12, push: [2, 4], lv: 'm', chip: 0.125, kd: 'launch', jlim: 2, jinc: 3, cancel: 'u', saGround: 1, saOnly: ['su3'], rootF: [2, 2, 1], rootDmg: 800,
             preDelay: [2, 3, 4], aaInv: [[1, 14], [1, 9], [1, 8]], jump: { vx: [1.6, 2.2, 2.8], vy: [-9.5, -10.8, -12.0] }, lvy: -9, lvx: 2.5, meter: 40 },
