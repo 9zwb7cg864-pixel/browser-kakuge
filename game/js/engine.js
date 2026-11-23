@@ -1044,7 +1044,14 @@ var KF = window.KF || (window.KF = {});
     this.projs.forEach(function (p) {
       p.t++;
       if (p.kind === 'ball') {
-        p.x += p.vx; p.life--;
+        if (p.chase) {   // 当てて浮かせたあと：相手が弾より前へ飛んでいくまで待ち、さらに少し止まってから追いかける
+          var o = p.owner.opp, dir = p.vx > 0 ? 1 : -1, lm = self.limits();
+          if (o.state !== 'launch') p.chase = false;
+          else if ((o.x - p.x) * dir > p.lead || o.x <= lm[0] + 1 || o.x >= lm[1] - 1) p.ahead = true;   // 画面端なら飛んでいけないので、そのまま追いつく
+        }
+        if (p.stop > 0 || (p.chase && !p.ahead)) { if (p.stop > 0) p.stop--; return; }
+        var cs = p.chase && p.mv.proj.chaseSpd;   // 追いかけるときは少し速く
+        p.x += cs ? (p.vx > 0 ? cs : -cs) : p.vx; p.life--;
         if (p.life <= 0 || p.x < self.camX - 380 || p.x > self.camX + 380) p.alive = false;
       } else if (p.kind === 'beam') {
         var o = p.owner;
@@ -1142,10 +1149,15 @@ var KF = window.KF || (window.KF = {});
       if (p.t - p.lastHit < p.rehit) return;
       if (!self.hittable(o, p.mv, p.key) || o.projInv > 0) return;
       var b = self.projBox(p); if (!b) return;
+      if (p.chase) {   // 当てたあと：相手が弾より前へ飛んでいき、弾がその体の真ん中に追いついたときだけ次が当たる
+        var dir = p.vx > 0 ? 1 : -1;
+        if (p.stop > 0 || !p.ahead || (p.x + dir * p.r - o.x) * dir < 0) return;
+      }
       var ov = anyOverlap([b], o.boxes('hurt'));
       if (ov) {
         p.lastHit = p.t; p.hits--;
         self.onHit(p.owner, o, p.mv, ov, p);
+        if (p.mv.proj && p.mv.proj.stop && o.state === 'launch') { p.stop = p.mv.proj.stop; p.lead = p.mv.proj.lead || p.r; p.chase = true; p.ahead = false; }   // 浮かせたときだけ、止まってから追いかける
         if (p.owner.state === 'attack' && p.owner.move === p.mv) p.owner.projHit = true;
         if (p.kind === 'ball' && p.hits <= 0) p.alive = false;
       }
@@ -1290,6 +1302,7 @@ var KF = window.KF || (window.KF = {});
     if (spike) kd = 'bounce';
     if (kd || wasAir) {
       def.state = 'launch'; def.air = true; def.setAnim('launch'); def.t = 0;
+      if (wasAir && def.A.launch.pl) def.aF = Math.min(6, def.A.launch.frames.length - 1);   // 空中でもう一度当たったときは、立ったやられ姿から始めない
       if (kd === 'sweep') { def.vy = -3.5; def.vx = -dirX * -1 * 0 + dirX * 1.0; def.y = Math.min(def.y, C.GROUND - 4); }
       else {
         var lvy = mv.pcLaunch && punish ? mv.pcLaunch[0] : pick(mv.lvy, str), lvx = mv.pcLaunch && punish ? mv.pcLaunch[1] : pick(mv.lvx, str);
