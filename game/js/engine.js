@@ -341,7 +341,7 @@ var KF = window.KF || (window.KF = {});
         if (this.trySpecial(f, false)) return;   // 踏み切り中は必殺技を出せる（スト6と同じ）
         f.stepAnim();
         if (f.t >= 4) {
-          f.state = 'air'; f.air = true; f.vy = C.JUMP_VY; f.vx = f.jumpDir * D.jumpVX * f.facing;
+          f.state = 'air'; f.air = true; f.vy = C.JUMP_VY; f.vx = f.jumpDir * D.jumpVX * C.JUMP_VXK * f.facing; f.jumpG = true;
           f.airAttackUsed = false;
           var ja = f.jumpDir > 0 ? 'jump_f' : (f.jumpDir < 0 ? 'jump_b' : 'jump_up');
           if (!f.A[ja]) ja = 'jump_up';
@@ -778,6 +778,7 @@ var KF = window.KF || (window.KF = {});
     f.rushBonus = !!f.nextRush; f.nextRush = false; f.projHit = false; f.rushCut = f.rushBonus ? C.RUSH_REC_CUT : 0;
     // 空中で出した飛び上がる超必殺（昇竜SAの天地穿）は、溜めを飛ばして、いきなり相手へ向かって突き上げる
     f.hover = false; f.airSA = 0;
+    if (f.air && mv.type) f.jumpG = false;   // 空中で出した必殺技・超必殺は、それぞれの動き（普通の重さ）で動く
     if (f.air && mv.jump && (mv.type === 'u' || mv.type === 'gu')) {
       var an = f.A[mv.anim], ia = 0; for (var k2 = 0; k2 < an.frames.length; k2++) if (an.frames[k2].ph === 'a') { ia = k2; break; }
       f.liftoff = false; f.airSA = 1; f.vy = 0; f.vx = 0; f.aF = 2; f.aT = 0;   // 溜めを短くして、すぐ突き上げに入る
@@ -1063,14 +1064,15 @@ var KF = window.KF || (window.KF = {});
       if (f.y >= C.GROUND) { f.y = C.GROUND; f.air = false; }
     }
     else if (f.air) {
-      f.vy += (f.state === 'launch' ? (f.floatG || 0.5) : C.GRAVITY);   // ふわっと浮かせる技（アッパー）は落ちるのが遅い
+      if (f.state === 'launch' || f.state === 'thrown') f.jumpG = false;
+      f.vy += (f.state === 'launch' ? (f.floatG || 0.5) : f.jumpG ? C.JUMP_G : C.GRAVITY);   // ふわっと浮かせる技（アッパー）は落ちるのが遅い／普通のジャンプはジャンプの重さで落ちる
       // EX昇穿を当てた相手は、当てた側が空中にいるあいだはゆっくりしか落ちない（着地後の昇穿が届くように）
       if (f.state === 'launch' && f.hangBy != null) {
         if (f.opp.air && f.opp.state === 'attack') f.vy = Math.min(f.vy, 0.5); else f.hangBy = null;
       }
       f.y += f.vy;
       if (f.y >= C.GROUND && f.vy > 0) {
-        f.y = C.GROUND; f.air = false; f.vy = 0;
+        f.y = C.GROUND; f.air = false; f.vy = 0; f.jumpG = false;
         this.onLand(f);
       }
     }

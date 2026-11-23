@@ -48,7 +48,7 @@ function run(kind, combo, c, k) {
   }
   for (let f = 0; f < 420; f++) {
     const a = b.p[0];
-    if (!airDone && a.air && a.vy > 0.5 && a.y > 186) { q.push(inp(5, op.waitAir)); airDone = true; }
+    if (!airDone && a.air && a.vy > 0.5 && a.y > 150) { q.push(inp(5, op.waitAir)); airDone = true; }
     const ev0 = b.events.length;
     b.step([q.length ? q.shift() : N(), p2q.length ? p2q.shift() : N()]);
     for (const e of b.events.slice(ev0)) {

@@ -36,7 +36,7 @@ function trialDp(scene, dpDelay, strBtn) {
   for (let f = 0; f < 240; f++) {
     let x = q.length ? q.shift() : null;
     if (!x) {
-      if (ph === 0 && (scene !== 'aa' || (o.air && o.y > 170))) { q.push(I(2), I(3, 'lp,mp')); x = I(6); ph = 1; }
+      if (ph === 0 && (scene !== 'aa' || (o.air && o.y > 150 && o.vy > 0))) { q.push(I(2), I(3, 'lp,mp')); x = I(6); ph = 1; }
       else if (ph === 1 && m.moveId === 'dp_ex' && m.connected && !m.air && m.actionable()) ph = 2;
       else if (ph === 1 && m.moveId === 'dp_ex' && !m.air && m.actionable()) ph = 2;
       if (ph === 2) { if (landAt < 0) landAt = f; if (f - landAt >= dpDelay) { q.push(I(2), I(3, strBtn)); x = I(6); ph = 3; } }

@@ -85,14 +85,14 @@ KF.Renderer.prototype.drawStageCity = function (camX, b) {
 KF.Renderer.prototype.drawStage = function (camX, b) {
   // カメラの位置ごとに描いた絵を取っておき、同じ位置なら1枚貼るだけにする（ステージは動かないので毎フレーム描き直さない）
   var key = Math.round(camX);
-  if (!this.stCache) { this.stCache = document.createElement('canvas'); this.stCache.width = 680; this.stCache.height = 400; this.stKey = null; }
+  if (!this.stCache) { this.stCache = document.createElement('canvas'); this.stCache.width = 680; this.stCache.height = 480; this.stKey = null; }   // 上に80ドット余分に描いておく（高く跳んだときカメラが上を向く）
   if (this.stKey !== key) {
     this.stKey = key;
     var sc = this.stCache.getContext('2d');
-    sc.setTransform(1, 0, 0, 1, 0, 0); sc.clearRect(0, 0, 680, 400); sc.translate(20, 20);
+    sc.setTransform(1, 0, 0, 1, 0, 0); sc.clearRect(0, 0, 680, 480); sc.translate(20, 80);
     this.drawStageRaw(sc, key);
   }
-  this.ctx.drawImage(this.stCache, -20, -20);
+  this.ctx.drawImage(this.stCache, -20, -80);
 };
 KF.Renderer.prototype.drawStageRaw = function (c, camX) {
   var W = 640, H = 360, C = KF.CONST;
@@ -100,16 +100,16 @@ KF.Renderer.prototype.drawStageRaw = function (c, camX) {
   // 壁
   var gw = c.createLinearGradient(0, 0, 0, base);
   gw.addColorStop(0, '#3d4452'); gw.addColorStop(0.6, '#59616f'); gw.addColorStop(1, '#6a7280');
-  c.fillStyle = gw; c.fillRect(-20, -20, W + 40, base + 20);
+  c.fillStyle = gw; c.fillRect(-20, -80, W + 40, base + 80);
   // 壁の方眼（少し奥なのでゆっくり動く）
   var wl = L * 0.85;
   c.lineWidth = 1;
   for (var gx = Math.floor(wl / cell) * cell; gx < wl + W + cell; gx += cell) {
     var x = Math.round(gx - wl) + 0.5, major = Math.round(gx / cell) % 5 === 0;
     c.strokeStyle = major ? 'rgba(255,255,255,0.30)' : 'rgba(255,255,255,0.12)';
-    c.beginPath(); c.moveTo(x, -20); c.lineTo(x, base); c.stroke();
+    c.beginPath(); c.moveTo(x, -80); c.lineTo(x, base); c.stroke();
   }
-  for (var gy = base; gy > -20; gy -= cell) {
+  for (var gy = base; gy > -80; gy -= cell) {
     var major2 = Math.round((base - gy) / cell) % 5 === 0;
     c.strokeStyle = major2 ? 'rgba(255,255,255,0.30)' : 'rgba(255,255,255,0.12)';
     c.beginPath(); c.moveTo(-20, gy + 0.5); c.lineTo(W + 20, gy + 0.5); c.stroke();
@@ -327,7 +327,10 @@ KF.Renderer.prototype.render = function (b) {
     var zc = b.zoomAt || [W / 2, H / 2], z = 1 + b.zoom;
     c.translate(zc[0], zc[1]); c.scale(z, z); c.translate(-zc[0], -zc[1]);
   }
-  c.translate(Math.round(shx), Math.round(shy));
+  // 高く跳んだら、頭が画面の上から出ないようにカメラを少し上へ向ける（見た目だけ）
+  var topY = Math.min(b.p[0].y, b.p[1].y), wantY = Math.max(0, Math.min(55, 190 - topY));   // 55まで（立っている相手の足が画面の下に収まる）
+  this.camY = (this.camY || 0) + (wantY - (this.camY || 0)) * 0.3;
+  c.translate(Math.round(shx), Math.round(shy + this.camY));
   this.drawStage(camX, b);
   if (b.bgFlash > 0) { c.fillStyle = 'rgba(255,255,255,' + (b.bgFlash * 0.07) + ')'; c.fillRect(-20, -20, W + 40, H + 40); }
   var ox = W / 2 - camX;

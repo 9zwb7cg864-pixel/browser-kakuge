@@ -9,7 +9,7 @@ var KF = window.KF || (window.KF = {});
 
 KF.CONST = {
   W: 640, H: 360, GROUND: 300, WORLD_W: 1024, WALL: 36,
-  GRAVITY: 0.62, JUMP_VY: -12.4, JUMP_VX: 3.6,
+  GRAVITY: 0.62, JUMP_VY: -18.5, JUMP_G: 0.974, JUMP_VXK: 40 / 38, JUMP_VX: 3.6,   // ジャンプはスト6と同じくらい：滞空38F・最高点176px（体の約1.2倍）。横に跳ぶ距離は前と同じ
   RUSH_MAX: 6000, RUSH_SEG: 1000, RUSH_NEUTRAL_COST: 1000, RUSH_CANCEL_COST: 3000,
   RUSH_REGEN: 5, RUSH_REGEN_FWD: 7, RUSH_COOLDOWN: 90, RUSH_BONUS_ADV: 4, RUSH_REC_CUT: 5,
   SUPER_MAX: 3000, SUPER_BAR: 1000, EX_COST: 2000, EX_MAX: 6000,   // EX技はラッシュと同じゲージ（6本）を2本使う。超必殺のゲージ（3本）は別
@@ -80,7 +80,7 @@ KF.CHARS = {
               preDelay: 10 },   // 発生24F。のけぞりの長い強P系からだけつながり、弱・中からは出るがつながらない
       // EX虚掌破：発生7F。弱・中・強どの通常技からでもつながる
       palm_ex: { anim: 'ex_palm', type: 'x', name: 'EX虚掌破', dmg: 1000, adv: [0, -4], hs: 13, push: [2, 6], lv: 'm', chip: 0.125,
-              kd: 'launch', lvy: -7, lvx: 0.6, jset: 0, jlim: 0, cancel: 'u', floatG: 0.22, dashS: 5.5 },   // 前に踏み込みながら打つ。ふわっと浮かせて、ジャンプで追いかけて拾える
+              kd: 'launch', lvy: -8, lvx: 0.6, jset: 0, jlim: 0, cancel: 'u', floatG: 0.22, dashS: 5.5 },   // 前に踏み込みながら打つ。ふわっと浮かせて、ジャンプで追いかけて拾える
       su3: { anim: 'su_3', type: 'u', bars: 3, name: '天地穿', dmg: 600, hits: 7, rehit: 5, hs: 6, push: [0.3, 2], lv: 'm', chip: 0.25,
              inv: [[1, 44]], lock: 1, lockAir: 1, dashS: 7, jump: { vx: [0.8], vy: [-10] }, kdLast: 'launch', lvy: -12, lvx: 2.5, lastDmg: 1800, minScale: 0.7 },
       su1: { anim: 'su_1', type: 'u', bars: 1, name: '虚空砲', dmg: 620, hits: 5, rehit: 8, hs: 6, push: [1.5, 2], lv: 'm', chip: 0.25,
