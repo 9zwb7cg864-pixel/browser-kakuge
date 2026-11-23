@@ -462,7 +462,7 @@ KF.Renderer.prototype.drawMoveFx = function (c, f, ox, back) {
       var o = sp.off || [0, 0];
       x = (x0 + x1) / 2 + o[0]; y = (y0 + y1) / 2 + o[1];
     } else { x = sp.at[0]; y = sp.at[1]; }
-    this.drawFxFrame(c, sp.fx, fi, f.x + ox + x * f.facing, f.y + y, f.facing < 0, sp.s || 1);
+    this.drawFxFrame(c, sp.fx, fi, f.x + ox + x * f.facing, f.y + y, f.facing < 0, sp.s || 1, sp.alpha);
   }
 };
 
