@@ -447,10 +447,10 @@ console.log('■ 昇竜SAの猶予（飛び上がったあとでも、空中か�
       const e0 = b.events.length; b.step([q.shift() || N(), N()]);
       for (const e of b.events.slice(e0)) { if (e.type === 'hit' && e.move === 'dp' && hitF == null) hitF = f; if (e.type === 'hit' && e.move === 'su3') su++; if (e.type === 'super' && h == null) h = Math.round(C.GROUND - b.p[0].y); } }
     return { su, h }; };
-  const early = tryD(3), late = tryD(25), tooLate = tryD(40);
+  const early = tryD(3), late = tryD(25), tooLate = tryD(48);
   ok(early.su >= 6, '昇穿が当たってすぐ入れると、天地穿が最後まで当たる（' + early.su + 'hit）');
   ok(late.su >= 6 && late.h > 40, '飛び上がったあと（当たって25F後）に入れても、空中から天地穿が出て最後まで当たる（高さ' + late.h + '・' + late.su + 'hit）');
-  ok(tooLate.h == null, '遅すぎる（当たって40F後）とSAは出ない（ゲージを無駄にしない）');
+  ok(tooLate.h == null, '遅すぎる（当たって48F後）とSAは出ない（ゲージを無駄にしない）。受付は当たって42F後まで');
 }
 
 console.log('■ ラッシュから出した技（勢いが残る・後すきが短い・有利は技だけ）');

@@ -671,6 +671,8 @@ var KF = window.KF || (window.KF = {});
       var pressed = null, nPressed = 0;
       var pw = cancelLevel ? Math.min(12, Math.max(3, this.frameNo - (f.moveStartF || 0))) : 5;
       if (f.move && f.move.freeCancel) pw = 18;   // 変身中に入れておいた必殺技は、変身し終わった瞬間に出る
+      var saEasy = cancelLevel && f.state === 'attack' && f.move && f.move.saGround;   // 昇竜SA：受付を長くして入れやすく
+      if (saEasy) pw = Math.min(20, Math.max(3, this.frameNo - (f.moveStartF || 0)));
       var mq = f.mReq && f.mReq.move === c.move && this.frameNo - f.mReq.t < pw ? f.mReq : null;
       if (mq) { pressed = set[Math.min(2, mq.str)]; nPressed = mq.ex ? 2 : 1; }
       else for (var k = 0; k < 3; k++) if (f.buf.pressedWithin(set[k], pw)) { nPressed++; if (!pressed || k > set.indexOf(pressed)) pressed = set[k]; }
@@ -685,13 +687,13 @@ var KF = window.KF || (window.KF = {});
       var slowAdd = (cancelLevel && cancelLevel !== 'air' && mv.slowFrom && !willEx && f.state === 'attack' && f.move && f.move.type !== 's' && f.move.type !== 'x' && mv.slowFrom.ok.indexOf(f.moveId) < 0) ? mv.slowFrom.add : 0;
       if (cancelLevel === 's' && mv.type !== 'u' && mv.type !== 'gu' && !/[sxg]/.test(mv.type)) continue;
       if (cancelLevel === 'u' && mv.type !== 'u' && mv.type !== 'gu') continue;
-      var wAdd = f.move && f.move.freeCancel ? 14 : 0;   // 変身中に入れておいたコマンドも受け付ける
+      var wAdd = f.move && f.move.freeCancel ? 14 : saEasy ? 12 : 0;   // 変身中に入れておいたコマンドも受け付ける／昇竜SAはコマンドの受付を12F長く
       if (mv.swap && f.move && f.move.freeCancel) continue;   // 変身し終わった直後に、もう一度変身はしない
       var okSeq = mq ? true : c.dd ? f.buf.matchDD(c.win, false, !!cancelLevel) : c.dp ? f.buf.matchDP(c.win + wAdd) : f.buf.match(c.seq, c.win + wAdd, c.loose);
       // 簡易入力（昇竜の ↘↓↘ ・ ↓↘→↘ など）
       if (!okSeq && c.alt) for (var q = 0; q < c.alt.length && !okSeq; q++) okSeq = f.buf.matchStrict(c.alt[q], c.win);
       // 超必殺の簡易コマンド（スト6：↓↘→↓→ ・ ↓→↓↘→ でも成立）
-      if (!okSeq && c.altL) for (var q3 = 0; q3 < c.altL.length && !okSeq; q3++) okSeq = f.buf.match(c.altL[q3], c.win, false);
+      if (!okSeq && c.altL) for (var q3 = 0; q3 < c.altL.length && !okSeq; q3++) okSeq = f.buf.match(c.altL[q3], c.win + (saEasy ? 12 : 0), false);
       // 入力の最後が別の技の形で終わっているときはそちらを優先（前歩き波動が昇竜に化けない）
       if (okSeq && c.notIf) for (var q2 = 0; q2 < c.notIf.length && okSeq; q2++) if (f.buf.matchStrict(c.notIf[q2], c.win)) okSeq = false;
       if (!okSeq) continue;
@@ -869,7 +871,7 @@ var KF = window.KF || (window.KF = {});
       if (this.trySpecial(f, 's', 'change')) { f.opp.swapUsed = 1; this.emit('swapcancel', { side: f.side }); this.emit('announce', { text: '変身キャンセル', small: 1, side: f.side }); return; }
     }
     // 昇竜SA：昇穿などは、当たってから飛び上がる前（ヒットストップ中）だけ超必殺でキャンセルできる
-    if (f.connected && (mv.cancel || mv.tc) && t <= a.lastActive + (mv.saGround ? 14 : 10) && !(mv.saGround && mv.rootF && !f.rootHit)) {
+    if (f.connected && (mv.cancel || mv.tc) && t <= a.lastActive + (mv.saGround ? 24 : 10) && !(mv.saGround && mv.rootF && !f.rootHit)) {
       if (this.tryCancel(f, cur, dir)) return;
     }
     // ラッシュ中の技は空振りでもラッシュの勢いを少し残す

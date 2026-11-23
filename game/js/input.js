@@ -193,7 +193,7 @@ KF.InputBuffer.prototype.push = function (inp, facing) {
   var x = inp.x * facing; // 向きを考慮（前=+）
   var dir = 5 + x - inp.y * 3; // テンキー表記
   this.hist.push({ dir: dir, p: inp.pressed, h: inp.held });
-  if (this.hist.length > 40) this.hist.shift();
+  if (this.hist.length > 60) this.hist.shift();
 };
 KF.InputBuffer.prototype.refacing = function () { };
 // ↓↓（変身）：↓を2回入れてP。人の押し方のばらつきを広く受け付ける
