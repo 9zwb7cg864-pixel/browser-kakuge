@@ -29,8 +29,8 @@ console.log('■ 必殺技コマンド');
   ok(b.projs.length > 0 || hits(e).length > 0, '虚環弾（↓↘→+P）で飛び道具が出る'); }
 { const b = fresh(); const e = run(b, [[1, 6], [1, 2], [1, 3, 'hp']]);
   ok(hits(e).some(x => x.move === 'dp'), '昇穿（→↓↘+P）が出てヒット'); }
-{ const b = fresh('kokuu', 'shuuen', 120); const e = run(b, [[1, 2], [1, 1], [1, 4, 'mk']]);
-  ok(hits(e).some(x => x.move === 'rushk'), '迅閃脚（↓↙←+K）が突進してヒット'); }
+{ const b = fresh('kokuu', 'shuuen', 120); const e = run(b, [[1, 2], [1, 3], [1, 6, 'mk']]);
+  ok(hits(e).some(x => x.move === 'rushk'), '迅閃脚（↓↘→+K）が突進してヒット'); }
 { const b = fresh('shuuen', 'kokuu', 60); const e = run(b, [[1, 6], [1, 3], [1, 2], [1, 1], [1, 4, 'hp']], N, 120);
   ok(b.p[1].hp < b.p[1].D.hp - 2000, '終縛（→↘↓↙←+P）コマンド投げが決まる（' + (b.p[1].D.hp - b.p[1].hp) + 'ダメージ）'); }
 { const b = fresh(); b.p[0].sup = 0; b.p[0].ex = 1000; b.p[0].rushCD = 999; const e = run(b, [[1, 6], [1, 2], [1, 3, 'lp,mp']]);
@@ -119,8 +119,8 @@ console.log('■ 追加した技');
 { const b = fresh(); const e = run(b, [[2, 6, 'mp']], () => inp(6), 60); ok(e.some(x => x.type === 'block' && x.move === 'f_mp'), '鎚打ちは立ちガードできる'); }
 { const b = fresh('kokuu', 'shuuen', 70); const e = run(b, [[2, 6, 'hp']], N, 60); ok(hits(e).some(x => x.move === 'f_hp'), '1P →強P 踏破肘が踏み込んで当たる'); }
 { const b = fresh('kokuu', 'shuuen', 80); const e = run(b, [[2, 4, 'hk']], N, 60); ok(hits(e).some(x => x.move === 'b_hk'), '1P ←強K 旋踵が当たる'); }
-{ const b = fresh('kokuu', 'shuuen', 60); const e = run(b, [[1, 2], [1, 3], [1, 6, 'mk']], N, 90); ok(hits(e).filter(x => x.move === 'tatsu').length >= 3, '1P 旋風脚（↓↘→+K）が多段ヒット（' + hits(e).filter(x => x.move === 'tatsu').length + 'hit）'); }
-{ const b = fresh('kokuu', 'shuuen', 130); const e = run(b, [[1, 9], [16, 5], [1, 2], [1, 3], [1, 6, 'mk']], N, 80); ok(e.some(x => x.type === 'hit' && x.move === 'atatsu') || b.p[0].moveId === 'atatsu', '1P 空中で空旋脚が出る'); }
+{ const b = fresh('kokuu', 'shuuen', 60); const e = run(b, [[1, 2], [1, 1], [1, 4, 'mk']], N, 90); ok(hits(e).filter(x => x.move === 'tatsu').length >= 3, '1P 旋風脚（↓↙←+K）が多段ヒット（' + hits(e).filter(x => x.move === 'tatsu').length + 'hit）'); }
+{ const b = fresh('kokuu', 'shuuen', 130); const e = run(b, [[1, 9], [16, 5], [1, 2], [1, 1], [1, 4, 'mk']], N, 80); ok(e.some(x => x.type === 'hit' && x.move === 'atatsu') || b.p[0].moveId === 'atatsu', '1P 空中で空旋脚が出る'); }
 { const b = fresh(); const e = run(b, [[1, 2], [1, 1], [1, 4, 'hp'], [52, 5], [1, 6], [1, 2], [1, 3, 'hp']], N, 100);
   ok(hits(e).some(x => x.move === 'palm') && hits(e).some(x => x.move === 'dp' && x.combo === 2), '1P 虚掌破で浮かせて昇穿で追撃できる'); }
 { const b = fresh(); b.p[0].sup = 3000; const e = run(b, [[1, 2], [1, 3], [1, 6], [1, 2], [1, 3], [1, 6, 'hk']], N, 200);
@@ -193,7 +193,7 @@ console.log('■ ラウンド・タイマー');
 
 console.log('■ 密着で技が当たる');
 {
-  const CMD = { fire: [[2], [3], [6, 'lp']], dp: [[6], [2], [3, 'lp']], tatsu: [[2], [3], [6, 'lk']], palm: [[2], [1], [4, 'lp']], rushk: [[2], [1], [4, 'lk']],
+  const CMD = { fire: [[2], [3], [6, 'lp']], dp: [[6], [2], [3, 'lp']], tatsu: [[2], [1], [4, 'lk']], palm: [[2], [1], [4, 'lp']], rushk: [[2], [3], [6, 'lk']],
     wave: [[2], [3], [6, 'lk']], rekka1: [[2], [1], [4, 'lp']], grab: [[6], [3], [2], [1], [4, 'lp']] };
   const ids = { kokuu: ['lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'c_lp', 'c_mp', 'c_hp', 'c_lk', 'c_mk', 'c_hk', 'f_mp', 'f_hp', 'b_hk', 'fire', 'dp', 'tatsu', 'palm', 'rushk'],
     shuuen: ['lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'c_lp', 'c_mp', 'c_hp', 'c_lk', 'c_mk', 'c_hk', 'f_hp', 'f_mk', 'b_hp', 'wave', 'dp', 'rekka1', 'rushk', 'grab'] };
@@ -273,13 +273,13 @@ console.log('■ 空中追撃の決まりとK技の役割');
   { const b = mk(); const ev = play(b, [inp(4, 'hk')], 80, () => inp(6)); const adv = ev.find(e => e.type === 'adv');
     ok(adv && adv.v >= 1, '旋踵はガードさせて有利（' + (adv ? adv.v : '?') + 'F）'); }
   // 迅閃脚は下段：立ちガードできない
-  { const b = mk(); b.p[1].x = 560; const ev = play(b, [inp(2), inp(1), inp(4, 'mk')], 80, () => inp(6));
+  { const b = mk(); b.p[1].x = 560; const ev = play(b, [inp(2), inp(3), inp(6, 'mk')], 80, () => inp(6));
     ok(ev.some(e => e.type === 'hit' && e.move === 'rushk'), '迅閃脚は下段（立ちガードでは防げない）'); }
   // 迅閃脚は飛び道具をくぐる
   for (const slide of [false, true]) {
     const b = mk(); b.p[1].x = 760; b.camX = 620; const q = []; let go = false, hit = false;
     for (let f = 0; f < 120; f++) {
-      const pr = b.projs[0]; if (slide && !go && pr && pr.x - b.p[0].x < 70) { go = true; q.push(inp(2), inp(1), inp(4, 'hk')); }
+      const pr = b.projs[0]; if (slide && !go && pr && pr.x - b.p[0].x < 70) { go = true; q.push(inp(2), inp(3), inp(6, 'hk')); }
       const e0 = b.events.length; b.step([q.shift() || N(), f === 0 ? inp(2) : f === 1 ? inp(1) : f === 2 ? inp(4, 'lp') : N()]);
       if (b.events.slice(e0).some(e => e.type === 'hit' && e.side === 1)) hit = true;
     }
@@ -467,7 +467,7 @@ console.log('■ ラッシュから出した技（勢いが残る・後すきが
   // 有利はラッシュから出した技にだけ：そこからキャンセルした旋風脚には付かない
   b = new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]); b.camX = 512; b.p[0].x = 380; b.p[1].x = 520; b.p[0].facing = 1; b.p[1].facing = -1;
   const q = [...PR, ...Array(7).fill(N()), inp(5, 'hp')]; let tatsuBonus = null;
-  for (let f = 0; f < 120; f++) { const e0 = b.events.length; if (b.p[0].moveId === 'hp' && b.p[0].connected && !q.length) q.push(inp(2), inp(3), inp(6, 'mk')); b.step([q.length ? q.shift() : N(), N()]); if (b.p[0].moveId === 'tatsu' && tatsuBonus == null) tatsuBonus = b.p[0].rushBonus; }
+  for (let f = 0; f < 120; f++) { const e0 = b.events.length; if (b.p[0].moveId === 'hp' && b.p[0].connected && !q.length) q.push(inp(2), inp(1), inp(4, 'mk')); b.step([q.length ? q.shift() : N(), N()]); if (b.p[0].moveId === 'tatsu' && tatsuBonus == null) tatsuBonus = b.p[0].rushBonus; }
   ok(tatsuBonus === false, 'ラッシュの有利は、ラッシュから出した技にだけ付く（キャンセルした旋風脚には付かない）');
 }
 

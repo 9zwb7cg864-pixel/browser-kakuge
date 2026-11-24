@@ -29,7 +29,7 @@ for (const corner of [false, true]) {
   for (const [nm, st] of Object.entries(starters)) {
     const s = root(corner); for (const f of st) s.step([f, N()]);
     for (let k = 0; k < 90; k++) {
-      const c = clone(s); c.events.length = 0; for (const f of mo([2, 3, 6], 'hk')) c.step([f, N()]);
+      const c = clone(s); c.events.length = 0; for (const f of mo([2, 1, 4], 'hk')) c.step([f, N()]);
       let first = null; for (let i = 0; i < 60; i++) { for (const e of c.events) if (e.type === 'hit' && e.side === 0 && e.move === 'tatsu' && c.p[0].str === 2 && first === null) first = e.combo; c.events.length = 0; c.step([N(), N()]); }
       if (first >= 2) { bad.push(nm + ' ' + k + 'F後'); break; }
       s.step([N(), N()]);
@@ -37,7 +37,7 @@ for (const corner of [false, true]) {
   }
   ok(!bad.length, (corner ? '画面端' : '画面中央') + '：10種類の技のあと、0〜89Fのどこで出してもつながらない' + (bad.length ? '（' + bad.join('／') + '）' : ''));
 }
-{ const b = root(false); b.p[1].x = 600; for (const f of mo([2, 3, 6], 'hk')) b.step([f, N()]); let h = 0; for (let i = 0; i < 80; i++) { for (const e of b.events) if (e.type === 'hit' && e.side === 0) h++; b.events.length = 0; b.step([N(), N()]); }
+{ const b = root(false); b.p[1].x = 600; for (const f of mo([2, 1, 4], 'hk')) b.step([f, N()]); let h = 0; for (let i = 0; i < 80; i++) { for (const e of b.events) if (e.type === 'hit' && e.side === 0) h++; b.events.length = 0; b.step([N(), N()]); }
   ok(h === 3, '生で出せば当たる（' + h + 'ヒット）'); }
 
 console.log('■ 強旋風脚は飛び道具を抜ける');
@@ -46,7 +46,7 @@ for (const str of ['mk', 'hk']) {
   b.camX = 512; b.p[0].x = 300; b.p[1].x = 700; b.step([N(), N()]);
   for (const f of mo([2, 1, 4], 'lp')) b.step([N(), f]);
   let t = 0; while (!(b.projs[0] && b.projs[0].x - b.p[0].x < 100) && t++ < 200) b.step([N(), N()]);
-  b.events.length = 0; for (const f of mo([2, 3, 6], str)) b.step([f, N()]);
+  b.events.length = 0; for (const f of mo([2, 1, 4], str)) b.step([f, N()]);
   let hit = false; for (let i = 0; i < 60; i++) { for (const e of b.events) if (e.type === 'hit' && e.side === 1) hit = true; b.events.length = 0; b.step([N(), N()]); }
   ok(str === 'hk' ? !hit : hit, str === 'hk' ? '強旋風脚は波動を抜ける' : '（確認）中旋風脚は波動に当たる');
 }

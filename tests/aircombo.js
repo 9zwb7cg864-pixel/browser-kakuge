@@ -14,7 +14,7 @@ function trialPalm(jumpDelay, hkT, hpDelay, btn) {
     if (!x) {
       if (ph === 0 && o.state === 'launch' && m.actionable()) { if (jumpAt < 0) jumpAt = f; if (f - jumpAt >= jumpDelay) { x = I(9); ph = 1; jumpAt = f; } }
       else if (ph === 1 && f - jumpAt === hkT) { x = I(5, btn); ph = 2; }
-      else if (ph === 2 && m.state === 'attack' && m.connected) { q.push(I(3), I(6, 'lk')); x = I(2); ph = 3; }
+      else if (ph === 2 && m.state === 'attack' && m.connected) { q.push(I(1), I(4, 'lk')); x = I(2); ph = 3; }   // 空旋脚：↓↙← + K
       else if (ph === 3 && !m.air && m.actionable()) { if (landAt < 0) landAt = f; if (f - landAt >= hpDelay) { x = I(5, 'hp'); ph = 4; } }
       else if (ph === 4 && m.state === 'attack' && m.moveId === 'hp' && m.connected) { q.push(I(2), I(3, 'hp')); x = I(6); ph = 5; }
     }
