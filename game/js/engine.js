@@ -779,7 +779,7 @@ var KF = window.KF || (window.KF = {});
     if (!mv) return false;
     f.state = 'attack'; f.t = 0; f.move = mv; f.moveId = id; f.str = str || 0; f.moveStartF = this.frameNo; f.moveSerial = (f.moveSerial || 0) + 1;
     f.modernMv = !!f.nextModern; f.nextModern = false;   // モダンのSPで出した技（ダメージ8割）
-    f.armorUsed = 0; f.holdA = 0;
+    f.armorUsed = 0; f.holdA = 0; f.aAcc = 0;
     f.mvT = 0; f.preD = mv.preDelay ? pick(mv.preDelay, f.str) : 0;
     // ラッシュから出した技だけ：有利＋4Fと、戻りの短縮（そこからキャンセルした技には引き継がない）
     f.rushBonus = !!f.nextRush; f.nextRush = false; f.projHit = false; f.rushCut = f.rushBonus ? C.RUSH_REC_CUT : 0;
@@ -817,6 +817,9 @@ var KF = window.KF || (window.KF = {});
     }
     // 持続を伸ばす技（迅閃脚）：持続の最後のコマのまま少し滑り続ける
     if (mv.holdActive && f.animTime() === a.lastActive && (f.holdA || 0) < pick(mv.holdActive, f.str)) f.holdA = (f.holdA || 0) + 1;
+    else if (mv.aSlow && f.phase() === 'a' && pick(mv.aSlow, f.str) < 1) {   // 持続をゆっくり再生する技（強旋風脚）：回る絵も遅くなり、そのぶん持続が長い
+      f.aAcc = (f.aAcc || 0) + pick(mv.aSlow, f.str); if (f.aAcc >= 1) { f.aAcc -= 1; f.stepAnim(); }
+    }
     else f.stepAnim();
     // ラッシュから出した技は、戻りのはじめを早送りして後すきを短くする
     if (f.rushCut > 0 && f.phase() === 'r' && !f.aDone) { f.stepAnim(); f.rushCut--; }
