@@ -210,7 +210,7 @@ KF.fighterImg = function (kind, anim, alt) { return alt ? KF.altImg(kind + ':' +
 KF.Renderer.prototype.drawFighterImg = function (ctx, f, x, y, alpha, flipY) {
   var A = KF.Assets, img = KF.fighterImg(f.kind, f.anim, f.alt);
   if (!img) return;
-  var fw = 224, fh = 200, sx = Math.min(f.aF, f.animObj().frames.length - 1) * fw;
+  var fw = f.animObj().fw || 224, fh = 200, sx = Math.min(f.aF, f.animObj().frames.length - 1) * fw;   // 足を伸ばす技（中足）は横に広いセル
   ctx.save();
   ctx.globalAlpha = alpha == null ? 1 : alpha;
   var q = ctx === this.ctx ? (KF.RES || 1) : 1;   // 画面の細かさに合わせて丸める（2倍なら半ドット単位）
@@ -224,11 +224,13 @@ KF.Renderer.prototype.drawFighterImg = function (ctx, f, x, y, alpha, flipY) {
 KF.Renderer.prototype.drawFighterWhite = function (ctx, f, x, y, alpha) {
   var img = KF.fighterImg(f.kind, f.anim, f.alt);
   if (!img) return;
-  if (!this.wcv) { this.wcv = document.createElement('canvas'); this.wcv.width = 224; this.wcv.height = 200; }
-  var w = this.wcv.getContext('2d'), sx = Math.min(f.aF, f.animObj().frames.length - 1) * 224;
-  w.globalCompositeOperation = 'source-over'; w.clearRect(0, 0, 224, 200);
-  w.drawImage(img, sx, 0, 224, 200, 0, 0, 224, 200);
-  w.globalCompositeOperation = 'source-atop'; w.fillStyle = '#ffffff'; w.fillRect(0, 0, 224, 200);
+  var fw = f.animObj().fw || 224;
+  if (!this.wcv) { this.wcv = document.createElement('canvas'); this.wcv.height = 200; }
+  if (this.wcv.width !== fw) this.wcv.width = fw;
+  var w = this.wcv.getContext('2d'), sx = Math.min(f.aF, f.animObj().frames.length - 1) * fw;
+  w.globalCompositeOperation = 'source-over'; w.clearRect(0, 0, fw, 200);
+  w.drawImage(img, sx, 0, fw, 200, 0, 0, fw, 200);
+  w.globalCompositeOperation = 'source-atop'; w.fillStyle = '#ffffff'; w.fillRect(0, 0, fw, 200);
   ctx.save(); ctx.globalAlpha = alpha;
   var q = KF.RES || 1; ctx.translate(Math.round(x * q) / q, Math.round(y * q) / q); ctx.scale(f.facing, 1);
   ctx.drawImage(this.wcv, -112, -190);
