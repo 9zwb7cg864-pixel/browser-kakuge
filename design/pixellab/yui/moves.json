@@ -332,5 +332,40 @@
    "img/intro_11.png",
    "img/intro_12.png"
   ]
+ },
+ "c_hp": {
+  "frames": [
+   "img/c_hp_00.png",
+   "img/c_hp_01.png",
+   "img/c_hp_02.png",
+   "img/c_hp_03.png",
+   "img/c_hp_04.png",
+   "img/c_hp_05.png",
+   "img/c_hp_06.png",
+   "img/c_hp_07.png",
+   "img/c_hp_08.png",
+   "img/c_hp_09.png",
+   "img/c_hp_10.png",
+   "img/c_hp_11.png",
+   "img/c_hp_12.png",
+   "img/c_hp_13.png",
+   "img/c_hp_14.png",
+   "img/c_hp_15.png",
+   "img/c_hp_16.png",
+   "img/c_hp_17.png",
+   "img/c_hp_18.png",
+   "img/c_hp_19.png",
+   "img/c_hp_20.png",
+   "img/c_hp_21.png",
+   "img/c_hp_22.png",
+   "img/c_hp_23.png",
+   "img/c_hp_24.png",
+   "img/c_hp_25.png",
+   "img/c_hp_26.png",
+   "img/c_hp_27.png",
+   "img/c_hp_28.png",
+   "img/c_hp_29.png",
+   "img/c_hp_30.png"
+  ]
  }
 }
