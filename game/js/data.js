@@ -66,7 +66,8 @@ KF.CHARS = {
       dp: { anim: 'sp_dp', type: 's', name: '昇穿', dmg: [1000, 1200, 1400], adv: ['kd', [-31, -36, -39]], hs: 12, push: [2, 4], lv: 'm', chip: 0.125, kd: 'launch', jlim: 2, jinc: 3, cancel: 'u', saGround: 1, saOnly: ['su3'], rootF: [2, 2, 1], rootDmg: 800,
             preDelay: [2, 3, 4], aaInv: [[1, 14], [1, 9], [1, 8]], jump: { vx: [1.6, 2.2, 2.8], vy: [-9.5, -10.8, -12.0] }, lvy: -9, lvx: 2.5, meter: 40 },
       dp_ex: { anim: 'ex_dp', type: 'x', name: 'EX昇穿', dmg: 800, adv: ['kd', -34], hs: 12, push: [2, 4], lv: 'm', chip: 0.125, kd: 'launch', hits: 2, rehit: 7, jlim: 3, jinc: 3, cancel: 'u', saGround: 1, saOnly: ['su2', 'su3'],
-            preDelay: 3, inv: [[1, 9]], jump: { vx: [2.4], vy: [-12.4] }, lvy: -6, lvx: 0.6, floatG: 0.23, hangVy: false, jugAfter: 1, jg: 1 },   // 当てたら着地後の昇穿がギリギリつながる（強は着地直後の2F、弱は4F）   // EX：発生は中と同じ6F・完全無敵
+            preDelay: 3, inv: [[1, 9]], jump: { vx: [2.4], vy: [-12.4] }, lvy: -6, lvx: 0.6, floatG: 0.23, hangVy: false, jugAfter: 1, jg: 1,
+            again: { lvy: -9, lvx: 2.5, floatG: 0.5 } },   // 2回目からのEX昇穿は普通の昇穿と同じ浮き方（そのあと昇穿はつながらない）   // 当てたら着地後の昇穿がギリギリつながる（強は着地直後の2F、弱は4F）   // EX：発生は中と同じ6F・完全無敵
       // 迅閃脚：下段スライディング。飛び道具をくぐり、当たるとダウン。ガードされると大きく不利。間合いは弱＜中＜強
       rushk: { anim: 'sp_slide', type: 's', name: '迅閃脚', dmg: [800, 900, 1000], adv: ['kd', -10], hs: 12, push: [3, 6], lv: 'l', chip: 0.125,
                kd: 'sweep', projInv: 1, jlim: 0, dash: { vx: [4.6, 5.8, 7.0], vy: 0 }, meter: 40 },   // 発生8F・持続13F。弱中強で遠くまで滑る

@@ -62,5 +62,14 @@ for (const sc of [['raw', '地上の相手に'], ['combo', 'しゃがみ弱K＞�
   ok(n === 6, `EX昇穿を${sc[1]}当てたら、着地直後の昇穿（弱・中・強／0〜1F遅れ）がつながる（${row}）`);
   if (sc[0] !== 'aa') { const r = trialDp(sc[0], 6, 'lp'); ok(r === '×', `${sc[1]}のEX昇穿のあと、着地から6F遅れた昇穿は間に合わない（ふわっと浮きすぎない）`); }
 }
+// EX昇穿の大きな浮き（そのあと昇穿がつながる）は1コンボに1回まで
+{ const chain = (plan) => { const b = new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]);
+    const m = b.p[0]; m.x = 470; b.p[1].x = 520; m.ex = 6000; let k = 0, q = [I(6), I(2), I(3, plan[0])], landAt = -1; const log = [];
+    for (let f = 0; f < 400; f++) { let x = q.length ? q.shift() : null;
+      if (!x && k < plan.length - 1 && m.moveId && m.connected && !m.air && m.actionable()) { k++; q.push(I(2), I(3, plan[k])); x = I(6); }
+      b.step([x || N(), N()]); for (const e of b.events.splice(0)) if (e.type === 'hit' && e.side === 0) log.push(e.move + '#' + e.combo); }
+    return log; };
+  const a = chain(['lp,mp', 'lp,mp', 'hp']);
+  ok(a.filter(x => /^dp_ex/.test(x)).length >= 3 && !a.some(x => /^dp#/.test(x)), 'EX昇穿 → EX昇穿 は入るが、2回目のEX昇穿は浮きが小さく、そのあとの昇穿は入らない（' + a.join(' ') + '）'); }
 console.log(`\n結果: ${pass} 件成功 / ${fail} 件失敗`);
 process.exit(fail ? 1 : 0);
