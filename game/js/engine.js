@@ -1082,7 +1082,7 @@ var KF = window.KF || (window.KF = {});
       f.vy += (f.state === 'launch' ? (f.floatG || 0.5) : f.jumpG ? C.JUMP_G : (f.moveG && f.state === 'attack') ? f.moveG : C.GRAVITY);   // ふわっと浮かせる技（アッパー）は落ちるのが遅い／普通のジャンプはジャンプの重さで落ちる
       // EX昇穿を当てた相手は、当てた側が空中にいるあいだはゆっくりしか落ちない（着地後の昇穿が届くように）
       if (f.state === 'launch' && f.hangBy != null) {
-        if (f.opp.air && f.opp.state === 'attack') f.vy = Math.min(f.vy, 0.5); else f.hangBy = null;
+        if (f.opp.air && f.opp.state === 'attack') f.vy = Math.min(f.vy, f.hangVy == null ? 0.5 : f.hangVy); else f.hangBy = null;
       }
       f.y += f.vy;
       if (f.y >= C.GROUND && f.vy > 0) {
@@ -1414,7 +1414,7 @@ var KF = window.KF || (window.KF = {});
       if (!wasAir) def.juggle = mv.jset != null ? pick(mv.jset, str) : (kd === 'sweep' || isSup ? 99 : 1);
       else if (def.jugBy !== jkey) def.juggle += mv.jinc != null ? mv.jinc : (isSup ? 99 : 1);
       def.jugBy = jkey;
-      if (mv.jugAfter != null) { def.juggle = mv.jugAfter; def.hangBy = att.side; }   // EX昇穿：当てたあと、通常の昇穿がもう1回入るように
+      if (mv.jugAfter != null) { def.juggle = mv.jugAfter; def.hangBy = mv.hangVy === false ? null : att.side; def.hangVy = mv.hangVy; }   // EX昇穿：当てたあと、通常の昇穿がもう1回入るように
       if (mv.lock && !lastHit) { def.vy = -2; def.vx = 0; def.pushV = 0; def.x = att.x + att.facing * 54; }
       if (mv.lockAir && !lastHit) { def.x = att.x + att.facing * 34; def.y = Math.min(C.GROUND - 2, att.y - 6); def.vy = Math.min(att.vy, -1); def.air = true; }
     } else {

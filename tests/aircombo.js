@@ -58,8 +58,9 @@ for (const btn of ['hk', 'mk']) {
 { let row = '', n = 0; for (const hd of [0, 2, 4, 6, 8, 10]) { const r = trialPalm(0, 12, hd, 'hk'); row += r; if (r === '○') n++; } ok(n >= 5, `着地後の強Pを0〜10F遅らせても昇穿まで（${row}）`); }
 for (const sc of [['raw', '地上の相手に'], ['combo', 'しゃがみ弱K＞しゃがみ弱P＞から'], ['aa', '対空で'], ['corner', '画面端で']]) {
   let row = '', n = 0;
-  for (const btn of ['lp', 'hp']) for (const d of [0, 2, 4, 6, 8]) { const r = trialDp(sc[0], d, btn); row += r; if (r === '○') n++; }
-  ok(n === 10, `EX昇穿を${sc[1]}当てたら、着地後の昇穿（弱・強／0〜8F遅れ）がつながる（${row}）`);
+  for (const btn of ['lp', 'mp', 'hp']) for (const d of [0, 1]) { const r = trialDp(sc[0], d, btn); row += r; if (r === '○') n++; }
+  ok(n === 6, `EX昇穿を${sc[1]}当てたら、着地直後の昇穿（弱・中・強／0〜1F遅れ）がつながる（${row}）`);
+  if (sc[0] !== 'aa') { const r = trialDp(sc[0], 6, 'lp'); ok(r === '×', `${sc[1]}のEX昇穿のあと、着地から6F遅れた昇穿は間に合わない（ふわっと浮きすぎない）`); }
 }
 console.log(`\n結果: ${pass} 件成功 / ${fail} 件失敗`);
 process.exit(fail ? 1 : 0);
