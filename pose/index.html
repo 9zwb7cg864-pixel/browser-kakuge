@@ -54,11 +54,14 @@
       <button id="bCopy">もう片方のポーズを写す</button>
       <button id="bFlipLimb">手前と奥の手足を入れ替え</button>
       <button id="bUndo">ひとつ戻す</button>
+      <button id="bPin">📌 固定する関節を選ぶ</button>
+      <button id="bUnpin">固定を全部外す</button>
       <label style="margin:0 0 0 8px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="cGhost" checked>もう片方のポーズを薄く表示</label>
     </div>
     <p class="hint">
       ・<b>腰</b>（ピンクの四角）をドラッグすると体ごと動く／<b>胸</b>で上体を傾ける／<b>頭</b>で首を傾ける<br>
       ・<b>手・足先</b>をドラッグすると、ひじ・ひざが自然に曲がって追いかける／<b>ひじ・ひざ</b>をドラッグすると、腕・脚の付け根から回る<br>
+      ・<b>📌 固定</b>：ボタンを押してから関節をタップすると固定（もう一度タップで外す）。固定した関節は、ほかをドラッグしても動かない（腕・脚は残りの関節が曲がって合わせる）<br>
       ・明るい線が手前（画面側）の手足、暗い線が奥の手足。右にいる青い影が相手（目盛りは自分の腰からの距離）
     </p>
   </div>
@@ -135,6 +138,7 @@
         var S = toScr(q[k]); ctx.globalAlpha = 1;
         ctx.fillStyle = k === 'p' ? '#ff4f8f' : k === 'c' || k === 'h' ? '#ffffff' : /1$/.test(k) ? '#7fd0ff' : '#4a7ea8';
         if (k === 'p') ctx.fillRect(S.x - 8, S.y - 8, 16, 16); else { ctx.beginPath(); ctx.arc(S.x, S.y, k === 'h' ? 7 : 7, 0, 7); ctx.fill(); }
+        if (pins()[k]) { ctx.strokeStyle = '#ffd23c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(S.x, S.y, 13, 0, 7); ctx.stroke(); ctx.fillStyle = '#ffd23c'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('固定', S.x, S.y - 17); }
       }
     }
     ctx.restore();
@@ -164,6 +168,7 @@
     drawFig(r[side], 1, true);
     ctx.fillStyle = side === 'start' ? '#7fd0ff' : '#ffb0cc'; ctx.textAlign = 'left'; ctx.font = 'bold 18px sans-serif';
     ctx.fillText(side === 'start' ? '出し始め' : '出し終わり', 14, 28);
+    if (pinMode) { ctx.fillStyle = '#ffd23c'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('📌 固定する関節をタップ（もう一度押すと終わる）', 140, 28); }
     // 手前の手・足先が腰から前にどれだけ出ているか
     var q = r[side]; var reach = Math.round(Math.max(q.h1.x, q.h2.x, q.f1.x, q.f2.x) - q.p.x);
     ctx.fillStyle = '#9aa0b8'; ctx.font = '13px sans-serif'; ctx.fillText('いちばん前の手足：腰から ' + reach, 14, 50);
@@ -187,7 +192,23 @@
     var e = P(root.x + Math.cos(base) * d, root.y + Math.sin(base) * d);
     return [m, e];
   }
-  var drag = null;
+  var drag = null, pinMode = false;
+  function pins() { var r = rec(cur); if (!r.pins) r.pins = {}; if (!r.pins[side]) r.pins[side] = {}; return r.pins[side]; }
+  // 固定した関節を元の場所に戻す（長さは保ったまま、つながっている骨を回して合わせる）
+  function enforce(q) {
+    var pn = pins(), has = function (k) { return !!pn[k]; };
+    var turn = function (o, k, to, list) { var a = ang(q[o], to) - ang(q[o], q[k]); list.forEach(function (j) { q[j] = rot(q[j], q[o], a); }); };
+    if (has('c')) turn('p', 'c', pn.c, ['c', 'h', 'e1', 'h1', 'e2', 'h2']);
+    if (has('h')) turn('c', 'h', pn.h, ['h']);
+    [['c', 'e1', 'h1'], ['c', 'e2', 'h2'], ['p', 'k1', 'f1'], ['p', 'k2', 'f2']].forEach(function (l) {
+      var r0 = l[0], m = l[1], e = l[2];
+      if (has(m)) turn(r0, m, pn[m], [m, e]);
+      if (has(e)) {
+        if (has(m)) turn(m, e, pn[e], [e]);
+        else { var r = ik(q[r0], q[m], q[e], pn[e], LEN[m], LEN[e]); q[m] = r[0]; q[e] = r[1]; }
+      }
+    });
+  }
   function pick(w) {
     var q = rec(cur)[side], best = null, bd = 20 / SCALE;
     for (var k in q) { var d = Math.hypot(q[k].x - w.x, q[k].y - w.y); if (d < bd) { bd = d; best = k; } }
@@ -211,10 +232,12 @@
   cv.addEventListener('pointerdown', function (e) {
     if (playT >= 0) return;
     var w = ev(e), k = pick(w); if (!k) return;
+    if (pinMode) { var pn = pins(); if (pn[k]) delete pn[k]; else pn[k] = P(rec(cur)[side][k].x, rec(cur)[side][k].y); save(); draw(); return; }
+    if (pins()[k]) { toast('固定している関節（📌で外せる）'); return; }
     undo.push(JSON.stringify(rec(cur)[side])); if (undo.length > 80) undo.shift();
     drag = k; cv.setPointerCapture(e.pointerId); e.preventDefault();
   });
-  cv.addEventListener('pointermove', function (e) { if (!drag) return; apply(drag, ev(e)); rec(cur).edited = true; draw(); });
+  cv.addEventListener('pointermove', function (e) { if (!drag) return; apply(drag, ev(e)); enforce(rec(cur)[side]); rec(cur).edited = true; draw(); });
   var end = function () { if (drag) { drag = null; save(); renderList(); } };
   cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
 
@@ -245,14 +268,16 @@
   $('cGhost').onchange = draw;
   $('memo').oninput = function () { rec(cur).memo = this.value; save(); };
   $('memo').onchange = renderList;
-  $('bReset').onclick = function () { undo.push(JSON.stringify(rec(cur)[side])); rec(cur)[side] = basePose(kindOf(cur)); save(); draw(); };
-  $('bCopy').onclick = function () { undo.push(JSON.stringify(rec(cur)[side])); var r = rec(cur); r[side] = clone(side === 'start' ? r.end : r.start); r.edited = true; save(); draw(); };
+  $('bReset').onclick = function () { undo.push(JSON.stringify(rec(cur)[side])); rec(cur)[side] = basePose(kindOf(cur)); pins(); rec(cur).pins[side] = {}; save(); draw(); };
+  $('bCopy').onclick = function () { undo.push(JSON.stringify(rec(cur)[side])); var r = rec(cur); r[side] = clone(side === 'start' ? r.end : r.start); pins(); r.pins[side] = {}; r.edited = true; save(); draw(); };
   $('bFlipLimb').onclick = function () {
     undo.push(JSON.stringify(rec(cur)[side])); var q = rec(cur)[side];
     [['e1', 'e2'], ['h1', 'h2'], ['k1', 'k2'], ['f1', 'f2']].forEach(function (p) { var t = q[p[0]]; q[p[0]] = q[p[1]]; q[p[1]] = t; });
     rec(cur).edited = true; save(); draw();
   };
   $('bUndo').onclick = function () { if (!undo.length) return toast('戻せるものがない'); rec(cur)[side] = JSON.parse(undo.pop()); save(); draw(); };
+  $('bPin').onclick = function () { pinMode = !pinMode; this.className = pinMode ? 'on' : ''; draw(); };
+  $('bUnpin').onclick = function () { var r = rec(cur); if (r.pins) r.pins[side] = {}; save(); draw(); toast('固定を外した'); };
   var raf = null, t0 = 0;
   $('bPlay').onclick = function () {
     if (playT >= 0) { playT = -1; cancelAnimationFrame(raf); draw(); return; }
