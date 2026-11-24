@@ -246,6 +246,12 @@ var KF = window.KF || (window.KF = {});
         var rm = i1.y > 0 ? (i1.x > 0 ? 'sRight' : i1.x < 0 ? 'oLeft' : 'center') : (i1.x > 0 ? 'oRight' : i1.x < 0 ? 'sLeft' : 'center');
         game.resetTraining(rm); recReset = rm;
       }
+      if (play && !paused) {   // 貼った入力の再生中は、1Pと2Pの入力を差し替える
+        var pf = play.frames[play.i];
+        i1 = playInput(pf, play.prev); play.prev = pf;
+        i2 = playInput({ d: play.stance === 'crouch' ? 2 : 5, b: play.i === 0 && play.opp ? [play.opp] : [] }, null);
+        if (++play.i >= play.frames.length) { play = null; game.noSupRefill = false; recToast = { s: '再生おわり', t: 120 }; }
+      }
       if (cfg.mode === 'training' && !paused) { recordKeys(i1); recInput(i1); }
       if (!paused) game.step([i1, i2]);
       for (; lastEvents < game.events.length; lastEvents++) handleEvent(game.events[lastEvents]);
@@ -317,6 +323,32 @@ var KF = window.KF || (window.KF = {});
     var done = function () { recToast = { s: t.indexOf('KFREC2') === 0 ? '入力をコピーしました（位置リセットから）' : '入力をコピーしました（位置リセットしてからやると正確に再生できます）', t: 180 }; };
     var fall = function () { window.prompt('この文字をコピーして送ってください', t); done(); };
     try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, fall); else fall(); } catch (e) { fall(); }
+  }
+  // 貼った入力（KFREC2）を、位置リセットしたところから1Pの入力として流す（コンボ探しの結果を画面で確かめる用）
+  //   KFREC2|リセットのしかた,1Pのキャラ,2Pのキャラ[,ラッシュの本数,SAの本数,stand/crouch,2Pが振る技]|入力
+  var play = null;
+  function startPlay(t) {
+    var m = /^KFREC2\|([^|]*)\|(.*)$/.exec((t || '').trim());
+    if (!m) { recToast = { s: '貼った文字が KFREC2 の形ではありません', t: 180 }; return; }
+    var h = m[1].split(','), frames = [];
+    if (h[1] !== game.p[0].kind || h[2] !== game.p[1].kind) { recToast = { s: 'キャラが違います（' + h[1] + ' 対 ' + h[2] + ' で記録）', t: 180 }; return; }
+    m[2].split(' ').forEach(function (tok) { var q = /^(\d)([a-z+]*)x(\d+)$/.exec(tok); if (!q) return; for (var k = 0; k < +q[3]; k++) frames.push({ d: +q[1], b: q[2] ? q[2].split('+') : [] }); });
+    game.resetTraining(h[0] || 'center'); recReset = h[0] || 'center';
+    var C = KF.CONST, p0 = game.p[0];
+    if (h[3] !== undefined && h[3] !== '') p0.rush = Math.min(C.RUSH_MAX, +h[3] * C.RUSH_MAX / 6);
+    game.noSupRefill = h[4] !== undefined && h[4] !== '';
+    if (game.noSupRefill) p0.sup = +h[4] * 1000;
+    play = { frames: frames, i: 0, prev: null, stance: h[5] || 'stand', opp: h[6] || '' };
+    paused = false;
+  }
+  function pasteRec() {
+    var fall = function () { var t = window.prompt('KFREC2 の文字を貼り付けてください', ''); if (t) startPlay(t); };
+    try { if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function (t) { if (/^KFREC2/.test((t || '').trim())) startPlay(t); else fall(); }, fall); else fall(); } catch (e) { fall(); }
+  }
+  function playInput(fr, prev) {
+    var X = [0, -1, 0, 1, -1, 0, 1, -1, 0, 1], Y = [0, 1, 1, 1, 0, 0, 0, -1, -1, -1], held = {}, pressed = {};
+    fr.b.forEach(function (k) { held[k] = true; if (!prev || prev.b.indexOf(k) < 0) pressed[k] = true; });
+    return { x: X[fr.d], y: Y[fr.d], held: held, pressed: pressed };
   }
   function drawKeyDisplay(y0) {
     var c = R.ctx, rowH = 15, h = KEY_ROWS * rowH + 6;
@@ -577,10 +609,10 @@ var KF = window.KF || (window.KF = {});
   }
 
   var PAUSE_BASE = ['再開', '技表', '当たり判定 表示切替', 'やり直す', 'タイトルへ'];
-  var PAUSE_TR = ['位置リセット：中央', '位置リセット：相手を画面端へ', '位置リセット：自分が画面端', 'キーディス 表示切替', 'スピード', '入力をコピー（最後のコンボ）'];
+  var PAUSE_TR = ['位置リセット：中央', '位置リセット：相手を画面端へ', '位置リセット：自分が画面端', 'キーディス 表示切替', 'スピード', '入力をコピー（最後のコンボ）', '入力を貼って再生'];
   var PAUSE_ITEMS = PAUSE_BASE;
   function drawPause() {
-    PAUSE_ITEMS = cfg.mode === 'training' ? [PAUSE_BASE[0]].concat(PAUSE_TR.slice(0, 4), [trSpeedLabel(), PAUSE_TR[5]], PAUSE_BASE.slice(1)) : PAUSE_BASE;
+    PAUSE_ITEMS = cfg.mode === 'training' ? [PAUSE_BASE[0]].concat(PAUSE_TR.slice(0, 4), [trSpeedLabel(), PAUSE_TR[5], PAUSE_TR[6]], PAUSE_BASE.slice(1)) : PAUSE_BASE;
     var c = R.ctx;
     c.fillStyle = 'rgba(0,0,10,0.7)'; c.fillRect(0, 0, 640, 360);
     R.text('PAUSE', 320, 70, 28, '#ffffff', 'center', '#7a5cff');
@@ -601,7 +633,8 @@ var KF = window.KF || (window.KF = {});
       else if (it === PAUSE_TR[2]) { game.resetTraining('sLeft'); recReset = 'sLeft'; paused = false; }
       else if (it === PAUSE_TR[3]) { toggleKeyDisp(); paused = false; }
       else if (it.indexOf('スピード') === 0) { cycleTrSpeed(); }
-      else if (it === PAUSE_TR[5]) { copyRec(); }   // メニューは開いたまま（何度か押して選ぶ）
+      else if (it === PAUSE_TR[5]) { copyRec(); }
+      else if (it === PAUSE_TR[6]) { pasteRec(); }   // メニューは開いたまま（何度か押して選ぶ）
       else { KF.Touch && KF.Touch.show(false); scene = 'title'; }
     }
   }

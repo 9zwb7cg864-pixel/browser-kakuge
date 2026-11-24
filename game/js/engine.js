@@ -280,7 +280,7 @@ var KF = window.KF || (window.KF = {});
       if (f.hpTrail < f.hp) f.hpTrail = f.hp;
       if (this.training && f.combo === 0 && f.actionable() && f.hp < f.D.hp) { f.hp = f.D.hp; f.hpShown = f.hp; f.hpTrail = f.hp; }
       if (this.training) {
-        f.sup = C.SUPER_MAX;
+        if (!this.noSupRefill || f.side === 1) f.sup = C.SUPER_MAX;   // コンボ探しの再生でSAの本数を決めたときは回復させない
         // 当たらずに終わった（ガード・空振り）ときも、動ける状態が少し続いたらラッシュゲージを戻す
         if (f.actionable() && f.opp.combo === 0 && f.opp.actionable()) { f.trIdle = (f.trIdle || 0) + 1; if (f.trIdle > 40 && f.rush < C.RUSH_MAX) { f.rush = C.RUSH_MAX; f.rushCD = 0; f.emptyT = 0; f.rushEmpty = false; } }
         else f.trIdle = 0;
