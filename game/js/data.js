@@ -56,7 +56,7 @@ KF.CHARS = {
       throw: { anim: 'throw', type: 't', dmg: 1200, doAnim: 'throw_do' },
       // 必殺技
       fire: { anim: 'sp_fire', type: 's', name: '虚環弾', dmg: 600, adv: [2, -4], hs: 10, push: [6, 6], lv: 'm', chip: 0.125,
-              proj: { fx: 'ball_k', spd: [3.6, 4.8, 6.0], life: 160, hits: 1, r: 14 }, meter: 40, cancel: 'u',
+              proj: { fx: 'ball_k', spd: [3.6, 4.8, 7.2], life: 160, hits: 1, r: 14 }, meter: 40, cancel: 'u',
               lvy: -3.5, lvx: 0.5, floatG: 0.35 },   // 浮いた相手に当たると、近くにふわっと浮かせ直す。当たったらラッシュでキャンセルできる
       // EX虚環弾：ゆっくり飛ぶ。1発目で相手を少し浮かせて後ろへ飛ばし、弾は少し止まってから追いかけて、飛んだ先で2発目が当たる
       fire_ex: { anim: 'ex_fire', type: 'x', name: 'EX虚環弾', dmg: 450, adv: [6, 0], hs: 10, push: [6, 6], lv: 'm', chip: 0.125,
