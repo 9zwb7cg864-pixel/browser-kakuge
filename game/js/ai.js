@@ -57,10 +57,12 @@ KF.AI.prototype.output = function () { return this.out; };
 KF.AI.prototype.update = function () {
   var m = this.me(), o = m.opp, L = this.L, b = this.b;
   this.remember();
+  if (this.level === 'EXPERT') this.learnWatch();
   if (this.planJob) { if (this.q.length || !m.actionable()) { this.planJob = null; this.hold = null; } else this.planStep(); }
   var s = this.observe();
   var dist = Math.abs(s.x - m.x);
   var self = this;
+  if (b.phase === 'over' && this.learn && !this.learnSaved) { this.learnSave(); this.learnSaved = true; }
   if (b.phase !== 'fight' || b.freeze > 0) { this.out = { x: 0, y: 0, held: {} }; if (b.phase !== 'fight') this.clear(); return; }
 
   // 投げられた → 投げ抜け（受付時間内に判断できた場合）
@@ -328,16 +330,61 @@ KF.AI.prototype.planCandidates = function (m) {
   return C;
 };
 // 相手の動き方の見本（相手から見た前後）
-KF.AI.prototype.oppModels = function (n) {
-  var M = [
-    { name: 'idle', w: 0.24, f: function () { return [5, '']; } },
-    { name: 'block', w: 0.18, f: function () { return [4, '']; } },
-    { name: 'walk', w: 0.18, f: function () { return [6, '']; } },
-    { name: 'poke', w: 0.16, f: function (t) { return t >= 3 && t < 5 ? [2, 'mk'] : [2, '']; } },
-    { name: 'jump', w: 0.12, f: function (t) { return t < 2 ? [9, ''] : t >= 15 && t < 17 ? [5, 'hk'] : [5, '']; } },
-    { name: 'dp', w: 0.12, f: function (t) { return t === 3 ? [6, ''] : t === 4 ? [2, ''] : t === 5 || t === 6 ? [3, 'hp'] : [5, '']; } },
-  ];
+// 相手の動き方の見本（相手から見た前後）。w は覚える前の起こりやすさ
+KF.AI_OPP_MODELS = [
+  { name: 'idle', w: 0.22, f: function () { return [5, '']; } },
+  { name: 'block', w: 0.18, f: function () { return [4, '']; } },
+  { name: 'walk', w: 0.16, f: function () { return [6, '']; } },
+  { name: 'poke', w: 0.15, f: function (t) { return t >= 3 && t < 5 ? [2, 'mk'] : [2, '']; } },
+  { name: 'jump', w: 0.11, f: function (t) { return t < 2 ? [9, ''] : t >= 15 && t < 17 ? [5, 'hk'] : [5, '']; } },
+  { name: 'dp', w: 0.08, f: function (t) { return t === 3 ? [6, ''] : t === 4 ? [2, ''] : t === 5 || t === 6 ? [3, 'hp'] : [5, '']; } },
+  { name: 'fire', w: 0.06, f: function (t) { return t === 3 ? [2, ''] : t === 4 ? [3, ''] : t === 5 || t === 6 ? [6, 'mp'] : [5, '']; } },
+  { name: 'throw', w: 0.04, f: function (t) { return t < 3 ? [6, ''] : t === 3 || t === 4 ? [5, 'lp,lk'] : [5, '']; } },
+];
+// 覚えたクセで重みを決め、起こりやすい順に n 通り使う（間合いごと）
+KF.AI.prototype.oppModels = function (n, dist) {
+  var ctx = this.learnCtx(dist, 'n'), cnt = this.learn && this.learn[ctx], PRIOR = 6;
+  var M = KF.AI_OPP_MODELS.map(function (m) {
+    var c = cnt ? (cnt[m.name] || 0) : 0, tot = cnt ? cnt._t || 0 : 0;
+    return { name: m.name, f: m.f, w: (m.w * PRIOR + c) / (PRIOR + tot) };
+  });
+  M.sort(function (a, b) { return b.w - a.w; });
   return M.slice(0, n);
+};
+// ---- 相手のクセを覚える：間合い（近・中・遠）× 状況（立ち回り n／起き上がり w）ごとに、相手がやった行動を数える
+KF.AI.prototype.learnCtx = function (dist, sit) { return sit + (dist < 110 ? 'N' : dist < 210 ? 'M' : 'F'); };
+KF.AI.prototype.learnLoad = function () {
+  var o = this.me().opp; this.learnKey = 'kf_ai_learn_' + o.kind;
+  try { this.learn = JSON.parse(localStorage.getItem(this.learnKey) || 'null') || {}; } catch (e) { this.learn = {}; }
+};
+KF.AI.prototype.learnSave = function () { try { if (this.learnKey) localStorage.setItem(this.learnKey, JSON.stringify(this.learn)); } catch (e) { } };
+KF.AI.prototype.learnAdd = function (ctx, what) {
+  var t = this.learn[ctx] || (this.learn[ctx] = { _t: 0 });
+  // 古いことは少しずつ忘れる（最近のクセほど強く効く）
+  if (t._t > 80) { for (var k in t) t[k] *= 0.97; }
+  t[what] = (t[what] || 0) + 1; t._t += 1;
+};
+KF.AI.prototype.learnWatch = function () {
+  if (!this.learn) this.learnLoad();
+  var m = this.me(), o = m.opp, b = this.b, dist = Math.abs(o.x - m.x);
+  var st = this.lw || (this.lw = { ser: o.moveSerial || 0, t: 0, prevState: o.state });
+  // 起き上がりに何をしたか（起き上がって最初の行動）
+  if ((st.prevState === 'getup') && o.state !== 'getup') st.wake = b.frameNo;
+  var sit = st.wake && b.frameNo - st.wake < 20 ? 'w' : 'n';
+  var ctx = this.learnCtx(dist, sit), what = null;
+  if ((o.moveSerial || 0) !== st.ser && o.state === 'attack') {   // 技を出した
+    var id = o.moveId || '';
+    what = /^dp/.test(id) ? 'dp' : /^fire/.test(id) ? 'fire' : id === 'throw' ? 'throw' : o.air || /^j_/.test(id) ? 'jump' : 'poke';
+    st.ser = o.moveSerial;
+  } else if (o.state === 'prejump' && st.prevState !== 'prejump') what = 'jump';
+  else if (++st.t >= 8 && o.actionable() && sit === 'n') {   // 何もしていないときの様子（8Fごと）
+    st.t = 0;
+    var bx = o.buf.cur ? o.buf.cur() : null, dir = bx ? bx.dir : 5;
+    what = dir === 4 || dir === 1 || o.state === 'walk_b' ? 'block' : dir === 6 || o.state === 'walk_f' ? 'walk' : 'idle';
+  }
+  if (what) { this.learnAdd(ctx, what); if (sit === 'w') st.wake = 0; }
+  st.prevState = o.state;
+  if (b.frameNo % 600 === 0) this.learnSave();
 };
 function dirIn(d, btn, facing, prevHeld) {
   var rx = ((d - 1) % 3) - 1, ry = d >= 7 ? -1 : (d <= 3 ? 1 : 0), held = {};
@@ -384,7 +431,7 @@ KF.AI.prototype.planStart = function () {
     return true;
   });
   this.hold = { x: -1, y: 0 };   // 考えている間はガードを固めておく
-  this.planJob = { now: now, cands: cands, models: this.oppModels(P.models), i: 0, j: 0, acc: cands.map(function () { return { tot: 0, w: 0, worst: 1e9 }; }) };
+  this.planJob = { now: now, cands: cands, models: this.oppModels(P.models, dist), i: 0, j: 0, acc: cands.map(function () { return { tot: 0, w: 0, worst: 1e9 }; }) };
   return true;
 };
 KF.AI.prototype.planStep = function () {
@@ -425,6 +472,10 @@ KF.AI.prototype.decide = function (s, dist) {
   if (s.state === 'down' || s.state === 'getup') {
     // 起き攻め：近づいて重ねる / 2Pは投げ
     if (dist > 70) { this.push(6, '', 8); return; }
+    // 起き上がりに昇穿をよく出す相手には、重ねずにガードして、空振りを反撃する（覚えたクセ）
+    var wk = this.learn && this.learn[this.learnCtx(dist, 'w')];
+    if (wk && wk._t >= 3 && (wk.dp || 0) / wk._t > 0.3 && r < 0.8) { this.push(1, '', 30); return; }
+    if (wk && wk._t >= 3 && ((wk.block || 0) + (wk.idle || 0)) / wk._t > 0.6 && r < 0.5) { this.push(5, 'lp,lk', 1); return; }   // 固まる相手には投げ
     if (!K && r < 0.3 * L.spacing) { this.push(5, 'lp,lk', 1); return; }
     this.starter('lk', L.combo >= 2 ? (K ? [[2, 1, 4], 'lk'] : [[2, 1, 4], 'lk']) : null, true, true);
     if (K && L.combo >= 2) this.jug = { until: this.b.frameNo + 100 };
