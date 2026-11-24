@@ -91,8 +91,8 @@ KF.CHARS = {
       // EX虚掌破：発生7F。弱・中・強どの通常技からでもつながる
       palm_ex: { anim: 'ex_palm', type: 'x', name: 'EX虚掌破', dmg: 1000, adv: [0, -4], hs: 13, push: [2, 6], lv: 'm', chip: 0.125,
               kd: 'launch', lvy: -8, lvx: 0.6, jset: 0, jlim: 0, cancel: 'u', floatG: 0.22, dashS: 5.5 },   // 前に踏み込みながら打つ。ふわっと浮かせて、ジャンプで追いかけて拾える
-      su3: { anim: 'su_3', type: 'u', bars: 3, name: '天地穿', dmg: 600, hits: 7, rehit: 5, hs: 6, push: [0.3, 2], lv: 'm', chip: 0.25,
-             inv: [[1, 44]], lock: 1, lockAir: 1, dashS: 7, jump: { vx: [0.8], vy: [-10] }, kdLast: 'launch', lvy: -12, lvx: 2.5, lastDmg: 1800, minScale: 0.7 },
+      su3: { anim: 'su_3', type: 'u', bars: 3, name: '天地穿', dmg: 570, hits: 7, rehit: 5, hs: 6, push: [0.3, 2], lv: 'm', chip: 0.25,
+             inv: [[1, 44]], lock: 1, lockAir: 1, dashS: 7, jump: { vx: [0.8], vy: [-10] }, kdLast: 'launch', lvy: -12, lvx: 2.5, lastDmg: 1724, minScale: 0.7 },
       su1: { anim: 'su_1', type: 'u', bars: 1, name: '虚空砲', dmg: 620, hits: 5, rehit: 8, hs: 6, push: [1.5, 2], lv: 'm', chip: 0.25,
              inv: [[1, 14]], beam: { fx: 'beam_k', head: 'beamhead_k', len: 600, h: 34 }, kdLast: 'launch', lvy: -8, lvx: 4, minScale: 0.7 },
       su2: { anim: 'su_2', type: 'u', bars: 2, name: '零界継承', dmg: 390, hits: 9, rehit: 6, hs: 6, push: [0.5, 4], lv: 'm', chip: 0.25,
