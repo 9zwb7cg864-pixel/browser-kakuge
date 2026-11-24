@@ -1195,7 +1195,7 @@ var KF = window.KF || (window.KF = {});
         if (p.mv.needMech) {
           var ow = p.owner;
           if (!p.boost && ow.state === 'attack' && ow.move && ow.move.anim === 'sp_shock' && ow.phase() === 'a' && Math.abs(p.x - (ow.x + ow.facing * 75)) < 35 + p.r) {
-            p.boost = true; p.hopT = 0; p.vx = p.mvx; p.life = 160; p.fx = p.mv.proj.fxBoost || p.fx;   // 起動：電気をまとったメカになって進み出す
+            p.boost = true; p.hopT = 0; p.vx = p.mvx; p.life = 240; p.fx = p.mv.proj.fxBoost || p.fx;   // 起動：電気をまとったメカになって進み出す
             self.spawnFx('hit_w', p.x, p.y, 0.8); self.emit('sfx', { s: 'fire' });
           }
           if (p.boost) {
@@ -1315,6 +1315,7 @@ var KF = window.KF || (window.KF = {});
       if (ov) {
         p.lastHit = p.t; p.hits--;
         self.onHit(p.owner, o, p.mv, ov, p);
+        if (p.mv.needMech) self.spawnFx('mv_elec', o.x, o.y - 80, 0.8);   // メカが当たったら相手の体にビリビリ
         if (p.mv.proj && p.mv.proj.stop && o.state === 'launch') { p.stop = p.mv.proj.stop; p.lead = p.mv.proj.lead || p.r; p.chase = true; p.ahead = false; }   // 浮かせたときだけ、止まってから追いかける
         if (p.owner.state === 'attack' && p.owner.move === p.mv) p.owner.projHit = true;
         if (p.kind === 'ball' && p.hits <= 0) p.alive = false;

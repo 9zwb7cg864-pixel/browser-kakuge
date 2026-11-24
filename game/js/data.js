@@ -198,8 +198,9 @@ KF.CHARS.yui.moves = Object.assign({}, KF.CHARS.kokuu.moves, {
 delete KF.CHARS.yui.moves.fire; delete KF.CHARS.yui.moves.fire_ex;
 // メカ：↓↓+P で体の前にメカを置く（メカを1つ使う。もう出ているときは出せない）。置いただけでは動かず攻撃もしない。
 //  電撃の範囲に入ると起動して、電気をまといながら跳ねて進む（跳んでいる間は中段、地面近くは下段）
-KF.CHARS.yui.moves.mech = { anim: 'sp_mech', type: 's', name: 'メカ', dmg: 700, hs: 12, push: [2, 4], lv: 'l', chip: 0.125, needMech: 1, cancel: 'u', meter: 40,
-  proj: { fx: 'mech_idle', fxBoost: 'mech_elec', spd: [3.4, 3.4, 3.4], place: [55, 75, 95], life: 600, hits: 1, r: 18, ground: 1 } };   // 置く位置は弱・中・強で前へ。置いて10秒たつと消える
+KF.CHARS.yui.moves.mech = { anim: 'sp_mech', type: 's', name: 'メカ', dmg: 700, hs: 28,   // 当たると長いヒットストップでビリビリ
+  push: [2, 4], lv: 'l', chip: 0.125, needMech: 1, cancel: 'u', meter: 40,
+  proj: { fx: 'mech_idle', fxBoost: 'mech_elec', spd: [2.2, 2.2, 2.2], place: [55, 75, 95], life: 600, hits: 99, rehit: 40, r: 18, ground: 1 } };   // 当たっても消えない（40Fたつとまた当たる）   // 置く位置は弱・中・強で前へ。置いて10秒たつと消える
 // メカ補充：↓↙←+K でメカを1つ補充（最大3）。空中の ↓↙←+K は今までどおり空旋脚
 KF.CHARS.yui.moves.reload = { anim: 'sp_reload', type: 's', name: 'メカ補充', addMech: 1, mechMax: 3, meter: 20 };
 delete KF.CHARS.yui.moves.tatsu;
