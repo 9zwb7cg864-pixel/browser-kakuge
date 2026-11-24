@@ -93,6 +93,7 @@ var KF = window.KF || (window.KF = {});
   }
   KF.Fighter = Fighter;
   Fighter.prototype.reset = function (x) {
+    this.mech = 0;   // ユイのメカの数（↓↙←+K で補充、最大3）
     this.x = x; this.y = C.GROUND; this.vx = 0; this.vy = 0; this.pushV = 0;
     this.facing = this.side === 0 ? 1 : -1;
     this.hp = this.D.hp; this.hpShown = this.hp; this.hpTrail = this.hp;
@@ -578,15 +579,15 @@ var KF = window.KF || (window.KF = {});
       h: [{ b: 'hp' }, { sp: 'palm', str: 0 }, { sp: 'fire', str: 0 }, { sp: 'dp', str: 2 }, { su: 'su3' }],   // 虚掌破で浮かせて虚環弾で拾い、強昇穿 ＞ 天地穿（波動からのラッシュキャンセルは無し）
     },
     yui: {   // ユイには虚掌破・虚環弾が無いので、強は 強P ＞ 電撃 ＞ 超必殺
-      l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'tatsu', str: 0 }, { sp: 'dp', str: 2 }, { su: 'su3' }],
-      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'tatsu', str: 1 }, { sp: 'dp', str: 2 }, { su: 'su3' }],
+      l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'dp', str: 2 }, { su: 'su3' }],
+      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'dp', str: 2 }, { su: 'su3' }],
       h: [{ b: 'hp' }, { sp: 'shock', str: 0 }, { su: 'su1' }],
     },
   };
   //  SPの方向ごとの技（なし・前・下・後ろ・空中）。変身キャラ男は ↓↓+SP で変身
   KF.MODERN_SP = {
     kokuu: { n: 'fire', f: 'dp', d: 'tatsu', b: 'palm', air: 'atatsu' },
-    yui: { n: 'net', f: 'dp', d: 'tatsu', b: 'shock', air: 'atatsu' },   // ユイ：SP＝網、←SP＝電撃
+    yui: { n: 'net', f: 'dp', d: 'mech', b: 'shock', air: 'atatsu' },   // ユイ：SP＝網、←SP＝電撃、↓SP＝メカ
   };
   Battle.prototype.modernConvert = function (f, raw) {
     var H = raw.held || {}, Pp = raw.pressed || {};
@@ -677,6 +678,7 @@ var KF = window.KF || (window.KF = {});
       else for (var k = 0; k < 3; k++) if (f.buf.pressedWithin(set[k], pw)) { nPressed++; if (!pressed || k > set.indexOf(pressed)) pressed = set[k]; }
       if (!pressed) continue;
       var mv = f.D.moves[c.move];
+      if (mv && mv.needMech && (!(f.mech > 0) || this.projs.some(function (p) { return p.owner === f && p.kind === 'ball'; }))) continue;   // メカが無い・もう出ているときは出せない
       if (!!c.air !== (cancelLevel === 'air')) continue;
       // キャンセル元を限る技（虚掌破は強Pで出す技からだけ）。EXで出すときは限らない
       var willEx = nPressed >= 2 && f.D.moves[c.move + '_ex'] && f.rush > 0;
@@ -835,13 +837,14 @@ var KF = window.KF || (window.KF = {});
       var s2 = Math.min(f.str, mv.dash.vx.length - 1);
       if (ph === 'a') {
         if (!f.liftoff && mv.dash.vy) { f.liftoff = true; f.air = true; f.vy = mv.dash.vy; f.moveG = mv.dash.g || 0; }   // g：この技の間だけの重さ（低く長く飛ぶ）
-        f.vx = mv.dash.vx[s2] * f.facing;
+        f.vx = mv.stopOnHit && f.connected ? f.vx * 0.7 : mv.dash.vx[s2] * f.facing;   // セグウェイはぶつかったら止まる
       } else if (ph === 'r' && !f.air) f.vx *= 0.8;
     }
     if (mv.stall && f.air && ph !== 'r') { f.vy = Math.min(f.vy, 0.4); f.vx = mv.stall[Math.min(f.str, mv.stall.length - 1)] * f.facing; }
     if (mv.dive && ph === 'a' && !f.liftoff) { f.liftoff = true; f.vx = mv.dive.vx * f.facing; f.vy = mv.dive.vy; }
     if (mv.follow && this.tryFollow(f)) return;
     if (mv.dashS && ph === 's' && t > a.firstActive - 12) f.vx = mv.dashS * f.facing;
+    if (mv.dashS && mv.type === 'g' && ph !== 's') f.vx *= 0.6;   // 踏み込むコマンド投げは、空振ったらすぐ止まる
     if (mv.dashS && ph === 'a' && f.hitCount === 0) f.vx = mv.dashS * 0.6 * f.facing;
     if (mv.dashS && f.hitCount > 0) f.vx = 0.4 * f.facing;
     if (!mv.jump && !mv.dash && !mv.dashS && !f.air && !mv.air) f.vx *= f.rushBonus ? 0.9 : 0.82;   // ラッシュから出した技はゆっくり減速
@@ -849,6 +852,8 @@ var KF = window.KF || (window.KF = {});
     if (ph === 'a' && !f.spawned) {
       f.spawned = true;
       if (mv.proj) this.spawnProj(f, mv);
+      if (mv.needMech) f.mech = Math.max(0, (f.mech || 0) - 1);
+      if (mv.addMech) { f.mech = Math.min(mv.mechMax || 3, (f.mech || 0) + mv.addMech); this.emit('sfx', { s: 'fire' }); }
       if (mv.beam) this.spawnBeam(f, mv);
       if (mv.pillar) this.spawnPillar(f, mv);
       if (mv.type === 't' || mv.type === 'g' || mv.type === 'gu') { }
@@ -969,7 +974,7 @@ var KF = window.KF || (window.KF = {});
       var f = q[0];
       f.x = q[1]; f.y = C.GROUND; f.vx = 0; f.vy = 0; f.air = false; f.pushV = 0;
       f.state = 'idle'; f.setAnim('idle'); f.move = null; f.moveId = null; f.t = 0;
-      f.hs = 0; f.stun = 0; f.inv = 0; f.thInv = 0; f.projInv = 0; f.aaInv = 0; f.preD = 0; f.thrower = null; f.grabbed = null; f.netHidden = false;
+      f.hs = 0; f.stun = 0; f.inv = 0; f.thInv = 0; f.projInv = 0; f.aaInv = 0; f.preD = 0; f.thrower = null; f.grabbed = null; f.netHidden = false; f.wallSplat = 0;
       f.hp = f.D.hp; f.hpShown = f.hp; f.hpTrail = f.hp; f.rush = C.RUSH_MAX; f.rushCD = 0; f.emptyT = 0; f.rushEmpty = false; f.sup = C.SUPER_MAX;
       f.combo = 0; f.comboDmg = 0; f.scale = 1; f.addSc = 1; f.juggle = 0; f.rushLock = false; f.chain = 0; f.chainUsed = {};
       f.pendingBtn = null; f.pendingT = 0; f.pendingRush = 0; f.buf.hist.length = 0;
@@ -1051,8 +1056,9 @@ var KF = window.KF || (window.KF = {});
         f.netOut = true; o.netHidden = false;
         var dmg = Array.isArray(mv.dmg) ? mv.dmg[0] : mv.dmg, s = f.facing;
         this.applyDamage(f, o, dmg, mv, true);
-        var V = { f: [s * 7, -6], b: [-s * 7, -6], u: [s * 0.8, -13], d: [s * 2.5, 7] }[f.netDir];
-        o.state = 'launch'; o.air = true; o.vx = V[0]; o.vy = V[1]; o.setAnim('launch'); o.aF = 4; o.thrower = null; o.juggle = 99;
+        var V = { f: [s * 7, -6], b: [-s * 7, -6], u: [s * 0.8, -13], d: [s * 2.5, 7] }[f.netDir], far = N.far || 1;
+        o.state = 'launch'; o.air = true; o.vx = V[0] * (f.netDir === 'f' || f.netDir === 'b' ? far : 1); o.vy = V[1]; o.setAnim('launch'); o.aF = 4; o.thrower = null; o.juggle = 99;
+        if (N.splat) { o.wallSplat = 1; o.juggle = 0; }   // EX：遠くへ投げて壁に張り付く（そこから追撃できる）
         o.facing = f.netDir === 'b' ? s : -s;
         f.hs = o.hs = 12; this.shake = 8;
         this.spawnFx('hit_' + f.D.fx, o.x, o.y - 40, 1.3);
@@ -1183,6 +1189,20 @@ var KF = window.KF || (window.KF = {});
           else if ((o.x - p.x) * dir > p.lead || o.x <= lm[0] + 1 || o.x >= lm[1] - 1) p.ahead = true;   // 画面端なら飛んでいけないので、そのまま追いつく
         }
         if (p.stop > 0 || (p.chase && !p.ahead)) { if (p.stop > 0) p.stop--; return; }
+        // ユイのメカ：電撃の範囲に入ると起動して、ぴょんぴょん跳ねながら進む（跳んでいる間は中段）
+        if (p.mv.needMech) {
+          var ow = p.owner;
+          if (!p.boost && ow.state === 'attack' && ow.move && ow.move.anim === 'sp_shock' && ow.phase() === 'a' && Math.abs(p.x - (ow.x + ow.facing * 75)) < 35 + p.r) {
+            p.boost = true; p.hopT = 0; p.vx *= 1.25; p.life = Math.max(p.life, 160); p.fx = p.mv.proj.fxBoost || p.fx;   // 絵を電気をまとったメカに
+            self.spawnFx('hit_w', p.x, p.y, 0.8); self.emit('sfx', { s: 'fire' });
+          }
+          if (p.boost) {
+            var HL = 26, HH = 80;   // 1回の跳びは26F、高さはユイの腰くらい
+            p.hopT++;
+            var hh = HH * Math.abs(Math.sin(Math.PI * p.hopT / HL));
+            p.y = C.GROUND - 16 - hh; p.lvOver = hh > 18 ? 'o' : null;
+          }
+        }
         var cs = p.chase && p.mv.proj.chaseSpd;   // 追いかけるときは少し速く
         p.x += cs ? (p.vx > 0 ? cs : -cs) : p.vx; p.life--;
         if (p.vy) { p.y += p.vy; if (p.y >= C.GROUND - p.r * 0.5) p.alive = false; }   // 斜めに飛ぶ弾（斬空）は地面で消える
@@ -1334,10 +1354,11 @@ var KF = window.KF || (window.KF = {});
   };
 
   Battle.prototype.onHit = function (att, def, mv, ov, proj) {
+    if (!proj && mv.stopOnHit) att.vx = att.facing * 0.4;   // セグウェイ：ぶつかったら止まる
     var box = ov[0], hb = ov[1];
     var cx = (Math.max(box[0], hb[0]) + Math.min(box[0] + box[2], hb[0] + hb[2])) / 2;
     var cy = (Math.max(box[1], hb[1]) + Math.min(box[1] + box[3], hb[1] + hb[3])) / 2;
-    var blocked = this.canBlock(def, mv);
+    var blocked = this.canBlock(def, proj && proj.lvOver ? Object.assign({}, mv, { lv: proj.lvOver }) : mv);   // 跳ねているメカは中段
     var str = att.str || 0;
     var baseDmg = Array.isArray(mv.dmg) ? mv.dmg[Math.min(str, mv.dmg.length - 1)] : mv.dmg;
     // 根本ヒット（昇穿：弱・中は持続1〜2F目、強は1F目）。それ以外の当たり方は個別ダメージになり、SAでキャンセルできない（スト6と同じ）
@@ -1548,6 +1569,11 @@ var KF = window.KF || (window.KF = {});
     // 最大間隔（画面内に収める）
     var self0 = this;
     [a, b].forEach(function (f) {
+      if (f.state === 'launch' && f.wallSplat && (f.x <= lim[0] + 0.5 || f.x >= lim[1] - 0.5)) {   // 壁に張り付く（ビターン）→ 少し止まってから落ちる
+        f.wallSplat = 0; f.wallUsed = 1; f.vx = 0; f.vy = 0; f.hs = 18; f.floatG = 0.5;
+        self0.emit('sfx', { s: 'heavy' }); self0.spawnFx('dust', f.x, f.y - 40, 1.6); self0.shake = 10;
+        self0.emit('announce', { text: 'WALL SPLAT', small: 1 });
+      }
       if (f.state === 'launch' && f.wallB && (f.x <= lim[0] + 0.5 || f.x >= lim[1] - 0.5)) {   // 壁跳ね
         f.wallB = 0; f.wallUsed = 1; f.vx = -f.vx * 0.3; f.vy = Math.min(f.vy, -8.6); f.floatG = 0.42;
         self0.emit('sfx', { s: 'heavy' }); self0.spawnFx('dust', f.x, f.y - 40, 1.4); self0.shake = 7;

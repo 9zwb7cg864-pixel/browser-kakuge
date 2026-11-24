@@ -86,6 +86,11 @@ def new_anims():
     A['sp_net'] = [fr('s') for _ in range(8)] + [fr('a') for _ in range(6)] + [fr('r') for _ in range(28)]
     A['net_hold'] = [fr('-') for _ in range(24)]
     A['net_throw'] = [fr('-') for _ in range(30)]
+    # メカ：発生14Fでメカを放す（そこから這っていく）・全体40F。メカ補充：12Fで1つ増える・全体40F
+    A['sp_mech'] = [fr('s') for _ in range(14)] + [fr('a') for _ in range(2)] + [fr('r') for _ in range(14)]
+    A['sp_reload'] = [fr('s') for _ in range(12)] + [fr('a') for _ in range(2)] + [fr('r') for _ in range(26)]
+    # セグウェイ：8Fで乗って走り出し、走っている18Fだけ体の前に当たり判定（ぶつかる瞬間）、20Fで止まって降りる
+    A['sp_segway'] = [fr('s') for _ in range(8)] + [fr('a', [[22, -110, 36, 110]]) for _ in range(18)] + [fr('r') for _ in range(20)]
     for n, frs in A.items():
         meta['anims'][n] = {'file': 'yui_' + n + '.png', 'loop': False, 'frames': frs}
 new_anims()

@@ -196,19 +196,44 @@ KF.CHARS.yui.moves = Object.assign({}, KF.CHARS.kokuu.moves, {
          net: { box: [10, -250, 110, 170], at: [70, -190], hold: 'net_hold', throwAnim: 'net_throw', wait: 18, relF: 5 } }
 });
 delete KF.CHARS.yui.moves.fire; delete KF.CHARS.yui.moves.fire_ex;
+// メカ：↓↓+P で地面を這うメカを出す（メカを1つ使う。もう出ているときは出せない）。下段。弱中強で進む速さが違う
+KF.CHARS.yui.moves.mech = { anim: 'sp_mech', type: 's', name: 'メカ', dmg: 700, hs: 12, push: [2, 4], lv: 'l', chip: 0.125, needMech: 1, cancel: 'u', meter: 40,
+  proj: { fx: 'mech_walk', fxBoost: 'mech_elec', spd: [1.4, 2.4, 3.4], life: 220, hits: 1, r: 18, ground: 1 } };
+// メカ補充：↓↙←+K でメカを1つ補充（最大3）。空中の ↓↙←+K は今までどおり空旋脚
+KF.CHARS.yui.moves.reload = { anim: 'sp_reload', type: 's', name: 'メカ補充', addMech: 1, mechMax: 3, meter: 20 };
+delete KF.CHARS.yui.moves.tatsu;
+// セグウェイ：↓↘→+K。まあまあ速く突っ込む1段技。ぶつかった瞬間だけ当たり、相手は斜め前へ飛ぶ。弱中強で進む距離が違う
+KF.CHARS.yui.moves.segway = { anim: 'sp_segway', type: 's', name: 'セグウェイ', dmg: 1000, adv: ['kd', -12], hs: 12, push: [2, 4], lv: 'm', chip: 0.125,
+  kd: 'launch', lvx: 5.5, lvy: -6.5, jlim: 0, hits: 1, stopOnHit: 1, dash: { vx: [6.5, 7.5, 8.5], vy: 0 }, cancel: 'u', meter: 40 };
+delete KF.CHARS.yui.moves.rushk; delete KF.CHARS.yui.moves.rushk_ex;
+// ---- ユイのEX（ボタン2つ）
+var YM = KF.CHARS.yui.moves;
+// EXセグウェイ：攻撃を1発だけ耐えるアーマー（出始めから走り終わりまで）。少し速い
+YM.segway_ex = Object.assign({}, YM.segway, { type: 'x', name: 'EXセグウェイ', dmg: 1200, armor: [[1, 26]], armorHits: 1, dash: { vx: [8.5], vy: 0 } });
+// EX電撃：相手を真上にかち上げる。捕獲網につながる
+YM.shock_ex = Object.assign({}, YM.shock, { type: 'x', name: 'EX電撃', dmg: 900, kd: 'launch', lvy: -10, lvx: 0.4, floatG: 0.4, adv: ['kd', -4] });
+// EX捕獲網：前・後ろに投げる距離が長く、画面端の壁に張り付く（そこから追撃できる）
+YM.net_ex = Object.assign({}, YM.net, { type: 'x', name: 'EX捕獲網', dmg: 1600, net: Object.assign({}, YM.net.net, { far: 1.9, splat: 1 }) });
+// EXメカ補充：2つ補充
+YM.reload_ex = Object.assign({}, YM.reload, { type: 'x', name: 'EXメカ補充', addMech: 2 });
+// EXパワーグラブ：出始めに少し前へ踏み込んでからつかむ（普通より遠くの相手もつかめる）
+YM.glove_ex = Object.assign({}, YM.glove, { name: 'EXパワーグラブ', dmg: 2300, dashS: 11 });   // 前ステップ1回分（約90）踏み込む
 // ←強K：当たると相手を真上にかち上げる。必殺技でキャンセルして捕獲網で捕まえられる
 KF.CHARS.yui.moves.b_hk = Object.assign({}, KF.CHARS.kokuu.moves.b_hk, { name: 'かち上げ', kd: 'launch', lvy: -10, lvx: 0.6, floatG: 0.4, adv: ['kd', -6] });
 delete KF.CHARS.yui.moves.palm; delete KF.CHARS.yui.moves.palm_ex;
-KF.COMMANDS.yui = KF.COMMANDS.kokuu.map(function (c) { return c.move === 'palm' ? Object.assign({}, c, { move: 'shock' }) : c.move === 'fire' ? Object.assign({}, c, { move: 'net' }) : c; });
+KF.COMMANDS.yui = KF.COMMANDS.kokuu.map(function (c) { return c.move === 'palm' ? Object.assign({}, c, { move: 'shock' }) : c.move === 'fire' ? Object.assign({}, c, { move: 'net' }) : c.move === 'tatsu' ? Object.assign({}, c, { move: 'reload' }) : c.move === 'rushk' ? Object.assign({}, c, { move: 'segway' }) : c; });
 // 超必殺のあと、ほかの必殺技より先に見る（→↘↓↙← は ↓↙← を含むので）
-KF.COMMANDS.yui.splice(KF.COMMANDS.yui.filter(function (c) { return /^su/.test(c.move); }).length, 0, { seq: [6, 3, 2, 1, 4], btn: 'P', win: 18, move: 'glove' });
+KF.COMMANDS.yui.splice(KF.COMMANDS.yui.filter(function (c) { return /^su/.test(c.move); }).length, 0, { seq: [6, 3, 2, 1, 4], btn: 'P', win: 18, move: 'glove' }, { dd: 1, btn: 'P', win: 18, move: 'mech' });
 if (KF.MOVE_LIST.kokuu) KF.MOVE_LIST.yui = KF.MOVE_LIST.kokuu.map(function (r) {
   return /^虚掌破/.test(r[0]) ? ['電撃（手元のボタンを押すと、体の前の地面から電撃。キャラ1人分の幅）', '↓↙← + P']
     : /^虚環弾/.test(r[0]) ? ['捕獲網（対空投げ。空中の相手を網で捕まえ、方向+P でその方向へ投げる。入力なしなら前へ）', '↓↘→ + P']
-    : /^特殊技 旋踵/.test(r[0]) ? ['特殊技 かち上げ（当たると真上に浮く。必殺技キャンセルで捕獲網につながる）', r[1]] : r;
-}).concat([['パワーグラブ（コマンド投げ。ガード不能・投げ抜け不可。投げより少し遠くまで届く）', '→↘↓↙← + P']]);
+    : /^特殊技 旋踵/.test(r[0]) ? ['特殊技 かち上げ（当たると真上に浮く。必殺技キャンセルで捕獲網につながる）', r[1]]
+    : /^旋風脚/.test(r[0]) ? ['メカ補充（メカを1つ補充。最大3つ） / 空中で空旋脚', '↓↙← + K']
+    : /^迅閃脚/.test(r[0]) ? ['セグウェイ（速く突っ込む1段技。ぶつかると相手は斜め前へ飛ぶ）', '↓↘→ + K']
+    : /^EX必殺技/.test(r[0]) ? ['EX必殺技：セグウェイ＝攻撃を1発耐える／電撃＝かち上げて網につながる／捕獲網＝遠くへ投げて壁に張り付く／メカ補充＝2つ／パワーグラブ＝踏み込んでつかむ', r[1]] : r;
+}).concat([['パワーグラブ（コマンド投げ。ガード不能・投げ抜け不可。投げより少し遠くまで届く）', '→↘↓↙← + P'], ['メカ（地面を這うメカを出す。下段。メカを1つ使う）', '↓↓ + P']]);
 // 虚掌破を使うコンボはユイには無い
-if (KF.COMBOS.kokuu) KF.COMBOS.yui = KF.COMBOS.kokuu.filter(function (c) { return !c.steps.some(function (st) { return st.m && (st.m.join() === '2,1,4' || st.m.join() === '2,3,6') && /p/.test(st.b); }); });
+if (KF.COMBOS.kokuu) KF.COMBOS.yui = KF.COMBOS.kokuu.filter(function (c) { return !c.steps.some(function (st) { return st.m && (((st.m.join() === '2,1,4' || st.m.join() === '2,3,6') && /p/.test(st.b)) || ((st.m.join() === '2,1,4' || st.m.join() === '2,3,6') && /k/.test(st.b))); }); });
 KF.HIT_FIX['yui:sp_dp'] = KF.HIT_FIX['kokuu:sp_dp'];
 KF.HIT_FIX['yui:ex_dp'] = KF.HIT_FIX['kokuu:ex_dp'];
 KF.HIT_FIX['yui:c_mk'] = KF.HIT_FIX['kokuu:c_mk'];

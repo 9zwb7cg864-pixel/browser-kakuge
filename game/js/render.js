@@ -628,6 +628,15 @@ KF.Renderer.prototype.drawHUD = function (b) {
     }
     self.text(String(bars), L ? bx + 196 : bx - 10, by + 2, 18, bars ? '#ffffff' : '#666', L ? 'left' : 'right', bars ? col : null);
     self.text('必殺', L ? bx : bx + 186, by - 9, 9, '#c9b0ff', L ? 'left' : 'right');
+    // ユイのメカの数（最大3）：メカの絵を3つ並べ、無い分は暗く
+    if (f.D.moves.reload && KF.Assets.fx.mech_walk) {
+      for (var mq = 0; mq < 3; mq++) {
+        var mx = L ? bx + 40 + mq * 22 : bx + 186 - 40 - mq * 22;
+        c.save(); c.globalAlpha = mq < (f.mech || 0) ? 1 : 0.22;
+        self.drawFxFrame(c, 'mech_walk', 0, mx, by - 13, !L, 0.42);
+        c.restore();
+      }
+    }
     // コンボ数・ダメージ
     var def = f.opp;
     if (def.combo >= 2 || (def.dmgPop && def.dmgPop.t > 0 && def.combo >= 2)) f._comboShow = { n: def.combo, d: def.comboDmg, t: 70 };
