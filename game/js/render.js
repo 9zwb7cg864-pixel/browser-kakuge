@@ -26,11 +26,14 @@ KF.loadAssets = function (onProgress) {
   // 遊べるキャラは道着キャラ男だけなので、その絵とエフェクトだけ読み込む（もう1人のキャラ・街のステージの絵は読まない）
   // 遊べるキャラ：道着キャラ男（kokuu）
   var KINDS = ['kokuu', 'yui'];
+  if (KF.FX_FIRE == null) KF.FX_FIRE = true;
   return Promise.all(KINDS.map(function (k) { return json('assets/' + k + '/anims.json'); }).concat([json('assets/fx/fx.json'), json('assets/kokuu/movefx.json').catch(function () { return {}; })]))
     .then(function (r) {
       A.moveFx = r[KINDS.length + 1] || {};
       KINDS.forEach(function (k, i) { A.meta[k] = KF.prepAnims(r[i]); });
       A.fx = r[KINDS.length]; A.stage = {};
+      // 試験中：蒼井蓮の青いエフェクトを炎の色にする（false にすると元の青に戻る）
+      if (KF.FX_FIRE) Object.keys(A.fx).forEach(function (n) { if (A.fx[n + '_fire']) A.fx[n] = A.fx[n + '_fire']; });
       KINDS.forEach(function (k) { Object.keys(A.meta[k].anims).forEach(function (n) { img(k + ':' + n, 'assets/' + k + '/' + A.meta[k].anims[n].file); }); });
       Object.keys(A.fx).forEach(function (n) { img('fx:' + n, 'assets/fx/' + A.fx[n].file); });
       return Promise.all(jobs);
