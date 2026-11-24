@@ -68,6 +68,7 @@ KF.AI.prototype.update = function () {
   // 投げられた → 投げ抜け（受付時間内に判断できた場合）
   if (m.state === 'thrown' && m.techable && m.techT === 2 && this.rnd() < L.tech) { this.clear(); this.push(5, 'lp,lk', 2); }
 
+  if (KF.AI_ROUTES && (this.level === 'EXPERT' || this.level === 'HARD')) { this.routeTick(); this.greedyTick(true); if (!this.gjob) this.route = null; }
   // コンボの継続（自分の技が当たった/ガードされたのを確認して次へ）
   if (this.combo && m.state === 'attack' && m.connected && !this.combo.done) {
     var c = this.combo;
@@ -102,6 +103,7 @@ KF.AI.prototype.update = function () {
   if (this.after2 && m.state === 'attack' && m.moveId === 'change_in') { this.clear(); this.motion(this.after2[0], this.after2[1]); this.after2 = null; }
   if (this.after2 && m.actionable() && !this.q.length) this.after2 = null;
   // 浮いた相手への追撃：旋風脚などで浮かせたあと、動けるようになったら昇穿（ゲージがあれば超必殺）
+  if (this.jug && (this.route || this.gjob)) this.jug = null;
   if (this.jug) {
     if (b.frameNo > this.jug.until || o.state === 'down' || o.state === 'getup') this.jug = null;
     else if (!this.q.length && o.state === 'launch' && dist < 150 && (m.actionable() || (m.state === 'attack' && m.remaining() + m.hs <= 4))) {
@@ -115,7 +117,7 @@ KF.AI.prototype.update = function () {
 
   // 防御判断（キューより優先）
   var threat = this.threat(s, dist);
-  if (m.actionable() && threat) {
+  if (m.actionable() && threat && !this.route && !this.gjob) {
     var r = this.rnd();
     if (threat.kind === 'air' && dist < 190 && r < L.aa) {
       this.clear(); this.antiAir(dist);
@@ -137,7 +139,7 @@ KF.AI.prototype.update = function () {
   } else if (!threat) this.guarding = false;
 
   // 確定反撃：相手が硬直中
-  if (m.actionable() && !this.q.length && s.state === 'attack' && s.ph === 'r' && s.mv && s.rem > 12 && dist < 120 && this.rnd() < L.punish) {
+  if (!this.route && m.actionable() && !this.q.length && s.state === 'attack' && s.ph === 'r' && s.mv && s.rem > 12 && dist < 120 && this.rnd() < L.punish) {
     this.punish(dist, s);
   }
   // 起き上がりの切り返し
@@ -148,7 +150,7 @@ KF.AI.prototype.update = function () {
     else if (!KF.kokuuType(m.kind) || m.ex > 0) this.motion([6, 2, 3], KF.kokuuType(m.kind) ? 'lp,mp' : 'hp');
   }
 
-  if (!this.q.length && m.actionable()) {
+  if (!this.q.length && m.actionable() && !this.route && !this.gjob) {
     this.cool--;
     if (this.cool <= 0) {
       var planned = this.planOn() && s.state !== 'down' && s.state !== 'getup' && (this.planJob || this.planStart());
@@ -462,6 +464,170 @@ KF.AI.prototype.planCommit = function (c) {
   c.arr.forEach(function (x) { self.push(x[0], x[1], 1); });
   if (c.name === 'jumpHK' || c.name === 'jumpHK2') { this.plan = [[{ d: 5, b: 'mp', n: 2 }], [{ d: 5, b: 'hp', n: 2 }]]; this.planLast = null; }
 };
+
+// ==========================================================================================
+//  コンボ：コンボ探しで前もって計算したレシピ（KF.AI_ROUTES）を、当たったのを見てから1手ずつ入れる
+//  ・各手は「前の手が当たってから何F後に入れるか」が決まっている。入れる前に、本当につながるかをその場で計算して確かめる
+//  ・つながらないときは前後数フレームずらして探し、だめなら締めの技（昇穿・旋風脚・超必殺）の中で一番減るものを入れる
+// ==========================================================================================
+// 手の名前（コンボ探しの表記）→ 入力の並び [方向(相手の方向が6), ボタン]
+KF.AI.prototype.macroOf = function (label) {
+  var kind = this.me().kind, cmds = KF.COMMANDS[kind] || [], out = [], m;
+  var parts = label.split('→'), act = parts.pop(), pre = parts[0] || '';
+  if ((m = /^歩き(\d+)F$/.exec(pre))) { for (var i = 0; i < +m[1]; i++) out.push([6, '']); }
+  else if ((m = /^ラッシュ(\d+)F$/.exec(pre))) { out.push([5, 'rush']); for (var i2 = 0; i2 < +m[1]; i2++) out.push([5, '']); }
+  else if ((m = /^(前|垂直)ジャンプ(\d+)F$/.exec(pre))) { out.push([m[1] === '前' ? 9 : 8, '']); for (var i3 = 0; i3 < +m[2]; i3++) out.push([5, '']); }
+  var P = ['lp', 'mp', 'hp'], K = ['lk', 'mk', 'hk'];
+  if ((m = /^([52J64])(lp|mp|hp|lk|mk|hk)$/.exec(act))) { out.push([{ 5: 5, 2: 2, J: 5, 6: 6, 4: 4 }[m[1]], m[2]]); return out; }
+  var mv = act, str = null, ex = false;
+  if ((m = /^(\w+?)_EX$/.exec(act))) { mv = m[1]; ex = true; }
+  else if ((m = /^(\w+?)(弱|中|強)$/.exec(act))) { mv = m[1]; str = { '弱': 0, '中': 1, '強': 2 }[m[2]]; }
+  var c = null; for (var k = 0; k < cmds.length; k++) if (cmds[k].move === mv) { c = cmds[k]; break; }
+  if (!c) return null;
+  var set = c.btn === 'P' ? P : K, btn = ex ? set[0] + ',' + set[1] : /^su/.test(mv) ? set[2] : set[str == null ? 2 : str];
+  c.seq.forEach(function (d, i) { out.push([d, i === c.seq.length - 1 ? btn : '']); });
+  return out;
+};
+// 今の状態から、wait フレーム待って macro を入れたら、新しく出した技がコンボを切らさずに当たるか（当たればそのときのダメージ）
+function aiNow() { return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); }
+KF.AI.prototype.tryMacro = function (macro, wait, base, keep) {
+  var b = KF.cloneBattle(base || this.b), me = this.side, f = b.p[me], o = b.p[1 - me];
+  var ser0 = f.moveSerial || 0, c0 = o.combo, pm = {}, steps = wait + macro.length + 50;
+  for (var t = 0; t < steps; t++) {
+    var x = t < wait ? [5, ''] : t < wait + macro.length ? macro[t - wait] : [5, ''];
+    var a = dirIn(x[0], x[1], f.facing, pm); pm = a.held;
+    var inp = [null, null]; inp[me] = a; inp[1 - me] = aiIn(0, 0, {});
+    b.events.length = 0; b.fx.length = 0; b.step(inp);
+    if (c0 > 0 && o.combo === 0) return null;
+    for (var i = 0; i < b.events.length; i++) { var e = b.events[i]; if (e.type === 'comboEnd' && e.side === me) return null;
+      if (e.type === 'hit' && e.side === me && (f.moveSerial || 0) !== ser0 && e.combo > c0) {
+        if (!keep) return o.comboDmg;
+        b.events.length = 0; b.fx.length = 0;
+        return { d: o.comboDmg, b: b, held: pm }; } }
+    if (t > wait + macro.length + 4 && (f.moveSerial || 0) === ser0 && f.state !== 'rush' && f.state !== 'prejump' && f.state !== 'air') return null;
+  }
+  return null;
+};
+
+// レシピどおりにつながらないとき：つながる次の手の中から一番いいものを入れる（コンボが切れるまで続ける）
+// 技を入れた時点で「当たった直後の状態」を先に計算しておき、そこから次の手探しを前もって始める（見てからでは計算が間に合わない）
+KF.AI.prototype.greedyNames = function () {
+  if (this._gn) return this._gn;
+  var set = {}, R = (KF.AI_ROUTES || {}).kokuu || [];
+  R.forEach(function (r) { r.steps.slice(1).forEach(function (st) { set[st.label] = 1; }); });
+  ['dp強', 'dp_EX', 'tatsu中', 'tatsu弱', 'rushk_EX', 'rushk強', 'palm_EX', 'fire弱', 'fire強', '5hp', '2hp', '5mp', 'su1', 'su2', 'su3'].forEach(function (n) { set[n] = 1; });
+  return (this._gn = Object.keys(set));
+};
+KF.AI.prototype.greedyStart = function (snap) {
+  var o = this.me().opp; if (!snap && o.combo === 0) { this.gjob = null; return; }
+  var names = this.greedyNames(), W = [0, 2, 4, 7, 10, 14, 19, 25, 32], list = [], R = this.route, pref = null;
+  if (R && R.i < R.r.steps.length) {   // レシピの次の手：決まったタイミングに近い順に1Fずつ
+    var st = R.r.steps[R.i]; pref = st.label;
+    for (var d = 0; d <= 20; d++) { if (st.t + d >= 0) list.push([pref, st.t + d]); if (d && st.t - d >= 0) list.push([pref, st.t - d]); }
+  }
+  var np = list.length;
+  W.forEach(function (w) { names.forEach(function (n) { if (n !== pref) list.push([n, w]); }); });   // ほかの手は早いタイミングから順に
+  if (!snap) { var ev = this.b.events, fx = this.b.fx; this.b.events = []; this.b.fx = []; snap = KF.cloneBattle(this.b); this.b.events = ev; this.b.fx = fx; }
+  this.gjob = { snap: snap, f0: snap.frameNo, c: snap.p[1 - this.side].combo, list: list, i: 0, hits: {}, pref: pref, np: np };
+};
+// その手が当たった後、相手がまだコンボ中のうちにこっちが動けるようになるか
+KF.AI.prototype.canContinue = function (b0) {
+  var b = KF.cloneBattle(b0), me = this.side, f = b.p[me], o = b.p[1 - me], nin = [null, null], ok = 0;
+  for (var t = 0; t < 70; t++) {
+    nin[me] = aiIn(0, 0, {}); nin[1 - me] = aiIn(0, 0, {});
+    b.events.length = 0; b.fx.length = 0; b.step(nin);
+    if (o.combo === 0 || !/hitstun|launch/.test(o.state)) return false;
+    if (f.actionable()) { if (++ok >= 5) return true; }
+  }
+  return false;
+};
+// act=false のときは計算だけ（レシピ実行中の保険）
+KF.AI.prototype.greedyTick = function (act) {
+  var J = this.gjob, m = this.me(), o = m.opp, self = this, now = this.b.frameNo; if (!J) return;
+  var el = now - J.f0;
+  if (o.combo === 0) { this.gjob = null; return; }
+  if (el >= 0) {
+    if (o.combo < J.c) { if (el > 4) { this.gjob = null; if (act) this.greedyStart(); } return; }   // 読みどおりに当たらなかった
+  }
+  var T0 = aiNow(), TB = 4;   // 1フレームに使う計算時間（ミリ秒）
+  for (var n = 0; J.i < J.list.length && (n < 2 || aiNow() - T0 < TB); J.i++) {
+    var it = J.list[J.i]; if (J.hits[it[0]] || it[1] < el) continue;
+    if (J.pref && J.hits[J.pref]) break;   // レシピの手が見つかった
+    n++;
+    var mac = this.macroOf(it[0]); if (!mac) continue;
+    var r = this.tryMacro(mac, it[1], J.snap, true); if (r) J.hits[it[0]] = { name: it[0], w: it[1], d: r.d, b: r.b, mac: mac, sup: /^su/.test(it[0]), cont: this.canContinue(r.b) };
+  }
+  if (!act) return;
+  var best = null;
+  var R0 = this.route, last = R0 && R0.i >= R0.r.steps.length - 1, ph = J.pref && J.hits[J.pref];
+  if (ph && !(ph.sup || last) && J.nx !== true) {
+    // レシピのその次の手も、本当につながるか確かめる（数フレームに分けて）
+    if (J.nx == null) { var st2 = R0.r.steps[R0.i + 1]; J.nx = { mac: this.macroOf(st2.label), t: st2.t, d: 0 }; }
+    var X = J.nx;
+    for (var q2 = 0; X.d <= 20 && X.mac && (q2 < 1 || aiNow() - T0 < TB); q2++, X.d++) {
+      var ws = X.d ? [X.t + X.d, X.t - X.d] : [X.t];
+      for (var u = 0; u < ws.length; u++) if (ws[u] >= 0 && this.tryMacro(X.mac, ws[u], ph.b) != null) { J.nx = true; break; }
+      if (J.nx === true) break;
+    }
+    if (J.nx !== true) {
+      if (X.d <= 20 && X.mac && ph.w > el + 1) return;   // まだ確かめている途中
+      if (!ph.cont) { if (this.routeSwitch()) { this.greedyStart(J.snap); return; } J.pref = null; J.i = J.np; J.nx = null; return; }   // 行き止まり → 別のレシピか、ほかの手を探す
+    }
+  }
+  if (ph && J.pref && ph.w >= el) best = { h: ph };
+  else if (J.pref && !ph && J.i >= J.np && this.routeSwitch()) { this.greedyStart(J.snap); return; }   // 別のレシピで探し直す
+  else if (!J.pref || J.i >= J.np) {
+    if (el < 0) return;
+    var pend = J.i < J.list.length ? J.list[J.i][1] : 1e9;
+    for (var k in J.hits) { var h = J.hits[k]; if (h.w < el) continue;
+      var sc = h.d + (h.cont ? 1200 : 0) - (h.sup ? 100000 : 0);   // まだ続けられる手を優先。超必殺はほかに何もないときだけ
+      if (!best || sc > best.sc) best = { h: h, sc: sc }; }
+    if (J.i >= J.list.length) { if (!best) { this.gjob = null; this.route = null; return; } }
+    else if (!best || best.h.w > el + 1) return;   // まだ探している途中で、急ぐ必要もない
+  } else return;
+  var R = this.route;
+  if (R) { if (best.h.name === J.pref) { R.done.push(J.pref); R.i++; if (R.i >= R.r.steps.length) this.route = null; } else this.route = null; }
+  var ql = 0; this.q.forEach(function (x) { ql += x.n; });   // 前の手の入力がまだ残っていれば、その後ろに足す
+  for (var z = 0; z < best.h.w - el - ql; z++) this.push(5, '', 1);
+  best.h.mac.forEach(function (x) { self.push(x[0], x[1], 1); });
+  this.greedyStart(best.h.b);   // 入れた手が当たった後から、次を先に探しておく
+};
+KF.AI.prototype.routePick = function (starter) {
+  var R = (KF.AI_ROUTES || {})[KF.kokuuType(this.me().kind) ? 'kokuu' : this.me().kind]; if (!R) return [];
+  var m = this.me(), o = m.opp, lim = this.b.limits(), corner = Math.min(o.x - lim[0], lim[1] - o.x) < 130;
+  var rush = Math.floor(m.rush / 1000), sup = Math.floor(m.sup / 1000);
+  var ok = R.filter(function (r) { return r.starter === starter && r.rush <= rush && r.sup <= sup; });
+  // 最初は同じ位置（中央／端）でいちばん減るレシピ。乗り換え先は位置を問わず減る順
+  ok.sort(function (a, c) { return c.final - a.final; });
+  for (var i = 0; i < ok.length; i++) if (ok[i].corner === corner) { ok.unshift(ok.splice(i, 1)[0]); break; }
+  return ok;
+};
+// レシピの手がつながらないとき、ここまで同じ流れの別のレシピに乗り換える
+KF.AI.prototype.routeSwitch = function () {
+  var R = this.route; if (!R) return false;
+  for (var k = R.k + 1; k < R.list.length; k++) {
+    var r = R.list[k], same = r.steps.length > R.i;
+    for (var i = 1; i < R.i && same; i++) if (r.steps[i].label !== R.done[i - 1]) same = false;
+    if (same && r.steps[R.i].label !== R.r.steps[R.i].label) { R.k = k; R.r = r; return true; }
+  }
+  return false;
+};
+// 毎フレーム：レシピの続きを入れる
+KF.AI.prototype.routeTick = function () {
+  var m = this.me(), o = m.opp, b = this.b;
+  // 始動技が当たったら、レシピを選んで続きを探し始める
+  if (m.state === 'attack' && m.connected && o.combo === 1 && this.routeSer !== m.moveSerial && /hitstun|launch/.test(o.state)) {
+    this.routeSer = m.moveSerial;
+    if (this.rnd() < Math.max(this.L.confirm, 0.5)) {
+      this.clear(); this.plan = null; this.combo = null; this.jug = null;
+      var rl = this.routePick(m.moveId);
+      this.route = rl.length ? { list: rl, k: 0, r: rl[0], i: 1, done: [] } : null;
+      this.greedyStart();
+    }
+  }
+  if (this.route && o.combo === 0 && !this.gjob) this.route = null;
+};
+
 KF.AI.prototype.decide = function (s, dist) {
   if (this.me().D.base === 'gai') { this.decideGai(s, dist); return; }
   var m = this.me(), L = this.L, K = KF.kokuuType(m.kind), r = this.rnd();

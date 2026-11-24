@@ -5,7 +5,7 @@ global.localStorage = { getItem: () => null, setItem: () => {} };
 global.addEventListener = () => {};
 global.navigator = {};
 const G = path.join(__dirname, '..', 'game');
-for (const f of ['data.js', 'input.js', 'engine.js', 'ai.js', 'net.js']) {
+for (const f of ['data.js', 'input.js', 'engine.js', 'ai.js', 'ai_routes.js', 'net.js']) {
   const p = path.join(G, 'js', f);
   if (fs.existsSync(p)) vm.runInThisContext(fs.readFileSync(p, 'utf8'), { filename: f });
 }

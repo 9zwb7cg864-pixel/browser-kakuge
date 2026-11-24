@@ -236,11 +236,11 @@ var KF = window.KF || (window.KF = {});
       menuPrev.escB = KF.Input.isDown('Escape');
     }
     if (!paused && doStep) {
+      if (ai) ai.update();   // CPUの判断を先にして、そのフレームの入力にすぐ使う（1フレームの遅れをなくす）
       var i1 = sources[0].sample(), i2 = sources[1].sample();
       if (trPend) { i1 = mergePress(trPend[0], i1); i2 = mergePress(trPend[1], i2); trPend = null; }
       if (i1.pressed.start || KF.Input.isDown('Escape') && !menuPrev.escB) { paused = true; pausedSel = 0; menuPrev.esc = KF.Input.isDown('Escape'); menuPrev.ent = KF.Input.isDown('Enter'); }
       menuPrev.escB = KF.Input.isDown('Escape');
-      if (ai) ai.update();
       // トレーニング：位置リセット（押したときの方向で場所を選ぶ）
       if (cfg.mode === 'training' && i1.reset) {
         var rm = i1.y > 0 ? (i1.x > 0 ? 'sRight' : i1.x < 0 ? 'oLeft' : 'center') : (i1.x > 0 ? 'oRight' : i1.x < 0 ? 'sLeft' : 'center');
