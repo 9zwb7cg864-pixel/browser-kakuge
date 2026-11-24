@@ -471,7 +471,7 @@ console.log('■ ラッシュから出した技（勢いが残る・後すきが
   ok(tatsuBonus === false, 'ラッシュの有利は、ラッシュから出した技にだけ付く（キャンセルした旋風脚には付かない）');
 }
 
-console.log('■ アッパー → 波動 → ラッシュ → 強P ＞ 昇穿');
+console.log('■ 波動からラッシュキャンセルはできない');
 {
   for (const how of ['button', '66']) {
     const b = new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]);
@@ -486,29 +486,10 @@ console.log('■ アッパー → 波動 → ラッシュ → 強P ＞ 昇穿');
       const e0 = b.events.length; b.step([q.length ? q.shift() : N(), N()]);
       for (const e of b.events.slice(e0)) if (e.type === 'hit' && e.side === 0) seq.push(e.move + (e.combo === seq.length + 1 ? '' : '(途切れ)'));
     }
-    ok(seq.join(' ') === 'palm fire hp dp', (how === 'button' ? 'RUSHボタン' : '→→') + 'で アッパー → 波動 → ラッシュ強P ＞ 昇穿 が途切れずにつながる（' + seq.join(' ') + '）');
+    ok(seq.join(' ') !== 'palm fire hp dp', (how === 'button' ? 'RUSHボタン' : '→→') + 'でも、波動からはラッシュキャンセルできない（' + seq.join(' ') + '）');
   }
 }
 
-console.log('■ アッパー → 波動 → ラッシュ → パンチ ＞ 昇穿 は、押すタイミングがばらついてもつながる');
-{
-  const run = (o) => { const b = new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]); b.camX = 512; b.p[0].x = 470; b.p[1].x = 516; b.p[0].facing = 1; b.p[1].facing = -1; b.p[0].rush = 6000;
-    const A = b.p[0]; const q = [inp(2), inp(1), inp(4, 'hp')]; const seq = []; let st = 0, w = 0, cnt = 0;
-    for (let f = 0; f < 300; f++) {
-      if (st === 0 && seq.includes('palm') && A.actionable()) { if (cnt++ >= o.fd) { q.push(inp(2), inp(3), inp(6, o.fb)); st = 1; cnt = 0; } }
-      if (st === 1 && A.projHit) { if (cnt++ >= o.rd) { q.push(...(o.rush === 'btn' ? [inp(5, 'rush')] : [inp(6), N(), inp(6)])); st = 2; w = o.pd; } }
-      if (st === 2 && A.state === 'rush') { if (--w <= 0) { q.push(inp(5, o.pb)); st = 3; } }
-      if (st === 3 && /^(lp|mp|hp)$/.test(A.moveId || '') && A.connected) { q.push(inp(6), inp(2), inp(3, 'hp')); st = 4; }
-      const e0 = b.events.length; b.step([q.length ? q.shift() : N(), N()]);
-      for (const e of b.events.slice(e0)) if (e.type === 'hit' && e.side === 0) seq.push(e.move + (e.combo === seq.length + 1 ? '' : '!'));
-    }
-    return /^palm fire (lp|mp|hp) dp$/.test(seq.join(' ')); };
-  let tot = 0, bad = []; 
-  for (const fb of ['lp', 'mp', 'hp']) for (const fd of [2, 6, 10]) for (const rd of [0, 4, 8]) for (const rush of ['btn', '66']) for (const pd of [1, 6, 12]) for (const pb of ['lp', 'mp', 'hp']) {
-    tot++; if (!run({ fb, fd, rd, rush, pd, pb })) bad.push(`波動${fb}遅れ${fd} ラッシュ遅れ${rd}${rush} パンチ${pb}遅れ${pd}`); }
-  // 虚掌破で浮いた相手は落ちるのが速い（1.25倍）ので、波動やラッシュが遅いと拾えない。早めに入れた分（全体の6割以上）がつながればよい
-  ok(tot - bad.length >= tot * 0.6, (tot - bad.length) + '/' + tot + ' 通りでつながる：波動の強さ・入れる遅れ（2〜10F。強虚掌破は相手を遠くへ飛ばすので、14Fも遅れるとラッシュが届かないことがある）、ラッシュ（ボタン・→→）と遅れ、パンチの種類と遅れを変えた ' + tot + ' 通りすべてでつながる' + (bad.length ? '（失敗：' + bad.slice(0, 3).join('／') + ' ほか' + bad.length + '）' : ''));
-}
 
 // 対空の波動が空中の相手に当たったら、技の戻りの最中でも虚空砲でキャンセルしてつながる
 { const b = new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]);

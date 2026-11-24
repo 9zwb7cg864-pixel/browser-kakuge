@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>紺野ユイ 通常技ポーズ帳</title>
+<style>
+  :root { --bg: #14161f; --panel: #1e2130; --line: #33384d; --text: #e8eaf4; --sub: #9aa0b8; --acc: #ff7aa8; --acc2: #7fd0ff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", sans-serif; }
+  header { padding: 10px 14px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  h1 { font-size: 16px; margin: 0; color: var(--acc); }
+  main { display: grid; grid-template-columns: 220px 1fr 300px; gap: 10px; padding: 10px; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } #list { max-height: 180px; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  #list { overflow: auto; max-height: calc(100vh - 90px); }
+  .grp { font-size: 11px; color: var(--sub); margin: 10px 0 4px; }
+  .mv { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  .mv:hover { background: #2a2e42; }
+  .mv.on { background: #3a2a40; outline: 1px solid var(--acc); }
+  .mv .st { font-size: 10px; color: var(--sub); }
+  .mv .st.done { color: #7fffb0; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+  button { background: #2a2e42; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font-size: 13px; cursor: pointer; }
+  button:hover { border-color: var(--acc2); }
+  button.on { background: var(--acc); color: #1a0f16; border-color: var(--acc); font-weight: bold; }
+  canvas { width: 100%; background: #0d0f16; border-radius: 6px; touch-action: none; display: block; }
+  textarea { width: 100%; min-height: 160px; background: #0d0f16; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 14px; resize: vertical; }
+  label { font-size: 12px; color: var(--sub); display: block; margin: 10px 0 4px; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .hint { font-size: 12px; color: var(--sub); line-height: 1.6; }
+  .tag { font-size: 12px; color: var(--sub); }
+  input[type=range] { width: 100%; }
+  #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #000c; padding: 8px 14px; border-radius: 6px; font-size: 13px; display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>紺野ユイ 通常技ポーズ帳</h1>
+  <span class="tag">関節をドラッグしてポーズを作る。内容はこのブラウザに自動で保存される</span>
+</header>
+<main>
+  <div class="panel" id="list"></div>
+  <div class="panel">
+    <div class="tabs">
+      <button id="tStart" class="on">出し始め</button>
+      <button id="tEnd">出し終わり</button>
+      <span style="flex:1"></span>
+      <button id="bPlay">▶ 動かして見る</button>
+    </div>
+    <canvas id="cv" width="900" height="560"></canvas>
+    <div class="row" style="margin-top:8px">
+      <button id="bReset">構えに戻す</button>
+      <button id="bCopy">もう片方のポーズを写す</button>
+      <button id="bFlipLimb">手前と奥の手足を入れ替え</button>
+      <button id="bUndo">ひとつ戻す</button>
+      <label style="margin:0 0 0 8px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="cGhost" checked>もう片方のポーズを薄く表示</label>
+    </div>
+    <p class="hint">
+      ・<b>腰</b>（ピンクの四角）をドラッグすると体ごと動く／<b>胸</b>で上体を傾ける／<b>頭</b>で首を傾ける<br>
+      ・<b>手・足先</b>をドラッグすると、ひじ・ひざが自然に曲がって追いかける／<b>ひじ・ひざ</b>をドラッグすると、腕・脚の付け根から回る<br>
+      ・明るい線が手前（画面側）の手足、暗い線が奥の手足。右にいる青い影が相手（目盛りは自分の腰からの距離）
+    </p>
+  </div>
+  <div class="panel">
+    <div id="title" style="font-size:18px;font-weight:bold"></div>
+    <div id="sub" class="tag"></div>
+    <label>メモ（どんな技にしたいか・判定・当たる高さ・フレームなど何でも）</label>
+    <textarea id="memo" placeholder="例：ローキック。出し終わりで足先が相手のすねに当たる。発生は速め"></textarea>
+    <label>書き出し・読み込み</label>
+    <div class="row">
+      <button id="bExport">全部をコピー</button>
+      <button id="bImport">貼り付けて読み込む</button>
+    </div>
+    <p class="hint">「全部をコピー」した文字をClaudeに送れば、そのポーズとメモをもとに絵を作れる。別の端末に移すときも、この文字を「貼り付けて読み込む」で入れられる。</p>
+  </div>
+</main>
+<div id="toast"></div>
+<script>
+(function () {
+  // ---- 技の一覧（ユイの通常技）
+  var MOVES = [
+    ['立ち', [['lp', '立ち弱P'], ['mp', '立ち中P'], ['hp', '立ち強P'], ['lk', '立ち弱K'], ['mk', '立ち中K'], ['hk', '立ち強K']]],
+    ['しゃがみ', [['c_lp', 'しゃがみ弱P'], ['c_mp', 'しゃがみ中P'], ['c_hp', 'しゃがみ強P'], ['c_lk', 'しゃがみ弱K'], ['c_mk', 'しゃがみ中K'], ['c_hk', 'しゃがみ強K']]],
+    ['ジャンプ', [['j_lp', 'ジャンプ弱P'], ['j_mp', 'ジャンプ中P'], ['j_hp', 'ジャンプ強P'], ['j_lk', 'ジャンプ弱K'], ['j_mk', 'ジャンプ中K'], ['j_hk', 'ジャンプ強K']]],
+    ['特殊技・投げ', [['f_mp', '→＋中P'], ['f_hp', '→＋強P'], ['b_hk', '←＋強K'], ['throw', '投げ']]]
+  ];
+  var NAME = {}; MOVES.forEach(function (g) { g[1].forEach(function (m) { NAME[m[0]] = m[1]; }); });
+  var KEY = 'yui_pose_v1';
+
+  // ---- 骨（長さ）と関節
+  //  p:腰 c:胸（首の付け根） h:頭  手前の腕 se(肩=c) e1 h1 / 奥の腕 e2 h2  手前の脚 k1 f1 / 奥の脚 k2 f2
+  var L = { spine: 58, neck: 22, up: 30, fore: 30, thigh: 44, shin: 44 };
+  function P(x, y) { return { x: x, y: y }; }
+  function basePose(kind) {
+    if (kind === 'c') return { p: P(0, -58), c: P(6, -114), h: P(12, -134), e1: P(28, -98), h1: P(40, -118), e2: P(14, -92), h2: P(30, -110),
+      k1: P(36, -40), f1: P(20, 0), k2: P(-30, -36), f2: P(-24, 0) };
+    if (kind === 'j') return { p: P(0, -180), c: P(4, -238), h: P(8, -260), e1: P(26, -222), h1: P(36, -242), e2: P(12, -216), h2: P(26, -236),
+      k1: P(30, -166), f1: P(14, -134), k2: P(-12, -160), f2: P(-22, -128) };
+    return { p: P(0, -88), c: P(4, -146), h: P(8, -168), e1: P(26, -130), h1: P(38, -150), e2: P(10, -124), h2: P(26, -144),
+      k1: P(20, -46), f1: P(26, 0), k2: P(-20, -46), f2: P(-24, 0) };
+  }
+  function kindOf(id) { return id.indexOf('c_') === 0 ? 'c' : id.indexOf('j_') === 0 ? 'j' : 's'; }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  // ---- 保存
+  var db = {};
+  try { db = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { db = {}; }
+  function rec(id) { if (!db[id]) db[id] = { start: basePose(kindOf(id)), end: basePose(kindOf(id)), memo: '', edited: false }; return db[id]; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { } }
+
+  var cur = 'lp', side = 'start', undo = [];
+  var cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  var SCALE = 1.7, OX = 300, OY = 500, OPP = 150;   // 相手は自分の腰から150のところ
+  function toScr(p) { return { x: OX + p.x * SCALE, y: OY + p.y * SCALE }; }
+  function toW(x, y) { return { x: (x - OX) / SCALE, y: (y - OY) / SCALE }; }
+
+  // ---- 描く
+  var playT = -1;
+  function lerpPose(a, b, t) { var o = {}; for (var k in a) o[k] = P(a[k].x + (b[k].x - a[k].x) * t, a[k].y + (b[k].y - a[k].y) * t); return o; }
+  function drawFig(q, alpha, strong) {
+    ctx.save(); ctx.globalAlpha = alpha; ctx.lineCap = 'round';
+    var seg = function (a, b, col, w) { var A = toScr(a), B = toScr(b); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); };
+    var back = '#8a5a72', front = '#ffb0cc', body = '#ffd6e6';
+    seg(q.c, q.e2, back, 9); seg(q.e2, q.h2, back, 8); seg(q.p, q.k2, back, 11); seg(q.k2, q.f2, back, 10);
+    seg(q.p, q.c, body, 14);
+    seg(q.c, q.h, body, 8);
+    var H = toScr(q.h); ctx.fillStyle = body; ctx.beginPath(); ctx.arc(H.x, H.y, 15 * SCALE * 0.75, 0, 7); ctx.fill();
+    // 顔の向き（右向き）
+    ctx.fillStyle = '#14161f'; ctx.beginPath(); ctx.arc(H.x + 6 * SCALE * 0.75, H.y - 2, 2.5, 0, 7); ctx.fill();
+    seg(q.p, q.k1, front, 12); seg(q.k1, q.f1, front, 11);
+    seg(q.c, q.e1, front, 10); seg(q.e1, q.h1, front, 9);
+    if (strong) {
+      for (var k in q) {
+        var S = toScr(q[k]); ctx.globalAlpha = 1;
+        ctx.fillStyle = k === 'p' ? '#ff4f8f' : k === 'c' || k === 'h' ? '#ffffff' : /1$/.test(k) ? '#7fd0ff' : '#4a7ea8';
+        if (k === 'p') ctx.fillRect(S.x - 8, S.y - 8, 16, 16); else { ctx.beginPath(); ctx.arc(S.x, S.y, k === 'h' ? 7 : 7, 0, 7); ctx.fill(); }
+      }
+    }
+    ctx.restore();
+  }
+  function draw() {
+    var r = rec(cur);
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    // 床と目盛り
+    ctx.strokeStyle = '#33384d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, OY); ctx.lineTo(cv.width, OY); ctx.stroke();
+    ctx.fillStyle = '#6a7090'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
+    for (var d = 0; d <= 250; d += 50) { var x = OX + d * SCALE; ctx.fillRect(x - 1, OY, 2, 8); ctx.fillText(String(d), x, OY + 22); }
+    // 相手（棒人間の影）
+    var o = basePose('s'); var opp = {}; for (var k in o) opp[k] = P(OPP - o[k].x, o[k].y);
+    ctx.save(); ctx.globalAlpha = 0.35; ctx.strokeStyle = '#5a8cff'; ctx.lineCap = 'round';
+    var sg = function (a, b, w) { var A = toScr(a), B = toScr(b); ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); };
+    ['c-e1', 'e1-h1', 'c-e2', 'e2-h2', 'p-k1', 'k1-f1', 'p-k2', 'k2-f2', 'p-c', 'c-h'].forEach(function (s) { var t = s.split('-'); sg(opp[t[0]], opp[t[1]], 12); });
+    var OH = toScr(opp.h); ctx.fillStyle = '#5a8cff'; ctx.beginPath(); ctx.arc(OH.x, OH.y, 11, 0, 7); ctx.fill();
+    ctx.restore();
+    if (playT >= 0) {
+      var t = playT < 1 ? playT : playT < 1.4 ? 1 : 1 - (playT - 1.4) / 1;
+      drawFig(lerpPose(r.start, r.end, Math.max(0, Math.min(1, t))), 1, false);
+      ctx.fillStyle = '#ff7aa8'; ctx.textAlign = 'left'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('再生中（もう一度押すと止まる）', 14, 26);
+      return;
+    }
+    var other = side === 'start' ? r.end : r.start;
+    if (document.getElementById('cGhost').checked) drawFig(other, 0.22, false);
+    drawFig(r[side], 1, true);
+    ctx.fillStyle = side === 'start' ? '#7fd0ff' : '#ffb0cc'; ctx.textAlign = 'left'; ctx.font = 'bold 18px sans-serif';
+    ctx.fillText(side === 'start' ? '出し始め' : '出し終わり', 14, 28);
+    // 手前の手・足先が腰から前にどれだけ出ているか
+    var q = r[side]; var reach = Math.round(Math.max(q.h1.x, q.h2.x, q.f1.x, q.f2.x) - q.p.x);
+    ctx.fillStyle = '#9aa0b8'; ctx.font = '13px sans-serif'; ctx.fillText('いちばん前の手足：腰から ' + reach, 14, 50);
+  }
+
+  // ---- ドラッグ
+  var PARENT = { e1: 'c', h1: 'e1', e2: 'c', h2: 'e2', k1: 'p', f1: 'k1', k2: 'p', f2: 'k2' };
+  var LEN = { e1: L.up, h1: L.fore, e2: L.up, h2: L.fore, k1: L.thigh, f1: L.shin, k2: L.thigh, f2: L.shin };
+  var CHILD = { e1: 'h1', e2: 'h2', k1: 'f1', k2: 'f2' };
+  function rot(pt, o, a) { var dx = pt.x - o.x, dy = pt.y - o.y, c = Math.cos(a), s = Math.sin(a); return P(o.x + dx * c - dy * s, o.y + dx * s + dy * c); }
+  function ang(a, b) { return Math.atan2(b.y - a.y, b.x - a.x); }
+  function ik(root, mid, end, target, l1, l2) {
+    // 2本の骨で target に手先を届かせる。曲がる向きは今の向きのまま
+    var dx = target.x - root.x, dy = target.y - root.y, d = Math.hypot(dx, dy);
+    d = Math.max(Math.abs(l1 - l2) + 0.01, Math.min(l1 + l2 - 0.01, d));
+    var base = Math.atan2(dy, dx);
+    var cr = (end.x - root.x) * (mid.y - root.y) - (end.y - root.y) * (mid.x - root.x);
+    var bend = cr >= 0 ? 1 : -1;
+    var a = Math.acos((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d));
+    var m = P(root.x + Math.cos(base - bend * a) * l1, root.y + Math.sin(base - bend * a) * l1);
+    var e = P(root.x + Math.cos(base) * d, root.y + Math.sin(base) * d);
+    return [m, e];
+  }
+  var drag = null;
+  function pick(w) {
+    var q = rec(cur)[side], best = null, bd = 20 / SCALE;
+    for (var k in q) { var d = Math.hypot(q[k].x - w.x, q[k].y - w.y); if (d < bd) { bd = d; best = k; } }
+    return best;
+  }
+  function apply(k, w) {
+    var q = rec(cur)[side];
+    if (k === 'p') { var dx = w.x - q.p.x, dy = w.y - q.p.y; for (var j in q) { if (j === 'f1' || j === 'f2') continue; q[j].x += dx; q[j].y += dy; }
+      // 足先は床に残し、ひざで合わせる（ジャンプ中は足もいっしょに動く）
+      if (kindOf(cur) === 'j') { q.f1.x += dx; q.f1.y += dy; q.f2.x += dx; q.f2.y += dy; }
+      else ['1', '2'].forEach(function (s) { var r = ik(q.p, q['k' + s], q['f' + s], q['f' + s], L.thigh, L.shin); q['k' + s] = r[0]; q['f' + s] = r[1]; });
+      return; }
+    if (k === 'c') { var a = ang(q.p, w) - ang(q.p, q.c); ['c', 'h', 'e1', 'h1', 'e2', 'h2'].forEach(function (j) { q[j] = rot(q[j], q.p, a); }); return; }
+    if (k === 'h') { var a2 = ang(q.c, w) - ang(q.c, q.h); q.h = rot(q.h, q.c, a2); return; }
+    if (CHILD[k]) { var root = PARENT[k], a3 = ang(q[root], w) - ang(q[root], q[k]); q[k] = rot(q[k], q[root], a3); q[CHILD[k]] = rot(q[CHILD[k]], q[root], a3); return; }
+    // 手先・足先：2本の骨で追いかける
+    var mid = PARENT[k], rt = PARENT[mid];
+    var r2 = ik(q[rt], q[mid], q[k], w, LEN[mid], LEN[k]); q[mid] = r2[0]; q[k] = r2[1];
+  }
+  function ev(e) { var b = cv.getBoundingClientRect(); return toW((e.clientX - b.left) * cv.width / b.width, (e.clientY - b.top) * cv.height / b.height); }
+  cv.addEventListener('pointerdown', function (e) {
+    if (playT >= 0) return;
+    var w = ev(e), k = pick(w); if (!k) return;
+    undo.push(JSON.stringify(rec(cur)[side])); if (undo.length > 80) undo.shift();
+    drag = k; cv.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  cv.addEventListener('pointermove', function (e) { if (!drag) return; apply(drag, ev(e)); rec(cur).edited = true; draw(); });
+  var end = function () { if (drag) { drag = null; save(); renderList(); } };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+
+  // ---- 画面の部品
+  var $ = function (id) { return document.getElementById(id); };
+  function renderList() {
+    var h = '';
+    MOVES.forEach(function (g) {
+      h += '<div class="grp">' + g[0] + '</div>';
+      g[1].forEach(function (m) {
+        var r = db[m[0]], st = r && (r.edited || r.memo) ? '<span class="st done">設定あり</span>' : '<span class="st">未設定</span>';
+        h += '<div class="mv' + (m[0] === cur ? ' on' : '') + '" data-id="' + m[0] + '">' + m[1] + st + '</div>';
+      });
+    });
+    $('list').innerHTML = h;
+    Array.prototype.forEach.call(document.querySelectorAll('.mv'), function (el) { el.onclick = function () { select(el.getAttribute('data-id')); }; });
+  }
+  function select(id) {
+    cur = id; undo = []; playT = -1;
+    $('title').textContent = NAME[id];
+    $('sub').textContent = { s: '立ち技', c: 'しゃがみ技', j: 'ジャンプ技（空中）' }[kindOf(id)] || '';
+    $('memo').value = rec(id).memo || '';
+    renderList(); draw();
+  }
+  function setSide(s) { side = s; $('tStart').className = s === 'start' ? 'on' : ''; $('tEnd').className = s === 'end' ? 'on' : ''; undo = []; draw(); }
+  $('tStart').onclick = function () { setSide('start'); };
+  $('tEnd').onclick = function () { setSide('end'); };
+  $('cGhost').onchange = draw;
+  $('memo').oninput = function () { rec(cur).memo = this.value; save(); };
+  $('memo').onchange = renderList;
+  $('bReset').onclick = function () { undo.push(JSON.stringify(rec(cur)[side])); rec(cur)[side] = basePose(kindOf(cur)); save(); draw(); };
+  $('bCopy').onclick = function () { undo.push(JSON.stringify(rec(cur)[side])); var r = rec(cur); r[side] = clone(side === 'start' ? r.end : r.start); r.edited = true; save(); draw(); };
+  $('bFlipLimb').onclick = function () {
+    undo.push(JSON.stringify(rec(cur)[side])); var q = rec(cur)[side];
+    [['e1', 'e2'], ['h1', 'h2'], ['k1', 'k2'], ['f1', 'f2']].forEach(function (p) { var t = q[p[0]]; q[p[0]] = q[p[1]]; q[p[1]] = t; });
+    rec(cur).edited = true; save(); draw();
+  };
+  $('bUndo').onclick = function () { if (!undo.length) return toast('戻せるものがない'); rec(cur)[side] = JSON.parse(undo.pop()); save(); draw(); };
+  var raf = null, t0 = 0;
+  $('bPlay').onclick = function () {
+    if (playT >= 0) { playT = -1; cancelAnimationFrame(raf); draw(); return; }
+    t0 = performance.now(); playT = 0;
+    var tick = function (now) { playT = ((now - t0) / 1000 * 1.6) % 2.6; draw(); raf = requestAnimationFrame(tick); };
+    raf = requestAnimationFrame(tick);
+  };
+  function toast(s) { var t = $('toast'); t.textContent = s; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(function () { t.style.display = 'none'; }, 1800); }
+  function exportText() {
+    var out = { kind: 'yui_pose_v1', moves: {} };
+    for (var id in db) if (db[id].edited || db[id].memo) {
+      var r = db[id], rd = function (q) { var o = {}; for (var k in q) o[k] = [Math.round(q[k].x), Math.round(q[k].y)]; return o; };
+      out.moves[id] = { name: NAME[id], memo: r.memo, start: rd(r.start), end: rd(r.end) };
+    }
+    return JSON.stringify(out);
+  }
+  $('bExport').onclick = function () {
+    var t = exportText();
+    var ok = function () { toast('コピーした'); };
+    var fall = function () { window.prompt('この文字をコピーして', t); };
+    try { navigator.clipboard.writeText(t).then(ok, fall); } catch (e) { fall(); }
+  };
+  function importText(t) {
+    try {
+      var o = JSON.parse(t); if (o.kind !== 'yui_pose_v1') throw 0;
+      for (var id in o.moves) { var m = o.moves[id], cv2 = function (q) { var r = {}; for (var k in q) r[k] = P(q[k][0], q[k][1]); return r; };
+        db[id] = { start: cv2(m.start), end: cv2(m.end), memo: m.memo || '', edited: true }; }
+      save(); select(cur); toast('読み込んだ');
+    } catch (e) { toast('読み込めない文字だった'); }
+  }
+  $('bImport').onclick = function () {
+    var fall = function () { var t = window.prompt('書き出した文字を貼り付けて', ''); if (t) importText(t); };
+    try { navigator.clipboard.readText().then(function (t) { if (t && t.indexOf('yui_pose_v1') >= 0) importText(t); else fall(); }, fall); } catch (e) { fall(); }
+  };
+  select('lp');
+})();
+</script>
+</body>
+</html>

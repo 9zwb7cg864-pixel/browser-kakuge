@@ -56,7 +56,7 @@ KF.CHARS = {
       throw: { anim: 'throw', type: 't', dmg: 1200, doAnim: 'throw_do' },
       // 必殺技
       fire: { anim: 'sp_fire', type: 's', name: '虚環弾', dmg: 600, adv: [2, -4], hs: 10, push: [6, 6], lv: 'm', chip: 0.125,
-              proj: { fx: 'ball_k', spd: [3.6, 4.8, 6.0], life: 160, hits: 1, r: 14 }, meter: 40, cancel: 'ur',
+              proj: { fx: 'ball_k', spd: [3.6, 4.8, 6.0], life: 160, hits: 1, r: 14 }, meter: 40, cancel: 'u',
               lvy: -3.5, lvx: 0.5, floatG: 0.35 },   // 浮いた相手に当たると、近くにふわっと浮かせ直す。当たったらラッシュでキャンセルできる
       // EX虚環弾：ゆっくり飛ぶ。1発目で相手を少し浮かせて後ろへ飛ばし、弾は少し止まってから追いかけて、飛んだ先で2発目が当たる
       fire_ex: { anim: 'ex_fire', type: 'x', name: 'EX虚環弾', dmg: 450, adv: [6, 0], hs: 10, push: [6, 6], lv: 'm', chip: 0.125,
@@ -458,8 +458,6 @@ KF.COMBOS = {
     { name: '旋踵から', text: '←強K（旋踵）＞ 中旋風脚 ， 昇穿', steps: [{ d: 4, b: 'hk' }, { m: [2, 1, 4], b: 'mk' }, { m: [6, 2, 3], b: 'hp', link: 1 }] },
     { name: '虚掌破から', corner: 1, text: '（画面端）強P ＞ 虚掌破 ， 弱旋風脚 ， 昇穿', steps: [{ b: 'hp' }, { m: [2, 1, 4], b: 'hp' }, { m: [2, 1, 4], b: 'lk', link: 1 }, { m: [6, 2, 3], b: 'hp', link: 1 }] },
     { name: 'EX虚掌破（弱攻撃から）', text: 'しゃがみ弱K ＞ しゃがみ弱P ＞ EX虚掌破 ， しゃがみ強P ＞ 昇穿（ゲージ2本）', steps: [{ d: 2, b: 'lk' }, { d: 2, b: 'lp' }, { m: [2, 1, 4], b: 'lp,mp' }, { d: 2, b: 'hp', link: 1 }, { m: [6, 2, 3], b: 'hp' }] },
-    { name: 'アッパー強P拾い', corner: 1, text: '（画面端）強P ＞ 虚掌破 ， 強P ＞ 虚環弾 ＞ ラッシュ ～ 強P ＞ 昇穿（ラッシュ3本）', steps: [{ b: 'hp' }, { m: [2, 1, 4], b: 'hp' }, { b: 'hp', link: 1 }, { m: [2, 3, 6], b: 'lp' }, { b: 'rush' }, { b: 'hp', wait: 7, noHit: 1 }, { m: [6, 2, 3], b: 'hp' }] },
-    { name: 'アッパーから波動ラッシュ', corner: 1, text: '（画面端）強P ＞ 虚掌破 ， 虚環弾 ＞ ラッシュ ～ 強P ＞ 昇穿（ラッシュ3本）', steps: [{ b: 'hp' }, { m: [2, 1, 4], b: 'hp' }, { m: [2, 3, 6], b: 'lp', link: 1 }, { b: 'rush' }, { b: 'hp', wait: 7, noHit: 1 }, { m: [6, 2, 3], b: 'hp' }] },
     { name: '虚掌破から対空', corner: 1, text: '（画面端）虚掌破 ， しゃがみ強P ＞ 昇穿', steps: [{ m: [2, 1, 4], b: 'hp' }, { d: 2, b: 'hp', link: 1 }, { m: [6, 2, 3], b: 'hp' }] },
     // ---- 応用
     { name: '飛び込み', text: 'ジャンプ強K ， 中P ～ 強P ＞ 中旋風脚 ， 昇穿', jumpIn: 'hk', steps: [{ b: 'mp', link: 1 }, { b: 'hp' }, { m: [2, 1, 4], b: 'mk' }, { m: [6, 2, 3], b: 'hp', link: 1 }] },
