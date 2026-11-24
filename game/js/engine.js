@@ -1448,8 +1448,10 @@ var KF = window.KF || (window.KF = {});
     if (isThrow) { def.combo = 1; }
     att.sup = Math.min(C.SUPER_MAX, att.sup + (mv.type === 'u' || mv.type === 'gu' ? 0 : dmg * KF.SUPER_GAIN.hit[0]));
     def.sup = Math.min(C.SUPER_MAX, def.sup + dmg * KF.SUPER_GAIN.hit[1]);
-    if (mv.type !== 'x' && mv.type !== 'u' && mv.type !== 'gu') att.rush = Math.min(C.RUSH_MAX, att.rush + dmg * 0.3);
-    def.rush = Math.min(C.RUSH_MAX, def.rush + dmg * 0.25);
+    if (def.combo <= 1) {   // 当てたときのラッシュゲージの回復は、コンボの1発目だけ（つながった2発目からは、当てた側も食らった側も増えない）
+      if (mv.type !== 'x' && mv.type !== 'u' && mv.type !== 'gu') att.rush = Math.min(C.RUSH_MAX, att.rush + dmg * 0.3);
+      def.rush = Math.min(C.RUSH_MAX, def.rush + dmg * 0.25);
+    }
     def.dmgPop = { v: def.comboDmg, t: 60 };
     def.flash = 6;
     if (def.hp <= 0) this.koDefender(att, def);
