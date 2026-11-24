@@ -504,6 +504,7 @@ KF.HIT_FIX = {
   'gai:sp_upper': { y1: -60 },
   'gai:sp_lift': { y1: -60 },
   'kokuu:c_hp': { y1: -86 },
+  'kokuu:c_mk': { reach: 1.3 },   // 中足：リーチ1.3倍
   'kokuu:sp_palm': { y1: -84 },
   'kokuu:ex_palm': { y1: -84 },
   'shuuen:c_hp': { y1: -86 },
@@ -521,4 +522,5 @@ if (KF.MOVE_LIST.kokuu) KF.MOVE_LIST.yui = KF.MOVE_LIST.kokuu;
 if (KF.COMBOS.kokuu) KF.COMBOS.yui = KF.COMBOS.kokuu;
 KF.HIT_FIX['yui:sp_dp'] = KF.HIT_FIX['kokuu:sp_dp'];
 KF.HIT_FIX['yui:ex_dp'] = KF.HIT_FIX['kokuu:ex_dp'];
+KF.HIT_FIX['yui:c_mk'] = KF.HIT_FIX['kokuu:c_mk'];
 KF.kokuuType = function (k) { return k === 'kokuu' || k === 'yui'; };

@@ -75,6 +75,7 @@ var KF = window.KF || (window.KF = {});
             if (b[0] > 6) { b[2] += b[0] - 6; b[0] = 6; }
             // 全キャラ共通：打撃の攻撃判定を前へ伸ばす（リーチを長めに）。前に向かって出る判定だけ
             if (b[0] + b[2] > 24) b[2] += (KF.REACH_ADD != null ? KF.REACH_ADD : 14);
+            if (fix && fix.reach) b[2] = (b[0] + b[2]) * fix.reach - b[0];   // 技ごとのリーチの倍率（前の端を何倍にするか）
           });
         }
       });
