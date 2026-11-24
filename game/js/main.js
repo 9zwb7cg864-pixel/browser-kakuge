@@ -325,7 +325,7 @@ var KF = window.KF || (window.KF = {});
     try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, fall); else fall(); } catch (e) { fall(); }
   }
   // 貼った入力（KFREC2）を、位置リセットしたところから1Pの入力として流す（コンボ探しの結果を画面で確かめる用）
-  //   KFREC2|リセットのしかた,1Pのキャラ,2Pのキャラ[,ラッシュの本数,SAの本数,stand/crouch,2Pが振る技]|入力
+  //   KFREC2|リセットのしかた,1Pのキャラ,2Pのキャラ[,ラッシュの本数,SAの本数,stand/crouch,2Pが振る技,メカの数,置いたメカの位置]|入力
   var play = null;
   function startPlay(t) {
     var m = /^KFREC2\|([^|]*)\|(.*)$/.exec((t || '').trim());
@@ -339,6 +339,9 @@ var KF = window.KF || (window.KF = {});
     if (game.noRushRefill) p0.rush = Math.min(C.RUSH_MAX, +h[3] * C.RUSH_MAX / 6);
     game.noSupRefill = h[4] !== undefined && h[4] !== '';
     if (game.noSupRefill) p0.sup = +h[4] * 1000;
+    // ユイのメカ：持っている数（h[7]）と、最初から置いてあるメカの位置（h[8]＝自分から前へ何ドット）
+    if (h[7] !== undefined && h[7] !== '' && p0.D.moves.reload) p0.mech = +h[7];
+    if (h[8] !== undefined && h[8] !== '' && p0.D.moves.mech) { game.spawnProj(p0, p0.D.moves.mech); var mp = game.projs[game.projs.length - 1]; if (mp) mp.x = p0.x + p0.facing * +h[8]; }
     play = { frames: frames, i: 0, prev: null, stance: h[5] || 'stand', opp: h[6] || '' };
     paused = false;
   }
