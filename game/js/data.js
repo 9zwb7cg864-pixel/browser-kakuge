@@ -206,7 +206,7 @@ KF.CHARS.yui.moves.reload = { anim: 'sp_reload', type: 's', name: 'メカ補充'
 delete KF.CHARS.yui.moves.tatsu;
 // セグウェイ：↓↘→+K。まあまあ速く突っ込む1段技。ぶつかった瞬間だけ当たり、相手は斜め前へ飛ぶ。弱中強で進む距離が違う
 KF.CHARS.yui.moves.segway = { anim: 'sp_segway', type: 's', name: 'セグウェイ', dmg: 1000, adv: ['kd', -12], hs: 12, push: [2, 4], lv: 'm', chip: 0.125,
-  kd: 'launch', lvx: 5.5, lvy: -6.5, jlim: 0, hits: 1, stopOnHit: 1, dash: { vx: [6.5, 7.5, 8.5], vy: 0 }, cancel: 'u', meter: 40 };
+  kd: 'launch', lvx: 5.5, lvy: -6.5, jlim: 3, hits: 1, stopOnHit: 1, dash: { vx: [6.5, 7.5, 8.5], vy: 0 }, cancel: 'u', meter: 40 };
 delete KF.CHARS.yui.moves.rushk; delete KF.CHARS.yui.moves.rushk_ex;
 // ---- ユイのEX（ボタン2つ）
 var YM = KF.CHARS.yui.moves;
