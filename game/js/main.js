@@ -250,7 +250,7 @@ var KF = window.KF || (window.KF = {});
         var pf = play.frames[play.i];
         i1 = playInput(pf, play.prev); play.prev = pf;
         i2 = playInput({ d: play.stance === 'crouch' ? 2 : 5, b: play.i === 0 && play.opp ? [play.opp] : [] }, null);
-        if (++play.i >= play.frames.length) { play = null; game.noSupRefill = false; recToast = { s: '再生おわり', t: 120 }; }
+        if (++play.i >= play.frames.length) { play = null; game.noSupRefill = false; game.noRushRefill = false; recToast = { s: '再生おわり', t: 120 }; }
       }
       if (cfg.mode === 'training' && !paused) { recordKeys(i1); recInput(i1); }
       if (!paused) game.step([i1, i2]);
@@ -335,7 +335,8 @@ var KF = window.KF || (window.KF = {});
     m[2].split(' ').forEach(function (tok) { var q = /^(\d)([a-z+]*)x(\d+)$/.exec(tok); if (!q) return; for (var k = 0; k < +q[3]; k++) frames.push({ d: +q[1], b: q[2] ? q[2].split('+') : [] }); });
     game.resetTraining(h[0] || 'center'); recReset = h[0] || 'center';
     var C = KF.CONST, p0 = game.p[0];
-    if (h[3] !== undefined && h[3] !== '') p0.rush = Math.min(C.RUSH_MAX, +h[3] * C.RUSH_MAX / 6);
+    game.noRushRefill = h[3] !== undefined && h[3] !== '';   // ラッシュの本数を決めたときは、トレモの自動回復を止める
+    if (game.noRushRefill) p0.rush = Math.min(C.RUSH_MAX, +h[3] * C.RUSH_MAX / 6);
     game.noSupRefill = h[4] !== undefined && h[4] !== '';
     if (game.noSupRefill) p0.sup = +h[4] * 1000;
     play = { frames: frames, i: 0, prev: null, stance: h[5] || 'stand', opp: h[6] || '' };
