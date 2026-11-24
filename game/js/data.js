@@ -227,7 +227,7 @@ delete YM.atatsu; delete YM.atatsu_ex; delete YM.zanku; delete YM.zanku_ex; dele
 YM.mp = Object.assign({}, YM.mp); delete YM.mp.tc;
 YM.mk = Object.assign({}, YM.mk); delete YM.mk.tc;
 // ←強K：当たると相手を真上にかち上げる。必殺技でキャンセルして捕獲網で捕まえられる
-KF.CHARS.yui.moves.b_hk = Object.assign({}, KF.CHARS.kokuu.moves.b_hk, { name: 'かち上げ', kd: 'launch', lvy: -10, lvx: 0.6, floatG: 0.4, adv: ['kd', -6] });
+KF.CHARS.yui.moves.b_hk = Object.assign({}, KF.CHARS.kokuu.moves.b_hk, { name: 'かち上げ', aaInv: [[1, 17]], kd: 'launch', lvy: -10, lvx: 0.6, floatG: 0.4, adv: ['kd', -6] });
 delete KF.CHARS.yui.moves.palm; delete KF.CHARS.yui.moves.palm_ex;
 KF.COMMANDS.yui = KF.COMMANDS.kokuu.map(function (c) { return c.move === 'palm' ? Object.assign({}, c, { move: 'shock' }) : c.move === 'fire' ? Object.assign({}, c, { move: 'net' }) : c.move === 'tatsu' ? Object.assign({}, c, { move: 'reload' }) : c.move === 'rushk' ? Object.assign({}, c, { move: 'segway' }) : c; }).filter(function (c) { return !/^(dp|atatsu|zanku)$/.test(c.move); });   // 昇穿・空中技は無い
 // 超必殺のあと、ほかの必殺技より先に見る（→↘↓↙← は ↓↙← を含むので）
@@ -235,7 +235,7 @@ KF.COMMANDS.yui.splice(KF.COMMANDS.yui.filter(function (c) { return /^su/.test(c
 if (KF.MOVE_LIST.kokuu) KF.MOVE_LIST.yui = KF.MOVE_LIST.kokuu.map(function (r) {
   return /^虚掌破/.test(r[0]) ? ['電撃（手元のボタンを押すと、体の前の地面から電撃。キャラ1人分の幅）', '↓↙← + P']
     : /^虚環弾/.test(r[0]) ? ['捕獲網（対空投げ。空中の相手を網で捕まえ、方向+P でその方向へ投げる。入力なしなら前へ）', '↓↘→ + P']
-    : /^特殊技 旋踵/.test(r[0]) ? ['特殊技 かち上げ（当たると真上に浮く。必殺技キャンセルで捕獲網につながる）', r[1]]
+    : /^特殊技 旋踵/.test(r[0]) ? ['特殊技 かち上げ（空中の攻撃に無敵。当たると真上に浮く。必殺技キャンセルで捕獲網につながる）', r[1]]
     : /^旋風脚/.test(r[0]) ? ['メカ補充（メカを1つ補充。最大3つ）', '↓↙← + K']
     : /^迅閃脚/.test(r[0]) ? ['セグウェイ（速く突っ込む1段技。ぶつかると相手は斜め前へ飛ぶ）', '↓↘→ + K']
     : /^(昇穿|斬空|ターゲットコンボ)/.test(r[0]) ? null
