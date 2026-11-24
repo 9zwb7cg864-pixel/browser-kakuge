@@ -47,7 +47,7 @@ var KF = (typeof window !== 'undefined' ? window : global).KF || {};
     var map = new Map();
     function c(v) {
       if (v === null || typeof v !== 'object') return v;
-      if (statics.has(v)) return v;
+      if (statics.has(v) || Object.isFrozen(v)) return v;   // 固めてある物（入力の記録）は写さない
       var m = map.get(v); if (m) return m;
       var o, i;
       if (Array.isArray(v)) { o = new Array(v.length); map.set(v, o); for (i = 0; i < v.length; i++) o[i] = c(v[i]); }

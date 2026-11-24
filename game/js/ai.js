@@ -56,6 +56,8 @@ KF.AI.prototype.output = function () { return this.out; };
 
 KF.AI.prototype.update = function () {
   var m = this.me(), o = m.opp, L = this.L, b = this.b;
+  this.remember();
+  if (this.planJob) { if (this.q.length || !m.actionable()) { this.planJob = null; this.hold = null; } else this.planStep(); }
   var s = this.observe();
   var dist = Math.abs(s.x - m.x);
   var self = this;
@@ -146,7 +148,11 @@ KF.AI.prototype.update = function () {
 
   if (!this.q.length && m.actionable()) {
     this.cool--;
-    if (this.cool <= 0) { this.decide(s, dist); this.cool = L.think + Math.floor(this.rnd() * L.think); }
+    if (this.cool <= 0) {
+      var planned = this.planOn() && s.state !== 'down' && s.state !== 'getup' && (this.planJob || this.planStart());
+      if (!planned) this.decide(s, dist);
+      this.cool = planned ? KF.AI_PLAN[this.level].every : L.think + Math.floor(this.rnd() * L.think);
+    }
   }
 
   // 出力
@@ -259,6 +265,156 @@ KF.AI.prototype.rushRoute = function () {
   if (K) this.jug = { until: this.b.frameNo + 150 };
 };
 
+
+// ==========================================================================================
+//  先読みで立ち回る（HARD / EXPERT）
+//  ・相手の様子は反応時間ぶん遅れて見える：その時点の状態から、自分が入れた入力だけで「今」を予想する
+//  ・候補の行動（歩く・下がる・ガード・牽制・波動・飛ぶ・昇穿・投げ・ダッシュ・パリィ）を、
+//    相手の動き方いくつか（何もしない・ガード・前に歩く・しゃがみ中K・前ジャンプ・昇穿）と組み合わせて
+//    実際のゲームの計算で数十フレーム先まで進め、ダメージ・ダウン・有利不利・間合い・画面端で点数をつけて選ぶ
+// ==========================================================================================
+KF.AI_PLAN = { HARD: { horizon: 26, every: 8, noise: 70, models: 4, per: 16 }, EXPERT: { horizon: 28, every: 4, noise: 25, models: 5, per: 30 } };
+KF.AI.prototype.planOn = function () { return !!KF.AI_PLAN[this.level] && !!KF.cloneBattle && KF.kokuuType(this.me().kind); };
+function aiIn(dx, dy, held, prev) {
+  var pressed = {}; for (var k in held) if (held[k] && !(prev && prev[k])) pressed[k] = true;
+  return { x: dx, y: dy, held: held, pressed: pressed };
+}
+// 毎フレーム、今の状態を写して覚えておく（反応時間ぶん前の状態から先読みするため）
+KF.AI.prototype.remember = function () {
+  if (!this.planOn()) return;
+  var b = this.b, ev = b.events, fx = b.fx;
+  b.events = []; b.fx = [];
+  var c = KF.cloneBattle(b);
+  b.events = ev; b.fx = fx;
+  this.ring = this.ring || [];
+  this.ring.push({ f: b.frameNo, b: c });
+  if (this.ring.length > 40) this.ring.shift();
+};
+// 反応時間ぶん前の状態から、自分の入力だけを足して「今」を予想する（相手は最後に見えた入力のまま）
+KF.AI.prototype.believedNow = function () {
+  var R = this.L.react, b = this.b, ring = this.ring || [];
+  var i = ring.length - 1 - R; if (i < 0) return null;
+  var base = KF.cloneBattle(ring[i].b), me = this.side, f0 = ring[i].f;
+  var myHist = this.me().buf.hist, oHist = this.me().opp.buf.hist;
+  var steps = b.frameNo - f0; if (steps < 0 || steps > myHist.length) return null;
+  var oLast = oHist[oHist.length - 1 - steps] || null;   // 反応時間ぶん前に見えていた相手の入力
+  for (var k = 0; k < steps; k++) {
+    var h = myHist[myHist.length - steps + k], fm = base.p[me], fo = base.p[1 - me];
+    var mine = h ? { x: (((h.dir - 1) % 3) - 1) * fm.facing, y: h.dir >= 7 ? -1 : h.dir <= 3 ? 1 : 0, held: h.h || {}, pressed: h.p || {} } : aiIn(0, 0, {});
+    var theirs = oLast ? { x: (((oLast.dir - 1) % 3) - 1) * fo.facing, y: oLast.dir >= 7 ? -1 : oLast.dir <= 3 ? 1 : 0, held: oLast.h || {}, pressed: {} } : aiIn(0, 0, {});
+    var inp = [null, null]; inp[me] = mine; inp[1 - me] = theirs;
+    base.events.length = 0; base.fx.length = 0; base.step(inp);
+  }
+  return base;
+};
+// 候補の行動：前後・上下は「相手の方向が6」の向き。f(t) がそのフレームの [方向, ボタン]
+KF.AI.prototype.planCandidates = function (m) {
+  var C = [], self = this;
+  var seq = function (name, arr, then, setup) { C.push({ name: name, arr: arr, then: then || 4, setup: setup }); };
+  var hold = function (d, n) { var a = []; for (var i = 0; i < n; i++) a.push([d, '']); return a; };
+  var mot = function (dirs, btn) { return dirs.map(function (d, i) { return [d, i === dirs.length - 1 ? btn : '']; }); };
+  seq('walkF8', hold(6, 8), 5); seq('walkF16', hold(6, 16), 5);
+  seq('walkB8', hold(4, 8)); seq('walkB16', hold(4, 16));
+  seq('guard', hold(4, 14)); seq('cguard', hold(1, 14), 1);
+  seq('2mk', [[2, 'mk'], [2, 'mk']], 1, 'mk'); seq('5mk', [[5, 'mk'], [5, 'mk']], 4); seq('5hk', [[5, 'hk'], [5, 'hk']], 4);
+  seq('2hk', [[2, 'hk'], [2, 'hk']], 1); seq('5mp', [[5, 'mp'], [5, 'mp']], 4, 'mp'); seq('2lk', [[2, 'lk'], [2, 'lk']], 1, 'lk');
+  seq('fireL', mot([2, 3, 6], 'lp')); seq('fireH', mot([2, 3, 6], 'hp'));
+  seq('jumpHK', hold(9, 1).concat(hold(5, 13), [[5, 'hk'], [5, 'hk']]), 5);
+  seq('jumpHK2', hold(9, 1).concat(hold(5, 17), [[5, 'hk'], [5, 'hk']]), 5);
+  seq('dp', mot([6, 2, 3], 'hp'));
+  seq('throw', [[5, 'lp,lk'], [5, 'lp,lk']], 5);
+  seq('dash', [[6, ''], [5, ''], [6, ''], [6, '']], 5);
+  if (m.rush >= KF.CONST.PARRY_COST + 1000) seq('parry', hold(5, 1).map(function () { return [5, 'rush']; }).concat(hold(5, 10).map(function () { return [5, 'rush']; })), 4);
+  return C;
+};
+// 相手の動き方の見本（相手から見た前後）
+KF.AI.prototype.oppModels = function (n) {
+  var M = [
+    { name: 'idle', w: 0.24, f: function () { return [5, '']; } },
+    { name: 'block', w: 0.18, f: function () { return [4, '']; } },
+    { name: 'walk', w: 0.18, f: function () { return [6, '']; } },
+    { name: 'poke', w: 0.16, f: function (t) { return t >= 3 && t < 5 ? [2, 'mk'] : [2, '']; } },
+    { name: 'jump', w: 0.12, f: function (t) { return t < 2 ? [9, ''] : t >= 15 && t < 17 ? [5, 'hk'] : [5, '']; } },
+    { name: 'dp', w: 0.12, f: function (t) { return t === 3 ? [6, ''] : t === 4 ? [2, ''] : t === 5 || t === 6 ? [3, 'hp'] : [5, '']; } },
+  ];
+  return M.slice(0, n);
+};
+function dirIn(d, btn, facing, prevHeld) {
+  var rx = ((d - 1) % 3) - 1, ry = d >= 7 ? -1 : (d <= 3 ? 1 : 0), held = {};
+  if (btn) btn.split(',').forEach(function (k) { if (k) held[k] = true; });
+  return aiIn(rx * facing, ry, held, prevHeld);
+}
+// 1つの候補 × 1つの相手の動き方 を進めて点数をつける
+KF.AI.prototype.planScore = function (now, cand, model, H) {
+  var b = KF.cloneBattle(now), me = this.side, m = b.p[me], o = b.p[1 - me];
+  var hp0 = m.hp, ohp0 = o.hp, pm = {}, po = {}, hit = false, gotHit = false;
+  for (var t = 0; t < H; t++) {
+    var mine = t < cand.arr.length ? cand.arr[t] : [cand.then === 1 ? 1 : 4, ''];
+    // 自分の技が当たったら、そのあとはガードを固めずに次の行動に移れる前提（コンボは別の処理で続ける）
+    var a = dirIn(mine[0], mine[1], m.facing, pm), z = model.f(t), c = dirIn(z[0], z[1], o.facing, po);
+    pm = a.held; po = c.held;
+    var inp = [null, null]; inp[me] = a; inp[1 - me] = c;
+    b.events.length = 0; b.fx.length = 0; b.step(inp);
+    for (var i = 0; i < b.events.length; i++) { var e = b.events[i]; if (e.type === 'hit') { if (e.side === me) hit = true; else gotHit = true; } }
+    if (b.phase !== 'fight') break;
+  }
+  var dealt = ohp0 - o.hp, taken = hp0 - m.hp;
+  var sc = dealt * (hit && cand.setup ? 1.6 : 1.0) - taken * 1.15;   // 牽制が当たれば必殺技につなげられる分を足す
+  var down = function (f) { return f.state === 'down' || f.state === 'launch' || f.state === 'getup'; };
+  if (down(o)) sc += 250; if (down(m)) sc -= 300;
+  var busy = function (f) { return /hitstun|blockstun|attack|land|thrown|launch|down|getup/.test(f.state); };
+  if (m.actionable() && busy(o)) sc += 60; if (o.actionable() && busy(m)) sc -= (m.state === 'attack' ? 120 : 60);
+  var dist = Math.abs(m.x - o.x), pr = m.D.prefRange || [110, 190], mid = (pr[0] + pr[1]) / 2;
+  sc -= Math.max(0, Math.abs(dist - mid) - 25) * 1.2;
+  var lim = b.limits ? b.limits() : [KF.CONST.WALL, KF.CONST.WORLD_W - KF.CONST.WALL];
+  var myWall = Math.min(m.x - lim[0], lim[1] - m.x), oWall = Math.min(o.x - lim[0], lim[1] - o.x);
+  if (myWall < 70) sc -= (70 - myWall) * 3; if (oWall < 70) sc += (70 - oWall) * 1.5;
+  return sc;
+};
+// 先読みは1フレームで全部やると重いので、数フレームに分けて計算する（1フレームに per 組ずつ）
+KF.AI.prototype.planStart = function () {
+  var P = KF.AI_PLAN[this.level]; if (!P) return false;
+  var now = this.believedNow(); if (!now) return false;
+  var me = now.p[this.side]; if (!me.actionable()) return false;
+  var dist = Math.abs(me.x - now.p[1 - this.side].x);
+  var cands = this.planCandidates(me).filter(function (c) {   // 届かない・意味のない候補は先に外す
+    if (dist > 160 && /^(throw|2lk|5mp)$/.test(c.name)) return false;
+    if (dist > 260 && /^(2mk|5mk|5hk|2hk|dp)$/.test(c.name)) return false;
+    if (dist < 70 && /^(jumpHK2|dash)$/.test(c.name)) return false;
+    return true;
+  });
+  this.hold = { x: -1, y: 0 };   // 考えている間はガードを固めておく
+  this.planJob = { now: now, cands: cands, models: this.oppModels(P.models), i: 0, j: 0, acc: cands.map(function () { return { tot: 0, w: 0, worst: 1e9 }; }) };
+  return true;
+};
+KF.AI.prototype.planStep = function () {
+  var P = KF.AI_PLAN[this.level], J = this.planJob; if (!J) return;
+  for (var n = 0; n < P.per && J.i < J.cands.length; n++) {
+    var mo = J.models[J.j], v = this.planScore(J.now, J.cands[J.i], mo, P.horizon), a = J.acc[J.i];
+    a.tot += v * mo.w; a.w += mo.w; a.worst = Math.min(a.worst, v);
+    if (++J.j >= J.models.length) { J.j = 0; J.i++; }
+  }
+  if (J.i < J.cands.length) return;
+  this.planJob = null; this.hold = null;
+  if (this.q.length || !this.me().actionable()) return;   // 計算中に状況が変わった（攻撃された・コンボ中など）
+  var best = null, self = this;
+  for (var i = 0; i < J.cands.length; i++) {
+    var a = J.acc[i], score = a.tot / a.w * 0.75 + a.worst * 0.25 + (this.rnd() - 0.5) * P.noise;
+    if (J.cands[i].name === this.lastPlan) score -= 35;   // 同じ行動ばかりにならないように
+    if (!best || score > best.score) best = { c: J.cands[i], score: score };
+  }
+  if (best) this.planCommit(best.c);
+};
+KF.AI.prototype.planCommit = function (c) {
+  var self = this;
+  this.clear(); this.lastPlan = c.name;
+  // 牽制は当たったら必殺技につなぐ（当たったのを見てから）
+  if (c.setup === 'mk') { this.starter('mk', [[2, 3, 6], 'lp'], true, true); return; }
+  if (c.setup === 'lk') { this.starter('lk', [[2, 1, 4], 'lk'], true, true); this.jug = { until: this.b.frameNo + 100 }; return; }
+  if (c.setup === 'mp') { this.starter('mp', null); this.plan = [[{ d: 5, b: 'hp', n: 2 }], [{ d: 2, b: '', n: 1 }, { d: 1, b: '', n: 1 }, { d: 4, b: 'mk', n: 2 }]]; this.planLast = null; this.jug = { until: this.b.frameNo + 120 }; return; }
+  c.arr.forEach(function (x) { self.push(x[0], x[1], 1); });
+  if (c.name === 'jumpHK' || c.name === 'jumpHK2') { this.plan = [[{ d: 5, b: 'mp', n: 2 }], [{ d: 5, b: 'hp', n: 2 }]]; this.planLast = null; }
+};
 KF.AI.prototype.decide = function (s, dist) {
   if (this.me().D.base === 'gai') { this.decideGai(s, dist); return; }
   var m = this.me(), L = this.L, K = KF.kokuuType(m.kind), r = this.rnd();

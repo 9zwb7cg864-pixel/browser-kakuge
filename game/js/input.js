@@ -192,7 +192,9 @@ KF.InputBuffer = function () { this.hist = []; };
 KF.InputBuffer.prototype.push = function (inp, facing) {
   var x = inp.x * facing; // 向きを考慮（前=+）
   var dir = 5 + x - inp.y * 3; // テンキー表記
-  this.hist.push({ dir: dir, p: inp.pressed, h: inp.held });
+  // 記録は書き換えないので固めておく（状態を写すとき〔ロールバック・CPUの先読み〕に写さずに使い回せる）
+  var cp = function (o) { var r = {}; for (var k in o) if (o[k]) r[k] = true; return Object.freeze(r); };
+  this.hist.push(Object.freeze({ dir: dir, p: cp(inp.pressed || {}), h: cp(inp.held || {}) }));
   if (this.hist.length > 60) this.hist.shift();
 };
 KF.InputBuffer.prototype.refacing = function () { };
