@@ -199,7 +199,7 @@ KF.AI.prototype.punish = function (dist, s) {
     if (bars >= 2 && L.superUse > 0.8 && this.rnd() < 0.6) { this.starter('hp', [[2, 1, 4, 2, 1, 4], 'hp']); return; }
     if (bars >= 1 && L.superUse > 0.5 && this.rnd() < 0.4) { this.starter('hp', [[2, 3, 6, 2, 3, 6], 'hp']); return; }
     if (L.combo >= 3 && m.rush >= 3000 && this.rnd() < L.rush) { this.rushRoute(); return; }
-    if (L.combo >= 3) { this.starter('hp', [[2, 3, 6], 'hk']); this.jug = { until: this.b.frameNo + 90 }; return; }
+    if (L.combo >= 3) { this.starter('hp', [[2, 1, 4], 'mk']); this.jug = { until: this.b.frameNo + 90 }; return; }   // 強P ＞ 中旋風脚 → 昇穿
     this.starter('hp', L.combo >= 2 ? [[6, 2, 3], 'hp'] : null);
   } else {
     if (bars >= 3 && L.superUse > 0.8 && this.rnd() < 0.5) { this.starter('hp', [[2, 1, 4, 2, 1, 4], 'hp']); return; }
@@ -228,12 +228,12 @@ KF.AI.prototype.chainCombo = function (light) {
   var steps, first;
   if (light) {   // しゃがみ弱K ＞ しゃがみ弱P ＞ 弱旋風脚 → 昇穿（うまいCPUほど浮かせて追撃、そうでなければスライディングで締める）
     first = { d: 2, b: 'lk' };
-    var lfin = K ? (L.combo >= 3 ? mot([2, 3, 6], 'lk') : mot([2, 1, 4], 'lk')) : mot([2, 1, 4], 'lk');
+    var lfin = K ? (L.combo >= 3 ? mot([2, 1, 4], 'lk') : mot([2, 3, 6], 'lk')) : mot([2, 1, 4], 'lk');   // 旋風脚は↓↙←＋K、迅閃脚は↓↘→＋K
     steps = [[{ d: 2, b: 'lp', n: 4 }], lfin];
     if (K && L.combo >= 3) this.jug = { until: this.b.frameNo + 120 };
   } else {       // ターゲットコンボ ＞ 強旋風脚 → 昇穿（ゲージがあれば超必殺）
     first = { d: 5, b: K ? 'mp' : 'mk' };
-    var fin = K ? mot([2, 3, 6], 'hk') : mot([2, 1, 4], 'hk');
+    var fin = K ? mot([2, 1, 4], 'mk') : mot([2, 1, 4], 'hk');
     if (bars >= (K ? 2 : 1) && L.superUse > 0.8 && this.rnd() < 0.4) fin = K ? mot([2, 1, 4, 2, 1, 4], 'hp') : mot([2, 3, 6, 2, 3, 6], 'hp');
     steps = [[{ d: 5, b: 'hp', n: 2 }], fin];
     if (K) this.jug = { until: this.b.frameNo + 120 };
@@ -255,7 +255,7 @@ KF.AI.prototype.rushRoute = function () {
   this.combo = { next: next, confirm: true, done: false };
   var self = this;
   // ラッシュ後の強Pが当たったら必殺技へ
-  this.after = K ? [[2, 3, 6], 'hk'] : [[2, 1, 4], 'hk'];
+  this.after = K ? [[2, 1, 4], 'mk'] : [[2, 1, 4], 'hk'];
   if (K) this.jug = { until: this.b.frameNo + 150 };
 };
 
@@ -270,7 +270,7 @@ KF.AI.prototype.decide = function (s, dist) {
     // 起き攻め：近づいて重ねる / 2Pは投げ
     if (dist > 70) { this.push(6, '', 8); return; }
     if (!K && r < 0.3 * L.spacing) { this.push(5, 'lp,lk', 1); return; }
-    this.starter('lk', L.combo >= 2 ? (K ? [[2, 3, 6], 'lk'] : [[2, 1, 4], 'lk']) : null, true, true);
+    this.starter('lk', L.combo >= 2 ? (K ? [[2, 1, 4], 'lk'] : [[2, 1, 4], 'lk']) : null, true, true);
     if (K && L.combo >= 2) this.jug = { until: this.b.frameNo + 100 };
     return;
   }
@@ -292,7 +292,7 @@ KF.AI.prototype.decide = function (s, dist) {
     if (K) {
       if (dist < 90 && r < 0.05) { this.push(6, 'mp', 2); return; }            // 中段で崩す
       if (dist < 100 && r < 0.08) { this.starter('hk', [[2, 3, 6], 'lp'], false, true); this.q[0].d = 4; return; } // 旋踵（ガードさせて有利）＞ 虚環弾
-      if (dist < 120) { this.motion([2, 3, 6], this.pick(['lk', 'mk'])); this.jug = { until: this.b.frameNo + 100 }; return; } // 旋風脚 → 浮いたら追撃
+      if (dist < 120) { this.motion([2, 1, 4], this.pick(['lk', 'mk'])); this.jug = { until: this.b.frameNo + 100 }; return; } // 旋風脚 → 浮いたら追撃
     } else {
       if (dist < 90 && r < 0.05) { this.push(6, 'mk', 2); return; }            // 中段の踏みつけ
       if (dist > 120) { this.motion([2, 3, 6], this.pick(['lk', 'mk'])); return; } // 地裂脚（下段の飛び道具）
@@ -306,7 +306,7 @@ KF.AI.prototype.decide = function (s, dist) {
   // 適正距離（差し合い）
   if (dist > pr[0]) {
     if (r < 0.35) {
-      if (K) { var tat = L.combo >= 3 && this.rnd() < 0.5; this.starter('mk', L.combo >= 2 ? (tat ? [[2, 3, 6], 'mk'] : [[2, 3, 6], 'lp']) : null, true, L.combo < 3); if (tat) this.jug = { until: this.b.frameNo + 100 }; }
+      if (K) { var tat = L.combo >= 3 && this.rnd() < 0.5; this.starter('mk', L.combo >= 2 ? (tat ? [[2, 1, 4], 'mk'] : [[2, 3, 6], 'lp']) : null, true, L.combo < 3); if (tat) this.jug = { until: this.b.frameNo + 100 }; }
       else this.starter('mk', L.combo >= 2 ? [[2, 1, 4], 'lk'] : null, true, L.combo < 3);
       return;
     }
@@ -319,7 +319,7 @@ KF.AI.prototype.decide = function (s, dist) {
   // 近距離
   if (r < 0.3 && L.combo >= 2) { this.chainCombo(this.rnd() < 0.5); return; }
   if (r < 0.25) {
-    if (K) { this.starter('lk', L.combo >= 2 ? [[2, 3, 6], 'lk'] : null, true, true); if (L.combo >= 2) this.jug = { until: this.b.frameNo + 100 }; }
+    if (K) { this.starter('lk', L.combo >= 2 ? [[2, 1, 4], 'lk'] : null, true, true); if (L.combo >= 2) this.jug = { until: this.b.frameNo + 100 }; }
     else this.starter('lk', L.combo >= 2 ? [[2, 1, 4], 'lk'] : null, true, true);
     return;
   }
