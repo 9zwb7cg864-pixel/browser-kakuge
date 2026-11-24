@@ -208,6 +208,7 @@ KF.altImg = function (key) {
 KF.fighterImg = function (kind, anim, alt) { return alt ? KF.altImg(kind + ':' + anim) : KF.Assets.img[kind + ':' + anim]; };
 
 KF.Renderer.prototype.drawFighterImg = function (ctx, f, x, y, alpha, flipY) {
+  if (f.netHidden) return;   // 網の中にすっぽり入っている間は描かない
   var A = KF.Assets, img = KF.fighterImg(f.kind, f.anim, f.alt);
   if (!img) return;
   var fw = f.animObj().fw || 224, fh = 200, sx = Math.min(f.aF, f.animObj().frames.length - 1) * fw;   // 足を伸ばす技（中足）は横に広いセル
@@ -358,6 +359,7 @@ KF.Renderer.prototype.render = function (b) {
 
   // 影
   b.p.forEach(function (f) {
+    if (f.netHidden) return;
     var a = Math.max(0.15, 0.5 - (C.GROUND - f.y) / 300);
     c.fillStyle = 'rgba(0,0,0,' + a + ')';
     c.beginPath(); c.ellipse(f.x + ox, C.GROUND + 2, 30, 5, 0, 0, Math.PI * 2); c.fill();

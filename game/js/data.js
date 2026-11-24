@@ -184,9 +184,28 @@ KF.HIT_FIX = {
 
 // 紺野ユイ：今は道着キャラ男（kokuu）と同じ技・判定を使う（攻撃の絵はまだ無いので、攻撃中は仮の絵）
 KF.CHARS.yui = Object.assign({}, KF.CHARS.kokuu, { name: '紺野ユイ', en: 'YUI', color: '#5c8dff' });
-KF.COMMANDS.yui = KF.COMMANDS.kokuu;
-if (KF.MOVE_LIST.kokuu) KF.MOVE_LIST.yui = KF.MOVE_LIST.kokuu;
-if (KF.COMBOS.kokuu) KF.COMBOS.yui = KF.COMBOS.kokuu;
+// ユイだけの必殺技：↓↙← + P（虚掌破のかわり）＝電撃、→↘↓↙← + P＝コマンド投げ
+KF.CHARS.yui.moves = Object.assign({}, KF.CHARS.kokuu.moves, {
+  // 電撃：手元のボタンを押すと、体の前（キャラ1人分の幅）の地面から電撃が立ち上がる。地上の相手には立ち・しゃがみどちらにも当たる
+  shock: { anim: 'sp_shock', type: 's', name: '電撃', dmg: 1000, adv: [-1, -6], hs: 12, push: [1, 3], lv: 'm', chip: 0.125, jlim: 0, cancel: 'u', meter: 40 },
+  // コマンド投げ：パワー手袋をかざして、つかんだ相手を持ち上げて投げる。ガードできない・投げ抜けできない。投げより少し遠くまでつかめる
+  glove: { anim: 'sp_glove', type: 'g', name: 'パワーグラブ', dmg: 2000, doAnim: 'glove_do', range: [130], meter: 40 },
+  // 網：大きい虫取り網を頭の上から前へすくい上げる対空投げ。空中の相手だけ捕まえる（地上の相手には何もしない）。
+  //  捕まえたら 方向+P でその方向（前・後ろ・上・下）へ投げる。入力がなければ18Fで前へ投げる
+  net: { anim: 'sp_net', type: 's', name: '捕獲網', dmg: 1500, meter: 40,
+         net: { box: [10, -250, 110, 170], at: [70, -190], hold: 'net_hold', throwAnim: 'net_throw', wait: 18, relF: 5 } }
+});
+delete KF.CHARS.yui.moves.fire; delete KF.CHARS.yui.moves.fire_ex;
+delete KF.CHARS.yui.moves.palm; delete KF.CHARS.yui.moves.palm_ex;
+KF.COMMANDS.yui = KF.COMMANDS.kokuu.map(function (c) { return c.move === 'palm' ? Object.assign({}, c, { move: 'shock' }) : c.move === 'fire' ? Object.assign({}, c, { move: 'net' }) : c; });
+// 超必殺のあと、ほかの必殺技より先に見る（→↘↓↙← は ↓↙← を含むので）
+KF.COMMANDS.yui.splice(KF.COMMANDS.yui.filter(function (c) { return /^su/.test(c.move); }).length, 0, { seq: [6, 3, 2, 1, 4], btn: 'P', win: 18, move: 'glove' });
+if (KF.MOVE_LIST.kokuu) KF.MOVE_LIST.yui = KF.MOVE_LIST.kokuu.map(function (r) {
+  return /^虚掌破/.test(r[0]) ? ['電撃（手元のボタンを押すと、体の前の地面から電撃。キャラ1人分の幅）', '↓↙← + P']
+    : /^虚環弾/.test(r[0]) ? ['捕獲網（対空投げ。空中の相手を網で捕まえ、方向+P でその方向へ投げる。入力なしなら前へ）', '↓↘→ + P'] : r;
+}).concat([['パワーグラブ（コマンド投げ。ガード不能・投げ抜け不可。投げより少し遠くまで届く）', '→↘↓↙← + P']]);
+// 虚掌破を使うコンボはユイには無い
+if (KF.COMBOS.kokuu) KF.COMBOS.yui = KF.COMBOS.kokuu.filter(function (c) { return !c.steps.some(function (st) { return st.m && (st.m.join() === '2,1,4' || st.m.join() === '2,3,6') && /p/.test(st.b); }); });
 KF.HIT_FIX['yui:sp_dp'] = KF.HIT_FIX['kokuu:sp_dp'];
 KF.HIT_FIX['yui:ex_dp'] = KF.HIT_FIX['kokuu:ex_dp'];
 KF.HIT_FIX['yui:c_mk'] = KF.HIT_FIX['kokuu:c_mk'];

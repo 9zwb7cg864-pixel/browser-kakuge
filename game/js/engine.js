@@ -577,10 +577,16 @@ var KF = window.KF || (window.KF = {});
       m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'tatsu', str: 1 }, { sp: 'dp', str: 2 }, { su: 'su3' }],
       h: [{ b: 'hp' }, { sp: 'palm', str: 0 }, { sp: 'fire', str: 0 }, { sp: 'dp', str: 2 }, { su: 'su3' }],   // 虚掌破で浮かせて虚環弾で拾い、強昇穿 ＞ 天地穿（波動からのラッシュキャンセルは無し）
     },
+    yui: {   // ユイには虚掌破・虚環弾が無いので、強は 強P ＞ 電撃 ＞ 超必殺
+      l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'tatsu', str: 0 }, { sp: 'dp', str: 2 }, { su: 'su3' }],
+      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'tatsu', str: 1 }, { sp: 'dp', str: 2 }, { su: 'su3' }],
+      h: [{ b: 'hp' }, { sp: 'shock', str: 0 }, { su: 'su1' }],
+    },
   };
   //  SPの方向ごとの技（なし・前・下・後ろ・空中）。変身キャラ男は ↓↓+SP で変身
   KF.MODERN_SP = {
     kokuu: { n: 'fire', f: 'dp', d: 'tatsu', b: 'palm', air: 'atatsu' },
+    yui: { n: 'net', f: 'dp', d: 'tatsu', b: 'shock', air: 'atatsu' },   // ユイ：SP＝網、←SP＝電撃
   };
   Battle.prototype.modernConvert = function (f, raw) {
     var H = raw.held || {}, Pp = raw.pressed || {};
@@ -851,6 +857,10 @@ var KF = window.KF || (window.KF = {});
     if ((mv.type === 't' || mv.type === 'g' || mv.type === 'gu') && ph === 'a' && !f.connected) {
       if (this.checkGrab(f, mv)) return;
     }
+    // 網の対空投げ（持続中に、網の範囲に空中の相手が入ったら捕まえる）
+    if (mv.net && ph === 'a' && !f.connected) {
+      if (this.checkNet(f, mv)) return;
+    }
     // キャンセル（飛び道具を撃った技は、撃った後しばらく超必殺でキャンセルできる）
     // 飛び道具が当たったら（空中の相手に当たったときなど）、技の戻りの最中でも超必殺でキャンセルできる
     if (mv.proj && mv.cancel && f.spawned && (t <= a.firstActive + 14 || (f.projHit && f.opp.state === 'launch'))) {
@@ -959,7 +969,7 @@ var KF = window.KF || (window.KF = {});
       var f = q[0];
       f.x = q[1]; f.y = C.GROUND; f.vx = 0; f.vy = 0; f.air = false; f.pushV = 0;
       f.state = 'idle'; f.setAnim('idle'); f.move = null; f.moveId = null; f.t = 0;
-      f.hs = 0; f.stun = 0; f.inv = 0; f.thInv = 0; f.projInv = 0; f.aaInv = 0; f.preD = 0; f.thrower = null; f.grabbed = null;
+      f.hs = 0; f.stun = 0; f.inv = 0; f.thInv = 0; f.projInv = 0; f.aaInv = 0; f.preD = 0; f.thrower = null; f.grabbed = null; f.netHidden = false;
       f.hp = f.D.hp; f.hpShown = f.hp; f.hpTrail = f.hp; f.rush = C.RUSH_MAX; f.rushCD = 0; f.emptyT = 0; f.rushEmpty = false; f.sup = C.SUPER_MAX;
       f.combo = 0; f.comboDmg = 0; f.scale = 1; f.addSc = 1; f.juggle = 0; f.rushLock = false; f.chain = 0; f.chainUsed = {};
       f.pendingBtn = null; f.pendingT = 0; f.pendingRush = 0; f.buf.hist.length = 0;
@@ -1007,6 +1017,50 @@ var KF = window.KF || (window.KF = {});
     this.emit('sfx', { s: 'grab' });
     return true;
   };
+  // ---------------------------------------------------------- 網（対空投げ）
+  //  捕まえた相手は網の中（描かない）。捕まえている間に 方向+P でその方向へ投げる。入力がなければ少しして前へ投げる
+  Battle.prototype.checkNet = function (f, mv) {
+    var o = f.opp, N = mv.net;
+    if (!o.air || o.thInv > 0 || ['thrown', 'throwing', 'ko'].indexOf(o.state) >= 0) return false;
+    var bx = N.box, x0 = f.x + (f.facing > 0 ? bx[0] : -(bx[0] + bx[2])), y0 = f.y + bx[1], hit = false;
+    o.boxes('hurt').forEach(function (h) { if (h[0] < x0 + bx[2] && h[0] + h[2] > x0 && h[1] < y0 + bx[3] && h[1] + h[3] > y0) hit = true; });
+    if (!hit) return false;
+    f.connected = true;
+    f.state = 'throwing'; f.setAnim(N.hold); f.t = 0; f.vx = 0;
+    f.grabbed = o; f.grabMove = mv; f.grabHit = false; f.netT = 0; f.netOut = false;
+    o.state = 'thrown'; o.t = 0; o.move = null; o.vx = 0; o.vy = 0; o.thrower = f; o.techable = false; o.netHidden = true;
+    this.endCombo(o);
+    this.emit('sfx', { s: 'grab' });
+    return true;
+  };
+  Battle.prototype.updateNet = function (f, cur) {
+    var o = f.grabbed, mv = f.grabMove, N = mv.net;
+    f.stepAnim();
+    if (!f.grabHit) {
+      o.x = f.x + f.facing * N.at[0]; o.y = f.y + N.at[1]; o.air = true; o.netHidden = true;
+      f.netT++;
+      var P = cur.p && (cur.p.lp || cur.p.mp || cur.p.hp);
+      if ((P && f.netT >= 3) || f.netT >= N.wait) {
+        var d = P ? cur.dir : 6;
+        f.netDir = d === 8 ? 'u' : (d === 2 || d === 1 || d === 3) ? 'd' : (d === 4 || d === 7) ? 'b' : 'f';
+        f.grabHit = true; f.setAnim(N.throwAnim); f.t = 0;
+      }
+    } else if (!f.netOut) {
+      o.x = f.x + f.facing * N.at[0]; o.y = f.y + N.at[1];
+      if (f.aF >= N.relF) {
+        f.netOut = true; o.netHidden = false;
+        var dmg = Array.isArray(mv.dmg) ? mv.dmg[0] : mv.dmg, s = f.facing;
+        this.applyDamage(f, o, dmg, mv, true);
+        var V = { f: [s * 7, -6], b: [-s * 7, -6], u: [s * 0.8, -13], d: [s * 2.5, 7] }[f.netDir];
+        o.state = 'launch'; o.air = true; o.vx = V[0]; o.vy = V[1]; o.setAnim('launch'); o.aF = 4; o.thrower = null; o.juggle = 99;
+        o.facing = f.netDir === 'b' ? s : -s;
+        f.hs = o.hs = 12; this.shake = 8;
+        this.spawnFx('hit_' + f.D.fx, o.x, o.y - 40, 1.3);
+        this.emit('sfx', { s: 'heavy' });
+      }
+    }
+    if (f.grabHit && f.aDone) { f.state = 'idle'; f.setAnim('idle'); f.grabbed = null; f.move = null; if (o.netHidden) o.netHidden = false; }
+  };
   Battle.prototype.doTech = function (a, b) {
     [a, b].forEach(function (f) { f.state = 'tech'; f.setAnim('tech'); f.t = 0; f.vx = -f.facing * 5.5; f.grabbed = null; f.thrower = null; f.move = null; f.thInv = 8; });
     var mx = (a.x + b.x) / 2;
@@ -1015,6 +1069,7 @@ var KF = window.KF || (window.KF = {});
     a.hs = b.hs = 8;
   };
   Battle.prototype.updateThrow = function (f, cur) {
+    if (f.grabMove && f.grabMove.net) { this.updateNet(f, cur); return; }
     var o = f.grabbed;
     f.stepAnim();
     // 投げ抜け（受付時間内に弱P+弱K）

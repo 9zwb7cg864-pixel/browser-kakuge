@@ -60,6 +60,35 @@ def place(p, f, lie=False):
     cell = Image.new('RGBA', (FW, FH))
     cell.paste(im, (x, y), im)
     return cell
+# ユイだけの技の動き（蒼井蓮には無い）。やられ判定と関節は構えのものを使い、攻撃判定と手の位置はここで決める
+def new_anims():
+    base = meta['anims']['idle']['frames'][0]
+    def fr(ph, hit=None, hand=None):
+        f = copy.deepcopy(base); f['d'] = 1; f['ph'] = ph
+        if hit: f['hit'] = hit
+        if hand: f['j'] = dict(f['j']); f['j']['hand_l'] = list(hand)
+        return f
+    A = {}
+    # 電撃：発生14F・持続6F・硬直22F。体の前の地面から立ち上がる（前へキャラ1人分＝幅70、高さ140）
+    A['sp_shock'] = [fr('s') for _ in range(14)] + [fr('a', [[40, -140, 70, 140]]) for _ in range(6)] + [fr('r') for _ in range(22)]
+    # パワーグラブ：発生7F・つかめるのは3F・空振りの硬直30F
+    A['sp_glove'] = [fr('s') for _ in range(7)] + [fr('a') for _ in range(3)] + [fr('r') for _ in range(30)]
+    # つかんだあと：手を高く上げて相手を持ち上げ（24F）、前下へ振り下ろして投げる（手が一番低いコマで投げる）
+    hand = []
+    # 絵に合わせる：手の前で相手を少し持ち上げて構え（〜30F）、振り上げて（31F）前下へ叩きつける（33F）
+    for i in range(46):
+        if i <= 30: t = i / 30; hand.append((64 - 4 * t, -112 - 28 * t))
+        elif i == 31: hand.append((44, -170))
+        elif i <= 33: t = (i - 31) / 2; hand.append((44 + 46 * t, -170 + 100 * t))
+        else: hand.append((60, -110))
+    A['glove_do'] = [fr('-', hand=hand[i]) for i in range(46)]
+    # 網：発生8F・持続6F・硬直28F（捕まえる範囲は技データの net.box）。捕まえたら持つ（最大24F）→ 投げる（8F目で放す）
+    A['sp_net'] = [fr('s') for _ in range(8)] + [fr('a') for _ in range(6)] + [fr('r') for _ in range(28)]
+    A['net_hold'] = [fr('-') for _ in range(24)]
+    A['net_throw'] = [fr('-') for _ in range(30)]
+    for n, frs in A.items():
+        meta['anims'][n] = {'file': 'yui_' + n + '.png', 'loop': False, 'frames': frs}
+new_anims()
 import os
 os.makedirs(OUT, exist_ok=True)
 for name, a in meta['anims'].items():

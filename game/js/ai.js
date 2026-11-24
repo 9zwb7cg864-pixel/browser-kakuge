@@ -516,7 +516,8 @@ KF.AI.prototype.greedyNames = function () {
   var set = {}, R = (KF.AI_ROUTES || {}).kokuu || [];
   R.forEach(function (r) { r.steps.slice(1).forEach(function (st) { set[st.label] = 1; }); });
   ['dp強', 'dp_EX', 'tatsu中', 'tatsu弱', 'rushk_EX', 'rushk強', 'palm_EX', 'fire弱', 'fire強', '5hp', '2hp', '5mp', 'su1', 'su2', 'su3'].forEach(function (n) { set[n] = 1; });
-  return (this._gn = Object.keys(set));
+  var D = this.me().D.moves;
+  return (this._gn = Object.keys(set).filter(function (n) { var mm = /(palm|fire)/.exec(n); return !mm || D[mm[1]]; }));
 };
 KF.AI.prototype.greedyStart = function (snap) {
   var o = this.me().opp; if (!snap && o.combo === 0) { this.gjob = null; return; }
@@ -596,7 +597,8 @@ KF.AI.prototype.routePick = function (starter) {
   var R = (KF.AI_ROUTES || {})[KF.kokuuType(this.me().kind) ? 'kokuu' : this.me().kind]; if (!R) return [];
   var m = this.me(), o = m.opp, lim = this.b.limits(), corner = Math.min(o.x - lim[0], lim[1] - o.x) < 130;
   var rush = Math.floor(m.rush / 1000), sup = Math.floor(m.sup / 1000);
-  var ok = R.filter(function (r) { return r.starter === starter && r.rush <= rush && r.sup <= sup; });
+  var D = m.D.moves, have = function (r) { return r.steps.every(function (st) { var mm = /(palm|fire)/.exec(st.label); return !mm || D[mm[1]]; }); };   // ユイには虚掌破・虚環弾が無い
+  var ok = R.filter(function (r) { return r.starter === starter && r.rush <= rush && r.sup <= sup && have(r); });
   // 最初は同じ位置（中央／端）でいちばん減るレシピ。乗り換え先は位置を問わず減る順
   ok.sort(function (a, c) { return c.final - a.final; });
   for (var i = 0; i < ok.length; i++) if (ok[i].corner === corner) { ok.unshift(ok.splice(i, 1)[0]); break; }
