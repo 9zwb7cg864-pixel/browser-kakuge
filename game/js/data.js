@@ -196,13 +196,16 @@ KF.CHARS.yui.moves = Object.assign({}, KF.CHARS.kokuu.moves, {
          net: { box: [10, -250, 110, 170], at: [70, -190], hold: 'net_hold', throwAnim: 'net_throw', wait: 18, relF: 5 } }
 });
 delete KF.CHARS.yui.moves.fire; delete KF.CHARS.yui.moves.fire_ex;
+// ←強K：当たると相手を真上にかち上げる。必殺技でキャンセルして捕獲網で捕まえられる
+KF.CHARS.yui.moves.b_hk = Object.assign({}, KF.CHARS.kokuu.moves.b_hk, { name: 'かち上げ', kd: 'launch', lvy: -10, lvx: 0.6, floatG: 0.4, adv: ['kd', -6] });
 delete KF.CHARS.yui.moves.palm; delete KF.CHARS.yui.moves.palm_ex;
 KF.COMMANDS.yui = KF.COMMANDS.kokuu.map(function (c) { return c.move === 'palm' ? Object.assign({}, c, { move: 'shock' }) : c.move === 'fire' ? Object.assign({}, c, { move: 'net' }) : c; });
 // 超必殺のあと、ほかの必殺技より先に見る（→↘↓↙← は ↓↙← を含むので）
 KF.COMMANDS.yui.splice(KF.COMMANDS.yui.filter(function (c) { return /^su/.test(c.move); }).length, 0, { seq: [6, 3, 2, 1, 4], btn: 'P', win: 18, move: 'glove' });
 if (KF.MOVE_LIST.kokuu) KF.MOVE_LIST.yui = KF.MOVE_LIST.kokuu.map(function (r) {
   return /^虚掌破/.test(r[0]) ? ['電撃（手元のボタンを押すと、体の前の地面から電撃。キャラ1人分の幅）', '↓↙← + P']
-    : /^虚環弾/.test(r[0]) ? ['捕獲網（対空投げ。空中の相手を網で捕まえ、方向+P でその方向へ投げる。入力なしなら前へ）', '↓↘→ + P'] : r;
+    : /^虚環弾/.test(r[0]) ? ['捕獲網（対空投げ。空中の相手を網で捕まえ、方向+P でその方向へ投げる。入力なしなら前へ）', '↓↘→ + P']
+    : /^特殊技 鎚打ち/.test(r[0]) ? [r[0].replace('特殊技 旋踵（ガードさせて有利）', '特殊技 かち上げ（当たると真上に浮く。捕獲網につながる）'), r[1].replace('← + 強K', '← + 強K')] : r;
 }).concat([['パワーグラブ（コマンド投げ。ガード不能・投げ抜け不可。投げより少し遠くまで届く）', '→↘↓↙← + P']]);
 // 虚掌破を使うコンボはユイには無い
 if (KF.COMBOS.kokuu) KF.COMBOS.yui = KF.COMBOS.kokuu.filter(function (c) { return !c.steps.some(function (st) { return st.m && (st.m.join() === '2,1,4' || st.m.join() === '2,3,6') && /p/.test(st.b); }); });
