@@ -59,6 +59,8 @@ function run(o) {
 const cases = [
   { name: 'モダン操作どうし・遅延1F（片道40ms）', lat: 40, jit: 30, delay: 1, ms: 60000, seed: 7, unordered: 1, modern: [true, true] },
   { name: 'モダン対クラシック・遅延1F', lat: 40, jit: 30, delay: 1, ms: 60000, seed: 8, unordered: 1, modern: [true, false] },
+  { name: '蓮 対 ユイ・遅延1F', lat: 40, jit: 30, delay: 1, ms: 60000, seed: 9, unordered: 1, kinds: ['kokuu', 'yui'] },
+  { name: 'ユイどうし・遅延1F', lat: 40, jit: 30, delay: 1, ms: 60000, seed: 10, unordered: 1, kinds: ['yui', 'yui'] },
   { name: '遅延0F・近い回線（片道15ms）・順番ばらばら', lat: 15, jit: 15, delay: 0, ms: 60000, seed: 5, unordered: 1 },
   { name: '遅延1F・普通の回線（片道50ms・揺らぎ40ms）・順番ばらばら', lat: 50, jit: 40, delay: 1, ms: 60000, seed: 6, unordered: 1 },
   { name: '近い回線（片道20ms）', lat: 20, jit: 10, delay: 2, ms: 60000, seed: 1 },

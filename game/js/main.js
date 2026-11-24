@@ -146,7 +146,7 @@ var KF = window.KF || (window.KF = {});
   var KINDS = ['kokuu', 'yui'];
   var DESC = {
     kokuu: ['地上戦が得意なバランス型', '飛び道具・対空・突進技を持つ', '体力 10000 / 動き 速め'],
-    yui: ['今は道着キャラ男と同じ技を使う', '攻撃の絵はまだ仮', '体力 10000 / 動き 速め'],
+    yui: ['道具で戦うトリッキー型', '電撃・捕獲網・メカ・セグウェイ', '体力 10000 / 動き 速め'],
   };
   function sceneSelect(m) {
     bg(0.6);
@@ -395,9 +395,13 @@ var KF = window.KF || (window.KF = {});
   // オンラインで使うキャラ（部屋に入る前に選ぶ。次に開いたときも同じキャラ）
   try { KF.onlineKind = localStorage.getItem('kf_online_kind') || 'kokuu'; } catch (e) { KF.onlineKind = 'kokuu'; }
   if (!KF.CHARS[KF.onlineKind]) KF.onlineKind = 'kokuu';
-  KF.onlineKind = 'kokuu';
-  function validKind(k) { return 'kokuu'; }
-  var ONLINE_ITEMS = ['部屋を作る', '部屋に入る（合言葉を入れる）', '戻る'];
+  function validKind(k) { return KF.CHARS[k] && KINDS.indexOf(k) >= 0 ? k : 'kokuu'; }
+  KF.onlineKind = validKind(KF.onlineKind);
+  function onlineItems() { return ['使うキャラ：◀ ' + KF.CHARS[KF.onlineKind].name + ' ▶', '部屋を作る', '部屋に入る（合言葉を入れる）', '戻る']; }
+  function nextOnlineKind(dir) {
+    KF.onlineKind = KINDS[(KINDS.indexOf(KF.onlineKind) + dir + KINDS.length) % KINDS.length];
+    try { localStorage.setItem('kf_online_kind', KF.onlineKind); } catch (e) { }
+  }
   var ui = null;
   // 合言葉の入力欄・招待リンクのコピーボタン（文字入力はHTMLの部品で行う）
   function netUI(mode) {
@@ -469,7 +473,7 @@ var KF = window.KF || (window.KF = {});
     quitBtn.style.display = want && scene === 'onlineBattle' ? 'block' : 'none';
     if (quitArm > 0 && --quitArm === 0) quitBtn.textContent = '対戦をやめる';
   }
-  function goOnline() { scene = 'online'; onl.stage = 'menu'; onl.sel = 0; netUI(null); }
+  function goOnline() { scene = 'online'; onl.stage = 'menu'; onl.sel = 1; netUI(null); }
   function newSession() {
     if (net) net.close();
     net = new KF.NetSession();
@@ -525,15 +529,18 @@ var KF = window.KF || (window.KF = {});
     R.text('オンライン対戦', 320, 34, 22, '#ffffff', 'center', '#00d8ff');
     if (onl.stage === 'menu') {
       R.text('同じ合言葉の部屋に入った2人で対戦します', 320, 64, 11, '#c0c8e8', 'center');
-      var rects = drawMenu(ONLINE_ITEMS, 100, onl.sel, 300);
-      if (m.up) { onl.sel = (onl.sel + 2) % 3; KF.Audio.play('cursor'); }
-      if (m.down) { onl.sel = (onl.sel + 1) % 3; KF.Audio.play('cursor'); }
+      var rects = drawMenu(onlineItems(), 100, onl.sel, 300);
+      drawFighterBig(KF.onlineKind, 'idle', 92, 300, 0.9, 1, frameT);
+      if (m.up) { onl.sel = (onl.sel + 3) % 4; KF.Audio.play('cursor'); }
+      if (m.down) { onl.sel = (onl.sel + 1) % 4; KF.Audio.play('cursor'); }
+      if (onl.sel === 0 && (m.left || m.right)) { nextOnlineKind(m.left ? -1 : 1); KF.Audio.play('cursor'); }
       var ck = pickByClick(rects); if (ck >= 0) { onl.sel = ck; m.ok = true; }
       if (m.back) { KF.Audio.play('back'); scene = 'title'; return; }
       if (m.ok) {
         KF.Audio.play('ok');
-        if (onl.sel === 0) onlineHost();
-        else if (onl.sel === 1) { onl.stage = 'code'; netUI('join'); }
+        if (onl.sel === 0) nextOnlineKind(1);
+        else if (onl.sel === 1) onlineHost();
+        else if (onl.sel === 2) { onl.stage = 'code'; netUI('join'); }
         else scene = 'title';
       }
       return;
