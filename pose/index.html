@@ -70,6 +70,12 @@
     <div id="sub" class="tag"></div>
     <label>メモ（どんな技にしたいか・判定・当たる高さ・フレームなど何でも）</label>
     <textarea id="memo" placeholder="例：ローキック。出し終わりで足先が相手のすねに当たる。発生は速め"></textarea>
+    <label>持ち物（棒・武器など）</label>
+    <div class="row"><label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--text)"><input type="checkbox" id="pOn">持たせる</label>
+      <select id="pHand" style="background:#0d0f16;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px"><option value="h1">手前の手</option><option value="h2">奥の手</option></select></div>
+    <div class="row" style="margin-top:6px"><span class="tag" style="width:64px">長さ</span><input type="range" id="pLen" min="10" max="260" step="1" style="flex:1"><input type="number" id="pLenN" min="10" max="400" style="width:64px;background:#0d0f16;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px"></div>
+    <div class="row"><span class="tag" style="width:64px">握る位置</span><input type="range" id="pGrip" min="0" max="100" step="1" style="flex:1"><span class="tag" id="pGripT" style="width:64px"></span></div>
+    <p class="hint" style="margin:4px 0 0">長さの目安：ユイの背の高さ（足から頭のてっぺん）が約190。向きは持ち物の先（オレンジの菱形）をドラッグして変える。腕を動かすと持ち物もいっしょに回る</p>
     <label>書き出し・読み込み</label>
     <div class="row">
       <button id="bExport">全部をコピー</button>
@@ -118,10 +124,18 @@
   function toScr(p) { return { x: OX + p.x * SCALE, y: OY + p.y * SCALE }; }
   function toW(x, y) { return { x: (x - OX) / SCALE, y: (y - OY) / SCALE }; }
 
+  // ---- 持ち物：長さ・握る位置・持つ手は技ごと、向き（前腕に対する角度）はポーズごと
+  function prop(id) { var r = rec(id || cur); if (!r.prop) r.prop = { on: false, len: 80, grip: 15, hand: 'h1' }; if (!r.propA) r.propA = { start: 0, end: 0 }; return r.prop; }
+  function propSeg(q, pr, rel) {
+    if (!pr || !pr.on) return null;
+    var hd = q[pr.hand], el = q['e' + pr.hand.slice(1)], a = ang(el, hd) + rel, dx = Math.cos(a), dy = Math.sin(a), g = pr.grip / 100;
+    var A = P(hd.x - dx * pr.len * g, hd.y - dy * pr.len * g), B = P(hd.x + dx * pr.len * (1 - g), hd.y + dy * pr.len * (1 - g));
+    return { a: A, b: B, tip: g <= 0.5 ? B : A, back: g > 0.5 };
+  }
   // ---- 描く
   var playT = -1;
   function lerpPose(a, b, t) { var o = {}; for (var k in a) o[k] = P(a[k].x + (b[k].x - a[k].x) * t, a[k].y + (b[k].y - a[k].y) * t); return o; }
-  function drawFig(q, alpha, strong) {
+  function drawFig(q, alpha, strong, rel) {
     ctx.save(); ctx.globalAlpha = alpha; ctx.lineCap = 'round';
     var seg = function (a, b, col, w) { var A = toScr(a), B = toScr(b); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); };
     var back = '#8a5a72', front = '#ffb0cc', body = '#ffd6e6';
@@ -132,7 +146,10 @@
     // 顔の向き（右向き）
     ctx.fillStyle = '#14161f'; ctx.beginPath(); ctx.arc(H.x + 6 * SCALE * 0.75, H.y - 2, 2.5, 0, 7); ctx.fill();
     seg(q.p, q.k1, front, 12); seg(q.k1, q.f1, front, 11);
+    var ps = propSeg(q, prop(), rel || 0);
+    if (ps) { seg(ps.a, ps.b, '#3a2a1a', 9); seg(ps.a, ps.b, '#e0a050', 5); }
     seg(q.c, q.e1, front, 10); seg(q.e1, q.h1, front, 9);
+    if (strong && ps) { var T = toScr(ps.tip); ctx.globalAlpha = 1; ctx.fillStyle = '#ff9a3c'; ctx.beginPath(); ctx.moveTo(T.x, T.y - 9); ctx.lineTo(T.x + 9, T.y); ctx.lineTo(T.x, T.y + 9); ctx.lineTo(T.x - 9, T.y); ctx.closePath(); ctx.fill(); }
     if (strong) {
       for (var k in q) {
         var S = toScr(q[k]); ctx.globalAlpha = 1;
@@ -159,19 +176,21 @@
     ctx.restore();
     if (playT >= 0) {
       var t = playT < 1 ? playT : playT < 1.4 ? 1 : 1 - (playT - 1.4) / 1;
-      drawFig(lerpPose(r.start, r.end, Math.max(0, Math.min(1, t))), 1, false);
+      var tt = Math.max(0, Math.min(1, t)); prop(); drawFig(lerpPose(r.start, r.end, tt), 1, false, r.propA.start + (r.propA.end - r.propA.start) * tt);
       ctx.fillStyle = '#ff7aa8'; ctx.textAlign = 'left'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('再生中（もう一度押すと止まる）', 14, 26);
       return;
     }
     var other = side === 'start' ? r.end : r.start;
-    if (document.getElementById('cGhost').checked) drawFig(other, 0.22, false);
-    drawFig(r[side], 1, true);
+    prop();
+    if (document.getElementById('cGhost').checked) drawFig(other, 0.22, false, r.propA[side === 'start' ? 'end' : 'start']);
+    drawFig(r[side], 1, true, r.propA[side]);
     ctx.fillStyle = side === 'start' ? '#7fd0ff' : '#ffb0cc'; ctx.textAlign = 'left'; ctx.font = 'bold 18px sans-serif';
     ctx.fillText(side === 'start' ? '出し始め' : '出し終わり', 14, 28);
     if (pinMode) { ctx.fillStyle = '#ffd23c'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('📌 固定する関節をタップ（もう一度押すと終わる）', 140, 28); }
     // 手前の手・足先が腰から前にどれだけ出ているか
     var q = r[side]; var reach = Math.round(Math.max(q.h1.x, q.h2.x, q.f1.x, q.f2.x) - q.p.x);
     ctx.fillStyle = '#9aa0b8'; ctx.font = '13px sans-serif'; ctx.fillText('いちばん前の手足：腰から ' + reach, 14, 50);
+    var ps0 = propSeg(q, prop(), r.propA[side]); if (ps0) ctx.fillText('持ち物の先：腰から ' + Math.round(Math.max(ps0.a.x, ps0.b.x) - q.p.x), 14, 70);
   }
 
   // ---- ドラッグ
@@ -220,6 +239,13 @@
     ['p', 'k1', 'k1'], ['k1', 'f1', 'f1r'], ['p', 'k2', 'k2'], ['k2', 'f2', 'f2r']];
   function pick(w) {
     var q = rec(cur)[side], best = null, bd = 22 / SCALE;
+    var ps = propSeg(q, prop(), rec(cur).propA[side]);
+    if (ps) {
+      if (Math.hypot(ps.tip.x - w.x, ps.tip.y - w.y) < 22 / SCALE) return 'pt';
+      var vx = ps.b.x - ps.a.x, vy = ps.b.y - ps.a.y, t0 = Math.max(0, Math.min(1, ((w.x - ps.a.x) * vx + (w.y - ps.a.y) * vy) / (vx * vx + vy * vy)));
+      var hd0 = q[prop().hand];
+      if (Math.hypot(ps.a.x + vx * t0 - w.x, ps.a.y + vy * t0 - w.y) < 10 / SCALE && Math.hypot(hd0.x - w.x, hd0.y - w.y) > 22 / SCALE) return 'pt';
+    }
     for (var k in q) { var d = Math.hypot(q[k].x - w.x, q[k].y - w.y); if (d < bd) { bd = d; best = k; } }
     if (best) return best;
     bd = 12 / SCALE;
@@ -231,6 +257,8 @@
   }
   function apply(k, w) {
     var q = rec(cur)[side];
+    if (k === 'pt') { var pr = prop(), hd = q[pr.hand], el = q['e' + pr.hand.slice(1)], g = pr.grip / 100;
+      var a = ang(hd, w) + (g > 0.5 ? Math.PI : 0) - ang(el, hd); rec(cur).propA[side] = Math.atan2(Math.sin(a), Math.cos(a)); return; }
     if (k === 'p') { var dx = w.x - q.p.x, dy = w.y - q.p.y; for (var j in q) { if (j === 'f1' || j === 'f2') continue; q[j].x += dx; q[j].y += dy; }
       // 足先は床に残し、ひざで合わせる（ジャンプ中は足もいっしょに動く）
       if (kindOf(cur) === 'j') { q.f1.x += dx; q.f1.y += dy; q.f2.x += dx; q.f2.y += dy; }
@@ -249,6 +277,7 @@
     if (playT >= 0) return;
     var w = ev(e), k = pick(w); if (!k) return;
     var jk = /r$/.test(k) ? k.slice(0, 2) : k, q = rec(cur)[side];
+    if (k === 'pt') { if (pinMode) return; undo.push(JSON.stringify(q)); grabOff = P(0, 0); drag = k; cv.setPointerCapture(e.pointerId); e.preventDefault(); return; }
     if (pinMode) { var pn = pins(); if (pn[jk]) delete pn[jk]; else pn[jk] = P(q[jk].x, q[jk].y); save(); draw(); return; }
     if (pins()[jk]) { toast('固定している関節（📌で外せる）'); return; }
     undo.push(JSON.stringify(q)); if (undo.length > 80) undo.shift();
@@ -285,6 +314,7 @@
     $('title').textContent = NAME[id];
     $('sub').textContent = { s: '立ち技', c: 'しゃがみ技', j: 'ジャンプ技（空中）' }[kindOf(id)] || '';
     $('memo').value = rec(id).memo || '';
+    propUI();
     renderList(); draw();
   }
   function setSide(s) { side = s; $('tStart').className = s === 'start' ? 'on' : ''; $('tEnd').className = s === 'end' ? 'on' : ''; undo = []; draw(); }
@@ -303,6 +333,12 @@
   $('bUndo').onclick = function () { if (!undo.length) return toast('戻せるものがない'); rec(cur)[side] = JSON.parse(undo.pop()); save(); draw(); };
   $('bPin').onclick = function () { pinMode = !pinMode; this.className = pinMode ? 'on' : ''; draw(); };
   $('bUnpin').onclick = function () { var r = rec(cur); if (r.pins) r.pins[side] = {}; save(); draw(); toast('固定を外した'); };
+  function propUI() { var pr = prop(); $('pOn').checked = pr.on; $('pHand').value = pr.hand; $('pLen').value = Math.min(260, pr.len); $('pLenN').value = pr.len; $('pGrip').value = pr.grip;
+    $('pGripT').textContent = pr.grip <= 3 ? '端を握る' : pr.grip >= 97 ? '先端を握る' : pr.grip + '%'; }
+  var propCh = function () { var pr = prop(); pr.on = $('pOn').checked; pr.hand = $('pHand').value; pr.grip = +$('pGrip').value; rec(cur).edited = rec(cur).edited || pr.on; propUI(); save(); draw(); };
+  $('pOn').onchange = propCh; $('pHand').onchange = propCh; $('pGrip').oninput = propCh;
+  $('pLen').oninput = function () { prop().len = +this.value; propCh(); };
+  $('pLenN').onchange = function () { prop().len = Math.max(5, Math.min(400, +this.value || 80)); propCh(); };
   var raf = null, t0 = 0;
   $('bPlay').onclick = function () {
     if (playT >= 0) { playT = -1; cancelAnimationFrame(raf); draw(); return; }
@@ -316,6 +352,8 @@
     for (var id in db) if (db[id].edited || db[id].memo) {
       var r = db[id], rd = function (q) { var o = {}; for (var k in q) o[k] = [Math.round(q[k].x), Math.round(q[k].y)]; return o; };
       out.moves[id] = { name: NAME[id], memo: r.memo, start: rd(r.start), end: rd(r.end) };
+      if (r.prop && r.prop.on) out.moves[id].prop = { len: r.prop.len, grip: r.prop.grip, hand: r.prop.hand === 'h1' ? '手前の手' : '奥の手',
+        angStart: Math.round((r.propA.start || 0) * 180 / Math.PI), angEnd: Math.round((r.propA.end || 0) * 180 / Math.PI), note: '角度は前腕の向きから時計回り（度）。grip は端から何%の所を握るか' };
     }
     return JSON.stringify(out);
   }
@@ -329,7 +367,8 @@
     try {
       var o = JSON.parse(t); if (o.kind !== 'yui_pose_v1') throw 0;
       for (var id in o.moves) { var m = o.moves[id], cv2 = function (q) { var r = {}; for (var k in q) r[k] = P(q[k][0], q[k][1]); return r; };
-        db[id] = { start: cv2(m.start), end: cv2(m.end), memo: m.memo || '', edited: true }; }
+        db[id] = { start: cv2(m.start), end: cv2(m.end), memo: m.memo || '', edited: true };
+        if (m.prop) { db[id].prop = { on: true, len: m.prop.len, grip: m.prop.grip, hand: m.prop.hand === '奥の手' ? 'h2' : 'h1' }; db[id].propA = { start: (m.prop.angStart || 0) * Math.PI / 180, end: (m.prop.angEnd || 0) * Math.PI / 180 }; } }
       save(); select(cur); toast('読み込んだ');
     } catch (e) { toast('読み込めない文字だった'); }
   }
