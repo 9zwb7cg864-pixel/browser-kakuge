@@ -587,7 +587,7 @@ var KF = window.KF || (window.KF = {});
   //  SPの方向ごとの技（なし・前・下・後ろ・空中）。変身キャラ男は ↓↓+SP で変身
   KF.MODERN_SP = {
     kokuu: { n: 'fire', f: 'dp', d: 'tatsu', b: 'palm', air: 'atatsu' },
-    yui: { n: 'net', f: 'segway', d: 'mech', b: 'shock', air: 'atatsu' },   // ユイ：SP＝網、→SP＝セグウェイ、←SP＝電撃、↓SP＝メカ
+    yui: { n: 'net', f: 'segway', d: 'mech', b: 'shock', air: null },   // ユイ：SP＝網、→SP＝セグウェイ、←SP＝電撃、↓SP＝メカ
   };
   Battle.prototype.modernConvert = function (f, raw) {
     var H = raw.held || {}, Pp = raw.pressed || {};
