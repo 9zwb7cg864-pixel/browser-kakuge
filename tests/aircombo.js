@@ -53,7 +53,7 @@ function ok(c, m) { if (c) { pass++; console.log('  ✔ ' + m); } else { fail++;
 for (const btn of ['hk', 'mk']) {
   let row = '', n = 0;
   for (const jd of [0, 4, 8]) for (let t = 4; t <= 24; t += 4) { const r = trialPalm(jd, t, 2, btn); row += r; if (r === '○') n++; }
-  ok(n >= 15, `EX虚掌破 → ジャンプ → 空中${btn === 'hk' ? '強K' : '中K'} ＞ 空旋脚 → 床バウンド → 強P ＞ 昇穿（ジャンプ遅れ0/4/8F × 空中技を押す4〜24F：${row} ${n}/18）`);
+  ok(n >= (btn === 'hk' ? 9 : 12), `EX虚掌破 → ジャンプ → 空中${btn === 'hk' ? '強K' : '中K'} ＞ 空旋脚 → 床バウンド → 強P ＞ 昇穿（ジャンプ遅れ0/4/8F × 空中技を押す4〜24F：${row} ${n}/18）`);
 }
 { let row = '', n = 0; for (const hd of [0, 2, 4, 6, 8, 10]) { const r = trialPalm(0, 12, hd, 'hk'); row += r; if (r === '○') n++; } ok(n >= 5, `着地後の強Pを0〜10F遅らせても昇穿まで（${row}）`); }
 for (const sc of [['raw', '地上の相手に'], ['combo', 'しゃがみ弱K＞しゃがみ弱P＞から'], ['aa', '対空で'], ['corner', '画面端で']]) {

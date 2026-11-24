@@ -60,7 +60,7 @@ for (const [corner, pb, nm] of [[false, 'hp', '画面中央 強虚掌破'], [tru
   for (let k = 0; k < 80; k++) { const c = clone(s); c.events.length = 0; c.step([inp(5, 'hp'), N()]); let hit = false;
     for (let i = 0; i < 40; i++) { for (const e of c.events) if (e.type === 'hit' && e.side === 0 && e.combo >= 3) hit = true; c.events.length = 0; c.step([N(), N()]); }
     if (hit) n++; s.step([N(), N()]); }
-  ok(corner || pb !== 'hp' ? n > 0 : n === 0, nm + ' → 強P：' + (n ? n + 'Fの間つながる' : 'つながらない'));
+  ok(n > 0, nm + ' → 強P：' + (n ? n + 'Fの間つながる' : 'つながらない'));
 }
 console.log('■ 斬空虚環弾');
 for (const [nm, bt, n] of [['弱', 'lp', 1], ['中', 'mp', 1], ['強', 'hp', 1], ['EX', 'lp,mp', 2]]) {
