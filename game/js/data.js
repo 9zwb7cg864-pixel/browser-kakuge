@@ -79,10 +79,10 @@ KF.CHARS = {
       atatsu: { anim: 'sp_atatsu', type: 's', name: '空旋脚', air: 1, dmg: 350, hits: 2, rehit: 7, hs: 8, push: [2, 3], lv: 'm', stun: [16, 12], stall: [2.4, 3.0, 3.6], jlim: 2,
                airSpike: { vy: 7, vx: 0.8 } },   // 浮いた相手に当てると、最後の1発で地面へ叩きつけて床でバウンド
       // 斬空虚環弾：空中で ↓↘→ + P。斜め下へ虚環弾を撃つ（弱ほど急な角度）。撃つあいだは空中で少し止まる
-      zanku: { anim: 'j_p', type: 's', name: '斬空虚環弾', air: 1, dmg: 500, hs: 10, push: [4, 4], lv: 'm', chip: 0.125, stall: [0], jlim: 2,
+      zanku: { anim: 'zanku', type: 's', name: '斬空虚環弾', air: 1, dmg: 500, hs: 10, push: [4, 4], lv: 'm', chip: 0.125, stall: [0], jlim: 2,
                proj: { fx: 'ball_k', spd: [3.0, 3.8, 4.6], vy: [3.4, 2.7, 2.0], life: 140, hits: 1, r: 14 }, meter: 40, lvy: -3.5, lvx: 0.5, floatG: 0.35 },
       // EX斬空虚環弾：地上のEX虚環弾と同じく2回当たる大きい弾
-      zanku_ex: { anim: 'j_p', type: 'x', name: 'EX斬空虚環弾', air: 1, dmg: 450, hs: 10, push: [4, 5], lv: 'm', chip: 0.125, stall: [0], jlim: 3,
+      zanku_ex: { anim: 'zanku', type: 'x', name: 'EX斬空虚環弾', air: 1, dmg: 450, hs: 10, push: [4, 5], lv: 'm', chip: 0.125, stall: [0], jlim: 3,
                proj: { fx: 'ball_k_ex', spd: [4.2], vy: [2.6], life: 160, hits: 2, r: 18, rehit: 8 }, kd: 'launch', lvy: -5.5, lvx: 1.2, floatG: 0.3 },
       palm: { anim: 'sp_palm', type: 's', name: '虚掌破', dmg: 1100, adv: [0, -8], hs: 13, push: [2, 7], lv: 'm', chip: 0.125,
               kd: 'launch', lvy: -6, lvx: 14, lvxDrag: 0.92, floatG: 0.25, jset: -1, jlim: 0, cancel: 'u', meter: 40,   // 強さの違いは無し（弱・中・強どれも同じ）。横に吹っ飛んでから止まる：画面中央では強Pが届かず、画面端では壁で止まって届く

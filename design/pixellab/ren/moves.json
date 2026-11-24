@@ -2439,5 +2439,33 @@
    "img/r7_rush_11.png",
    "img/r7_rush_12.png"
   ]
+ },
+ "zanku": {
+  "frames": [
+   "img/zk_02.png",
+   "img/zk_04.png",
+   "img/zk_05.png",
+   "img/zk_06.png",
+   "img/zk_07.png",
+   "img/zk_07.png",
+   "img/zk_08.png",
+   "img/zk_09.png",
+   "img/zk_10.png",
+   "img/zk_11.png",
+   "img/zk_12.png",
+   "img/zk_13.png",
+   "img/zk_13.png",
+   "img/zk_14.png",
+   "img/zk_14.png",
+   "img/zk_15.png",
+   "img/zk_15.png",
+   "img/zk_15.png",
+   "img/zk_16.png",
+   "img/zk_16.png",
+   "img/zk_16.png",
+   "img/zk_00.png",
+   "img/zk_00.png",
+   "img/zk_00.png"
+  ]
  }
 }
