@@ -71,5 +71,17 @@ for (const sc of [['raw', '地上の相手に'], ['combo', 'しゃがみ弱K＞�
     return log; };
   const a = chain(['lp,mp', 'lp,mp', 'hp']);
   ok(a.filter(x => /^dp_ex/.test(x)).length >= 3 && !a.some(x => /^dp#/.test(x)), 'EX昇穿 → EX昇穿 は入るが、2回目のEX昇穿は浮きが小さく、そのあとの昇穿は入らない（' + a.join(' ') + '）'); }
+function trialEarly(off, btn, gap=50) {
+  const b = new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]);
+  const m = b.p[0]; m.x = 470; b.p[1].x = 470+gap; m.ex = 6000;
+  const tl=[]; const q=[I(6),I(2),I(3,'lp,mp')]; let landF=-1; const log=[];
+  // まず着地フレームを調べる
+  const c = KF.cloneBattle(b); for (let f=0; f<200; f++){ c.step([q[f]||N(),N()]); if (f>10 && !c.p[0].air && c.p[0].actionable()){ landF=f; break; } }
+  const start = landF + off - 2;   // 押すボタンが landF+off に来るように
+  for (let f=0; f<300; f++){ let x=q[f]||null; if(!x && f>=start && f<start+3) x=[I(6),I(2),I(3,btn)][f-start];
+    b.step([x||N(),N()]); for(const e of b.events.splice(0)) if(e.type==='hit'&&e.side===0) log.push(e.move+'#'+e.combo); }
+  return log.some(s=>/^dp#/.test(s)&&!/#1$/.test(s)) ? '○':'×';
+}
+{ let row = ''; for (let off = -10; off <= 4; off++) row += trialEarly(off, 'hp'); ok(!row.includes('×'), 'EX昇穿のあと、着地の10F前から4F後までに入れた強昇穿がつながる（早めの入力も受け付ける）（' + row + '）'); }
 console.log(`\n結果: ${pass} 件成功 / ${fail} 件失敗`);
 process.exit(fail ? 1 : 0);

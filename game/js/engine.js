@@ -533,6 +533,10 @@ var KF = window.KF || (window.KF = {});
   // 必殺技・投げ・ラッシュ・通常技の発動判定（行動可能時）
   Battle.prototype.tryActions = function (f, dir) {
     var cur = f.buf.cur();
+    // 動けなかった状態（技の硬直・着地など）から動けるようになった直後の3フレームは、
+    // 少し前（12フレーム以内）に押した必殺技のボタンも受け付ける（着地の直前に入れた昇穿がちゃんと出るように）
+    if (f.lastActF !== this.frameNo - 1) f.actStartF = this.frameNo;
+    f.lastActF = this.frameNo;
     if (this.trySpecial(f, false)) return true;
     // 投げ：弱P+弱K（2フレーム以内）
     if ((cur.p.lp || cur.p.lk) && f.buf.pressedWithin('lp', 2) && f.buf.pressedWithin('lk', 2)) { this.tryThrow(f); return true; }
@@ -658,7 +662,7 @@ var KF = window.KF || (window.KF = {});
       var c = cmds[i], set = c.btn === 'P' ? P : K;
       if (only && c.move !== only) continue;
       var pressed = null, nPressed = 0;
-      var pw = cancelLevel ? Math.min(12, Math.max(3, this.frameNo - (f.moveStartF || 0))) : 5;
+      var pw = cancelLevel ? Math.min(12, Math.max(3, this.frameNo - (f.moveStartF || 0))) : (f.actStartF != null && this.frameNo - f.actStartF < 3 && f.actStartF > 0 ? 12 : 5);
       if (f.move && f.move.freeCancel) pw = 18;   // 変身中に入れておいた必殺技は、変身し終わった瞬間に出る
       var saEasy = cancelLevel && f.state === 'attack' && f.move && f.move.saGround;   // 昇竜SA：受付を長くして入れやすく
       if (saEasy) pw = Math.min(20, Math.max(3, this.frameNo - (f.moveStartF || 0)));
