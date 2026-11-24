@@ -327,9 +327,7 @@ var KF = window.KF || (window.KF = {});
           else if (f.anim === 'crouch_in' && f.aDone) f.setAnim('crouch');
           else if (f.anim === 'cguard') f.setAnim('crouch');
           f.vx = 0;
-        } else if (back && this.threatened(f)) {
-          f.state = 'guardpose'; f.setAnim('guard', true); f.vx = 0;
-        } else if (fwd) {
+        } else if (fwd) {   // 影縫い（近接ガード）は無し：相手が攻撃中でも後ろを入れれば下がれる
           if (f.state !== 'walk_f') { f.state = 'walk_f'; f.setAnim('walk_f'); }
           f.vx = D.walkF * f.facing;
         } else if (back) {
