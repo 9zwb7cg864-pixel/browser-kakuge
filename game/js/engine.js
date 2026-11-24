@@ -579,15 +579,15 @@ var KF = window.KF || (window.KF = {});
       h: [{ b: 'hp' }, { sp: 'palm', str: 0 }, { sp: 'fire', str: 0 }, { sp: 'dp', str: 2 }, { su: 'su3' }],   // 虚掌破で浮かせて虚環弾で拾い、強昇穿 ＞ 天地穿（波動からのラッシュキャンセルは無し）
     },
     yui: {   // ユイには虚掌破・虚環弾が無いので、強は 強P ＞ 電撃 ＞ 超必殺
-      l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'dp', str: 2 }, { su: 'su3' }],
-      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'dp', str: 2 }, { su: 'su3' }],
+      l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'shock', str: 0 }, { su: 'su1' }],
+      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'shock', str: 0 }, { su: 'su1' }],
       h: [{ b: 'hp' }, { sp: 'shock', str: 0 }, { su: 'su1' }],
     },
   };
   //  SPの方向ごとの技（なし・前・下・後ろ・空中）。変身キャラ男は ↓↓+SP で変身
   KF.MODERN_SP = {
     kokuu: { n: 'fire', f: 'dp', d: 'tatsu', b: 'palm', air: 'atatsu' },
-    yui: { n: 'net', f: 'dp', d: 'mech', b: 'shock', air: 'atatsu' },   // ユイ：SP＝網、←SP＝電撃、↓SP＝メカ
+    yui: { n: 'net', f: 'segway', d: 'mech', b: 'shock', air: 'atatsu' },   // ユイ：SP＝網、→SP＝セグウェイ、←SP＝電撃、↓SP＝メカ
   };
   Battle.prototype.modernConvert = function (f, raw) {
     var H = raw.held || {}, Pp = raw.pressed || {};
