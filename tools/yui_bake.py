@@ -69,8 +69,8 @@ def new_anims():
         if hand: f['j'] = dict(f['j']); f['j']['hand_l'] = list(hand)
         return f
     A = {}
-    # 電撃：発生14F・持続6F・硬直22F。体の前の地面から立ち上がる（前へキャラ1人分＝幅70、高さ140）
-    A['sp_shock'] = [fr('s') for _ in range(14)] + [fr('a', [[40, -140, 70, 140]]) for _ in range(6)] + [fr('r') for _ in range(22)]
+    # 電撃：発生14F・持続6F・硬直22F。体の前（前へキャラ1人分＝幅70、高さ140）と、自分の足元から立ち上がる
+    A['sp_shock'] = [fr('s') for _ in range(14)] + [fr('a', [[40, -140, 70, 140], [-35, -140, 70, 140]]) for _ in range(6)] + [fr('r') for _ in range(22)]
     # パワーグラブ：発生7F・つかめるのは3F・空振りの硬直30F
     A['sp_glove'] = [fr('s') for _ in range(7)] + [fr('a') for _ in range(3)] + [fr('r') for _ in range(30)]
     # つかんだあと：手を高く上げて相手を持ち上げ（24F）、前下へ振り下ろして投げる（手が一番低いコマで投げる）

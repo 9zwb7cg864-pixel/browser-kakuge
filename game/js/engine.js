@@ -1194,7 +1194,7 @@ var KF = window.KF || (window.KF = {});
         // ユイのメカ：電撃の範囲に入ると起動して、ぴょんぴょん跳ねながら進む（跳んでいる間は中段）
         if (p.mv.needMech) {
           var ow = p.owner;
-          if (!p.boost && ow.state === 'attack' && ow.move && ow.move.anim === 'sp_shock' && ow.phase() === 'a' && Math.abs(p.x - (ow.x + ow.facing * 75)) < 35 + p.r) {
+          if (!p.boost && ow.state === 'attack' && ow.move && ow.move.anim === 'sp_shock' && ow.phase() === 'a' && (Math.abs(p.x - (ow.x + ow.facing * 75)) < 35 + p.r || Math.abs(p.x - ow.x) < 35 + p.r)) {   // 前の電撃か足元の電撃の中
             p.boost = true; p.hopT = 0; p.vx = p.mvx; p.life = 240; p.fx = p.mv.proj.fxBoost || p.fx;   // 起動：電気をまとったメカになって進み出す
             self.spawnFx('hit_w', p.x, p.y, 0.8); self.emit('sfx', { s: 'fire' });
           }
