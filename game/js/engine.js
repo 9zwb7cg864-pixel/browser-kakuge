@@ -1162,6 +1162,8 @@ var KF = window.KF || (window.KF = {});
     if (pr.ground) h = [f.x + f.facing * 30, C.GROUND - 16];
     this.projs.push({ kind: 'ball', owner: f, mv: mv, key: f.side + ':' + f.moveSerial, x: h[0] + f.facing * 12, y: h[1], vx: pr.spd[s] * f.facing, vy: pr.vy ? pr.vy[Math.min(f.str, pr.vy.length - 1)] : 0,
                       fx: pr.fx, r: pr.r, hits: pr.hits, rehit: pr.rehit || 99, life: pr.life, t: 0, lastHit: -99, alive: true, modern: !!f.modernMv });
+    var np = this.projs[this.projs.length - 1];
+    if (mv.needMech) { np.mvx = np.vx; np.vx = 0; np.x = f.x + f.facing * (pr.place ? pr.place[s] : 60); }   // メカは置いたらその場で止まる（電撃で起動すると進む）
     this.emit('sfx', { s: 'fire' });
   };
   Battle.prototype.spawnBeam = function (f, mv) {
@@ -1193,7 +1195,7 @@ var KF = window.KF || (window.KF = {});
         if (p.mv.needMech) {
           var ow = p.owner;
           if (!p.boost && ow.state === 'attack' && ow.move && ow.move.anim === 'sp_shock' && ow.phase() === 'a' && Math.abs(p.x - (ow.x + ow.facing * 75)) < 35 + p.r) {
-            p.boost = true; p.hopT = 0; p.vx *= 1.25; p.life = Math.max(p.life, 160); p.fx = p.mv.proj.fxBoost || p.fx;   // 絵を電気をまとったメカに
+            p.boost = true; p.hopT = 0; p.vx = p.mvx; p.life = 160; p.fx = p.mv.proj.fxBoost || p.fx;   // 起動：電気をまとったメカになって進み出す
             self.spawnFx('hit_w', p.x, p.y, 0.8); self.emit('sfx', { s: 'fire' });
           }
           if (p.boost) {
@@ -1301,6 +1303,7 @@ var KF = window.KF || (window.KF = {});
     this.projs.forEach(function (p) {
       var o = p.owner.opp;
       if (!p.alive || p.hits <= 0) return;
+      if (p.mv.needMech && !p.boost) return;   // 置いただけのメカは攻撃しない（電撃で起動してから）
       if (p.t - p.lastHit < p.rehit) return;
       if (!self.hittable(o, p.mv, p.key) || o.projInv > 0) return;
       var b = self.projBox(p); if (!b) return;
