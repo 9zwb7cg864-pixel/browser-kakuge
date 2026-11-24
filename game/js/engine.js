@@ -573,22 +573,10 @@ var KF = window.KF || (window.KF = {});
       m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'tatsu', str: 1 }, { sp: 'dp', str: 2 }, { su: 'su3' }],
       h: [{ b: 'hp' }, { sp: 'palm', str: 0 }, { sp: 'fire', str: 0 }, { sp: 'dp', str: 2 }, { su: 'su3' }],   // 虚掌破で浮かせて虚環弾で拾い、強昇穿 ＞ 天地穿（波動からのラッシュキャンセルは無し）
     },
-    gai_h: {
-      l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'change' }, { sp: 'charge', str: 0 }, { su: 'su2' }],
-      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'change' }, { sp: 'lift', str: 2 }, { su: 'su3' }],
-      h: [{ b: 'hp' }, { sp: 'quake', str: 2 }, { sp: 'change' }, { sp: 'disc', str: 2 }, { b: 'rush' }, { b: 'hp' }, { sp: 'lift', str: 2 }, { su: 'su3' }],   // 変身キャンセルを使う
-    },
-    gai_s: {
-      l: [{ b: 'lp' }, { b: 'lp' }, { sp: 'change' }, { sp: 'quake', str: 0 }, { su: 'su1' }],
-      m: [{ b: 'mp' }, { b: 'hp' }, { sp: 'change' }, { sp: 'spin', str: 0 }, { su: 'su1' }],
-      h: [{ b: 'hp' }, { sp: 'charge', str: 2 }, { sp: 'change' }, { sp: 'spin', str: 2 }, { su: 'su1' }],   // 変身キャンセルを使う
-    },
   };
   //  SPの方向ごとの技（なし・前・下・後ろ・空中）。変身キャラ男は ↓↓+SP で変身
   KF.MODERN_SP = {
     kokuu: { n: 'fire', f: 'dp', d: 'tatsu', b: 'palm', air: 'atatsu' },
-    gai_h: { n: 'quake', f: 'upper', d: 'leap', b: 'spin', air: 'aslam', m: 'grab' },
-    gai_s: { n: 'charge', f: 'lift', d: 'reflect', b: 'counter', air: 'sdrop', m: 'disc' },
   };
   Battle.prototype.modernConvert = function (f, raw) {
     var H = raw.held || {}, Pp = raw.pressed || {};

@@ -28,7 +28,7 @@ function match(p1, p2, l1, l2, seed) {
 }
 module.exports = { match, makeSrc };
 if (require.main === module) {
-  const [l1, l2, n, p1, p2] = [process.argv[2] || 'EXPERT', process.argv[3] || 'EASY', +(process.argv[4] || 4), process.argv[5] || 'kokuu', process.argv[6] || 'shuuen'];
+  const [l1, l2, n, p1, p2] = [process.argv[2] || 'EXPERT', process.argv[3] || 'EASY', +(process.argv[4] || 4), process.argv[5] || 'kokuu', process.argv[6] || 'kokuu'];
   let w = [0, 0, 0];
   for (let i = 0; i < n; i++) {
     const r = match(p1, p2, l1, l2, 1000 + i * 17);

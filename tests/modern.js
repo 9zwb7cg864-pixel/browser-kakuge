@@ -81,34 +81,8 @@ function freshK(kind, gap) {
   b.p[0].ex = KF.CONST.EX_MAX; b.p[0].sup = 3000;
   return b;
 }
-for (const [kind, list] of [
-  ['gai_h', [['SP＋中', 5, 'grab', 'sp,m'], ['SP', 5, 'quake'], ['→＋SP', 6, 'upper'], ['↓＋SP', 2, 'leap'], ['←＋SP', 4, 'spin'], ['SP＋強', 5, 'su1', 'sp,h'], ['←＋SP＋強', 4, 'su2', 'sp,h'], ['↓＋SP＋強', 2, 'su3', 'sp,h']]],
-  ['gai_s', [['SP＋中', 5, 'disc', 'sp,m'], ['SP', 5, 'charge'], ['→＋SP', 6, 'lift'], ['↓＋SP', 2, 'reflect'], ['←＋SP', 4, 'counter'], ['SP＋強', 5, 'su1', 'sp,h'], ['←＋SP＋強', 4, 'su2', 'sp,h'], ['↓＋SP＋強', 2, 'su3', 'sp,h']]],
-]) {
-  const fn = KF.CHARS[kind].form;
-  for (const [name, dir, want, btn] of list) {
-    const b = freshK(kind, 140);
-    const pre = dir === 2 ? [M(2), M(2)] : dir !== 5 ? [M(dir)] : [];
-    const r = run(b, pre.concat([M(dir, btn || 'sp', '')]), 30);
-    ok(r.started[0] === want, `${fn}：${name}＝${want}（出た技：${r.started[0] || 'なし'}）`);
-  }
-  { const b = freshK(kind, 140); const r = run(b, [M(2), M(2), M(5), M(5), M(2, 'sp')], 60);
-    ok(r.started[0] === 'change' && b.p[0].kind === KF.CHARS[kind].other, `${fn}：↓↓＋SPで変身（出た技：${r.started[0] || 'なし'} → ${b.p[0].kind}）`); }
-  for (const key of ['l', 'm', 'h']) {
-    const b = freshK(kind, 50); b.p[0].sup = key === 'h' ? 3000 : 1000;
-    const q = []; for (let i = 0; i < 14; i++) { q.push(M(5, key, 'auto')); for (let j = 0; j < 9; j++) q.push(M(5, '', 'auto')); }
-    b.p[0].sup = 3000; const r = run(b, q, 420); const combo = Math.max(0, ...r.hits.map(h => h.combo));
-    ok(combo >= 3, `${fn}：アシスト＋${{ l: '弱', m: '中', h: '強' }[key]}を連打でコンボ（${r.started.join(' → ')}／${combo}ヒット ${10000 - b.p[1].hp}ダメージ）`);
-  }
-}
-
-// 空中SP：空中叩きつけ／盾落下
-for (const [kind, want] of [['gai_h', 'aslam'], ['gai_s', 'sdrop']]) {
-  const b = freshK(kind, 140); const r = run(b, [M(9)], 14); const r2 = run(b, [M(5, 'sp')], 20);
-  ok(r2.started.includes(want), `${KF.CHARS[kind].form}：空中でSP＝${want}（出た技：${r2.started.join(',') || 'なし'}）`);
-}
 // アシスト＋ボタンを押しっぱなしでも最後まで続けて出る
-for (const kind of ['kokuu', 'gai_h', 'gai_s']) for (const key of ['l', 'm', 'h']) {
+for (const kind of ['kokuu']) for (const key of ['l', 'm', 'h']) {
   const b = freshK(kind, 50); const q = [M(5, key, 'auto')];
   for (let i = 0; i < 300; i++) q.push({ x: 0, y: 0, held: { auto: true, [key]: true }, pressed: {} });
   const r = run(b, q, 420); const seqLen = KF.MODERN_AUTO[kind][key].length;

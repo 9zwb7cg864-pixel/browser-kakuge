@@ -865,7 +865,6 @@ var KF = window.KF || (window.KF = {});
     if (/autostart/.test(q)) { // テスト用：URLで直接対戦開始
       var mm = q.match(/level=(\w+)/); if (mm) cfg.level = mm[1];
       cfg.mode = /training/.test(q) ? 'training' : (/vs/.test(q) ? 'vs' : 'cpu');
-      if (/p1=shuuen/.test(q)) { cfg.p1 = 'shuuen'; cfg.p2 = 'kokuu'; }
       startBattle();
     }
     if (/fps/.test(q)) showFps = true;

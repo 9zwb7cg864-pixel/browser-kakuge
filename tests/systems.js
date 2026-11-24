@@ -4,7 +4,7 @@ const C = KF.CONST;
 { const B = KF.Battle; KF.Battle = function (o) { B.call(this, o); this.p.forEach(f => { f.ex = C.EX_MAX; }); }; KF.Battle.prototype = B.prototype; }
 let pass = 0, fail = 0;
 function ok(cond, msg) { if (cond) { pass++; console.log('  ✔ ' + msg); } else { fail++; console.log('  ✘ ' + msg); } }
-function fresh(p1 = 'kokuu', p2 = 'shuuen', gap = 50) {
+function fresh(p1 = 'kokuu', p2 = 'kokuu', gap = 50) {
   const b = new KF.Battle({ p1, p2, meta });
   for (let i = 0; i < 130; i++) b.step([N(), N()]);
   b.p[0].x = 470; b.p[1].x = 470 + gap; b.camX = 512; b.p[0].facing = 1; b.p[1].facing = -1;
@@ -25,34 +25,28 @@ const hits = evs => evs.filter(e => e.type === 'hit' && e.side === 0);
 const maxCombo = evs => Math.max(0, ...hits(evs).map(e => e.combo));
 
 console.log('■ 必殺技コマンド');
-{ const b = fresh('kokuu', 'shuuen', 300); const e = run(b, [[1, 2], [1, 3], [1, 6, 'hp']], N, 80);
+{ const b = fresh('kokuu', 'kokuu', 300); const e = run(b, [[1, 2], [1, 3], [1, 6, 'hp']], N, 80);
   ok(b.projs.length > 0 || hits(e).length > 0, '虚環弾（↓↘→+P）で飛び道具が出る'); }
 { const b = fresh(); const e = run(b, [[1, 6], [1, 2], [1, 3, 'hp']]);
   ok(hits(e).some(x => x.move === 'dp'), '昇穿（→↓↘+P）が出てヒット'); }
-{ const b = fresh('kokuu', 'shuuen', 120); const e = run(b, [[1, 2], [1, 3], [1, 6, 'mk']]);
+{ const b = fresh('kokuu', 'kokuu', 120); const e = run(b, [[1, 2], [1, 3], [1, 6, 'mk']]);
   ok(hits(e).some(x => x.move === 'rushk'), '迅閃脚（↓↘→+K）が突進してヒット'); }
-{ const b = fresh('shuuen', 'kokuu', 60); const e = run(b, [[1, 6], [1, 3], [1, 2], [1, 1], [1, 4, 'hp']], N, 120);
-  ok(b.p[1].hp < b.p[1].D.hp - 2000, '終縛（→↘↓↙←+P）コマンド投げが決まる（' + (b.p[1].D.hp - b.p[1].hp) + 'ダメージ）'); }
 { const b = fresh(); b.p[0].sup = 0; b.p[0].ex = 1000; b.p[0].rushCD = 999; const e = run(b, [[1, 6], [1, 2], [1, 3, 'lp,mp']]);
   ok(hits(e).some(x => x.move === 'dp_ex'), 'EX昇穿（P2つ同時）が出る'); ok(b.p[0].ex < 500 && b.p[0].sup >= 0, 'EXはEX/RUSHゲージを使い（足りなければ0まで）、必殺ゲージは使わない'); }
 { const b = fresh(); b.p[0].sup = 3000; b.p[0].ex = 0; b.p[0].rushCD = 999; const e = run(b, [[1, 6], [1, 2], [1, 3, 'lp,mp']]);
   ok(!hits(e).some(x => x.move === 'dp_ex') && b.p[0].sup >= 3000, 'EX/RUSHゲージが空なら、必殺ゲージが満タンでもEXは出ない'); }
-{ const b = fresh('kokuu', 'shuuen', 200); b.p[0].sup = 1000; const e = run(b, [[1, 2], [1, 3], [1, 6], [1, 2], [1, 3], [1, 6, 'hp']], N, 150);
+{ const b = fresh('kokuu', 'kokuu', 200); b.p[0].sup = 1000; const e = run(b, [[1, 2], [1, 3], [1, 6], [1, 2], [1, 3], [1, 6, 'hp']], N, 150);
   ok(e.some(x => x.type === 'super'), '超必殺 虚空砲（1本）が発動し暗転演出'); ok(hits(e).filter(x => x.move === 'su1').length >= 3, '虚空砲が多段ヒット（' + hits(e).filter(x => x.move === 'su1').length + 'hit）');
   ok(b.p[0].sup < 1000, '必殺ゲージ1本を消費'); }
-{ const b = fresh('kokuu', 'shuuen', 90); b.p[0].sup = 2000; const e = run(b, [[1, 2], [1, 1], [1, 4], [1, 2], [1, 1], [1, 4, 'hp']], N, 200);
+{ const b = fresh('kokuu', 'kokuu', 90); b.p[0].sup = 2000; const e = run(b, [[1, 2], [1, 1], [1, 4], [1, 2], [1, 1], [1, 4, 'hp']], N, 200);
   ok(maxCombo(e) >= 6, '超必殺 零界継承（2本）が乱舞でつながる（' + maxCombo(e) + 'hit, ' + (b.p[1].D.hp - b.p[1].hp) + 'ダメージ）'); }
-{ const b = fresh('shuuen', 'kokuu', 70); b.p[0].sup = 2000; const e = run(b, [[1, 2], [1, 3], [1, 6], [1, 2], [1, 3], [1, 6, 'hk']], N, 220);
-  ok(b.p[1].D.hp - b.p[1].hp >= 4000, '超必殺 万象終焉（2本・投げ）が決まる（' + (b.p[1].D.hp - b.p[1].hp) + 'ダメージ）'); }
-{ const b = fresh('shuuen', 'kokuu', 200); b.p[0].sup = 1000; const e = run(b, [[1, 2], [1, 3], [1, 6], [1, 2], [1, 3], [1, 6, 'hp']], N, 200);
-  ok(hits(e).filter(x => x.move === 'su1').length >= 2, '超必殺 終焉の柱が相手の位置で多段ヒット'); }
 
 console.log('■ コンボ成立');
 { const b = fresh(); const e = run(b, [[2, 2, 'mk'], [5, 2], [1, 2], [1, 3], [1, 6, 'lp']], N, 90);
   ok(maxCombo(e) === 2, 'しゃがみ中K → 虚環弾（必殺技キャンセル）で2ヒット'); }
 { const b = fresh(); const e = run(b, [[3, 5, 'hp'], [6, 5], [1, 6], [1, 2], [1, 3, 'hp']], N, 90);
   ok(maxCombo(e) === 2, '強P → 昇穿 で2ヒット（' + (b.p[1].D.hp - b.p[1].hp) + 'ダメージ）'); }
-{ const b = fresh('kokuu', 'shuuen', 38); const e = run(b, [[3, 2, 'lk'], [4, 2], [1, 2, 'lp'], [5, 2], [1, 2, 'lp'], [5, 2]], N, 60);
+{ const b = fresh('kokuu', 'kokuu', 38); const e = run(b, [[3, 2, 'lk'], [4, 2], [1, 2, 'lp'], [5, 2], [1, 2, 'lp'], [5, 2]], N, 60);
   ok(maxCombo(e) >= 3, '弱攻撃の連打キャンセル（しゃがみ弱K→弱P→弱P）で' + maxCombo(e) + 'ヒット'); }
 { const b = fresh(); const e = run(b, [[2, 5, 'mp'], [6, 5], [1, 5, 'rush'], [9, 6], [1, 5, 'hp'], [7, 5], [1, 6], [1, 2], [1, 3, 'hp']], N, 90);
   ok(e.some(x => x.type === 'rushcancel'), '中P → ラッシュキャンセル が発動');
@@ -78,7 +72,7 @@ console.log('■ 永久コンボの防止');
 { // ランダム入力の総当たり：長時間でもコンボが際限なく伸びない
   let worst = 0; const rng = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
   for (let trial = 0; trial < 30; trial++) {
-    const b = fresh(trial % 2 ? 'shuuen' : 'kokuu', 'kokuu'); b.p[0].sup = 3000;
+    const b = fresh('kokuu', 'kokuu'); b.p[0].sup = 3000;
     const btns = ['', '', 'lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'rush', 'lp,mp', 'lk,mk'];
     for (let f = 0; f < 1800; f++) {
       const d = 1 + Math.floor(rng() * 9), bt = rng() < 0.3 ? btns[Math.floor(rng() * btns.length)] : '';
@@ -104,7 +98,7 @@ console.log('■ 格ゲーとして変なつながり方がないこと');
 { const b = fresh(); const e = run(b, [[3, 5, 'mk'], [5, 5], [1, 2], [1, 3], [1, 6, 'lp']], N, 90);
   ok(!hits(e).some(x => x.combo >= 2), '1Pの立ち中Kは必殺技でキャンセルできない'); }
 { // 有利フレームが足りない目押し（1P 弱P＋4 → しゃがみ中P 発生6）はつながらない
-  const b = fresh('kokuu', 'shuuen', 46); let f = 0, done = false;
+  const b = fresh('kokuu', 'kokuu', 46); let f = 0, done = false;
   const ev0 = b.events.length;
   b.step([inp(5, 'lp'), N()]);
   for (let i = 0; i < 60; i++) { const a = b.p[0]; b.step([(!done && a.actionable() && i > 2) ? (done = true, inp(2, 'mp')) : inp(done ? 2 : 5), N()]); }
@@ -117,38 +111,23 @@ console.log('■ 格ゲーとして変なつながり方がないこと');
 console.log('■ 追加した技');
 { const b = fresh(); const e = run(b, [[2, 6, 'mp']], () => inp(3), 60); ok(e.some(x => x.type === 'hit' && x.move === 'f_mp'), '1P →中P 鎚打ちは中段（しゃがみガード不可）'); }
 { const b = fresh(); const e = run(b, [[2, 6, 'mp']], () => inp(6), 60); ok(e.some(x => x.type === 'block' && x.move === 'f_mp'), '鎚打ちは立ちガードできる'); }
-{ const b = fresh('kokuu', 'shuuen', 70); const e = run(b, [[2, 6, 'hp']], N, 60); ok(hits(e).some(x => x.move === 'f_hp'), '1P →強P 踏破肘が踏み込んで当たる'); }
-{ const b = fresh('kokuu', 'shuuen', 80); const e = run(b, [[2, 4, 'hk']], N, 60); ok(hits(e).some(x => x.move === 'b_hk'), '1P ←強K 旋踵が当たる'); }
-{ const b = fresh('kokuu', 'shuuen', 60); const e = run(b, [[1, 2], [1, 1], [1, 4, 'mk']], N, 90); ok(hits(e).filter(x => x.move === 'tatsu').length >= 3, '1P 旋風脚（↓↙←+K）が多段ヒット（' + hits(e).filter(x => x.move === 'tatsu').length + 'hit）'); }
-{ const b = fresh('kokuu', 'shuuen', 130); const e = run(b, [[1, 9], [16, 5], [1, 2], [1, 1], [1, 4, 'mk']], N, 80); ok(e.some(x => x.type === 'hit' && x.move === 'atatsu') || b.p[0].moveId === 'atatsu', '1P 空中で空旋脚が出る'); }
+{ const b = fresh('kokuu', 'kokuu', 70); const e = run(b, [[2, 6, 'hp']], N, 60); ok(hits(e).some(x => x.move === 'f_hp'), '1P →強P 踏破肘が踏み込んで当たる'); }
+{ const b = fresh('kokuu', 'kokuu', 80); const e = run(b, [[2, 4, 'hk']], N, 60); ok(hits(e).some(x => x.move === 'b_hk'), '1P ←強K 旋踵が当たる'); }
+{ const b = fresh('kokuu', 'kokuu', 60); const e = run(b, [[1, 2], [1, 1], [1, 4, 'mk']], N, 90); ok(hits(e).filter(x => x.move === 'tatsu').length >= 3, '1P 旋風脚（↓↙←+K）が多段ヒット（' + hits(e).filter(x => x.move === 'tatsu').length + 'hit）'); }
+{ const b = fresh('kokuu', 'kokuu', 130); const e = run(b, [[1, 9], [16, 5], [1, 2], [1, 1], [1, 4, 'mk']], N, 80); ok(e.some(x => x.type === 'hit' && x.move === 'atatsu') || b.p[0].moveId === 'atatsu', '1P 空中で空旋脚が出る'); }
 { const b = fresh(); const e = run(b, [[1, 2], [1, 1], [1, 4, 'hp'], [52, 5], [1, 6], [1, 2], [1, 3, 'hp']], N, 100);
   ok(hits(e).some(x => x.move === 'palm') && hits(e).some(x => x.move === 'dp' && x.combo === 2), '1P 虚掌破で浮かせて昇穿で追撃できる'); }
 { const b = fresh(); b.p[0].sup = 3000; const e = run(b, [[1, 2], [1, 3], [1, 6], [1, 2], [1, 3], [1, 6, 'hk']], N, 200);
   ok(e.some(x => x.type === 'super') && maxCombo(e) >= 5, '1P 超必殺3 天地穿（3本）が多段でつながる（' + maxCombo(e) + 'hit, ' + (b.p[1].D.hp - b.p[1].hp) + 'ダメージ）'); ok(b.p[0].sup < 100, '天地穿で必殺ゲージを3本消費'); }
-{ const b = fresh('shuuen', 'kokuu', 60); const e = run(b, [[2, 6, 'mk']], () => inp(1), 80); ok(e.some(x => x.type === 'hit' && x.move === 'f_mk'), '2P →中K 圧殺踏は中段'); }
-{ const b = fresh('shuuen', 'kokuu', 60); const e = run(b, [[2, 6, 'hp']], N, 60); ok(hits(e).some(x => x.move === 'f_hp'), '2P →強P 破頭が当たる'); }
-{ let okAA = false, when = null;
-  for (let t = 6; t <= 34 && !okAA; t++) { const b = fresh('shuuen', 'kokuu', 150); let f = 0;
-    const e = run(b, [[t, 5], [2, 4, 'hp']], (bb) => { f++; return f === 1 ? inp(7) : (f === 16 ? inp(5, 'hk') : N()); }, 80);
-    if (hits(e).some(x => x.move === 'b_hp')) { okAA = true; when = t; } }
-  ok(okAA, '2P ←強P 掬い爪で飛び込みを落とせる（相手が跳んでから' + when + 'F後に入力）'); }
-{ const b = fresh('shuuen', 'kokuu', 160); const e = run(b, [[1, 2], [1, 3], [1, 6, 'hk']], () => inp(6), 140); ok(e.some(x => x.type === 'hit' && x.move === 'wave'), '2P 地裂脚は下段（立ちガード不可）'); }
-{ const b = fresh('shuuen', 'kokuu', 160); const e = run(b, [[1, 2], [1, 3], [1, 6, 'hk']], () => inp(3), 140); ok(e.some(x => x.type === 'block'), '地裂脚はしゃがみガードできる'); }
-{ const b = fresh('shuuen', 'kokuu', 56); const e = run(b, [[1, 2], [1, 1], [1, 4, 'lp'], [10, 5], [1, 2], [1, 1], [1, 4, 'lp'], [10, 5], [1, 2], [1, 1], [1, 4, 'lp']], N, 90);
-  ok(['rekka1', 'rekka2', 'rekka3'].every(m => hits(e).some(x => x.move === m)) && maxCombo(e) >= 3, '2P 冥爪連撃が3段まで派生してつながる（' + maxCombo(e) + 'hit）'); }
-{ const b = fresh('shuuen', 'kokuu', 150); const e = run(b, [[1, 9], [14, 5], [1, 2], [1, 1], [1, 4, 'mk']], () => inp(1), 80); ok(e.some(x => x.type === 'hit' && x.move === 'dive'), '2P 空中の降魔落が出て、中段（しゃがみガード不可）'); }
-{ const b = fresh('shuuen', 'kokuu', 110); b.p[0].sup = 3000; const e = run(b, [[1, 2], [1, 1], [1, 4], [1, 2], [1, 1], [1, 4, 'hp']], N, 200);
-  ok(e.some(x => x.type === 'super') && hits(e).filter(x => x.move === 'su3').length >= 3, '2P 超必殺3 万象崩（3本）の柱が多段ヒット（' + (b.p[1].D.hp - b.p[1].hp) + 'ダメージ）'); }
-{ const b = fresh('shuuen', 'kokuu', 46); const e = run(b, [[3, 5, 'hp'], [8, 5], [1, 5, 'hk']], N, 60); ok(hits(e).some(x => x.move === 'tc_hk'), '2P ターゲットコンボ2（強P～強K）'); }
 { const b = fresh(); const e = run(b, [[3, 5, 'mk'], [7, 5], [1, 5, 'hk']], N, 60); ok(hits(e).some(x => x.move === 'tc_hk'), '1P ターゲットコンボ2（中K～強K）'); }
 
 console.log('■ ゲージ');
-{ const b = fresh('kokuu', 'shuuen', 300); b.p[0].rush = C.RUSH_MAX; run(b, [[2, 5, 'rush'], [1, 6, 'rush'], [1, 5, 'rush'], [1, 6, 'rush']], N, 2);
+{ const b = fresh('kokuu', 'kokuu', 300); b.p[0].rush = C.RUSH_MAX; run(b, [[2, 5, 'rush'], [1, 6, 'rush'], [1, 5, 'rush'], [1, 6, 'rush']], N, 2);
   const used = C.RUSH_MAX - b.p[0].rush;
   ok(b.p[0].state === 'rush' && used >= 1000 && used <= 1050, 'パリィ→→のラッシュでゲージ1本消費（' + Math.round(used) + '）');
   const r0 = b.p[0].rush; run(b, [], N, 60); ok(b.p[0].rush === r0, '使用直後はゲージ回復が止まる（クールダウン）');
   run(b, [], N, 100); ok(b.p[0].rush > r0, 'クールダウン後に自然回復（' + r0 + '→' + b.p[0].rush + '）');
-  const b2 = fresh('kokuu', 'shuuen', 300); b2.p[0].rush = 500; const e2 = run(b2, [[1, 5, 'rush']], N, 2);
+  const b2 = fresh('kokuu', 'kokuu', 300); b2.p[0].rush = 500; const e2 = run(b2, [[1, 5, 'rush']], N, 2);
   ok(b2.p[0].state !== 'rush' && !e2.some(x => x.type === 'rush'), 'ゲージ不足ではラッシュできない'); }
 { const b = fresh(); b.p[0].sup = 0; b.p[1].sup = 0; run(b, [[3, 5, 'hp']], N, 40);
   ok(b.p[0].sup > 0 && b.p[1].sup > 0, '攻撃を当てた側・食らった側の両方に必殺ゲージが溜まる（' + Math.round(b.p[0].sup) + ' / ' + Math.round(b.p[1].sup) + '）'); }
@@ -162,7 +141,7 @@ console.log('■ ゲージ');
 console.log('■ ガード');
 { const b = fresh(); const e = run(b, [[2, 2, 'mk']], () => inp(6), 40); ok(e.some(x => x.type === 'hit'), '下段（しゃがみ中K）は立ちガードできない'); }
 { const b = fresh(); const e = run(b, [[2, 2, 'mk']], () => inp(3), 40); ok(e.some(x => x.type === 'block'), '下段はしゃがみガードで防げる'); }
-{ const b = fresh('kokuu', 'shuuen', 300); const e = run(b, [[1, 2], [1, 3], [1, 6, 'hp']], () => inp(6), 120);
+{ const b = fresh('kokuu', 'kokuu', 300); const e = run(b, [[1, 2], [1, 3], [1, 6, 'hp']], () => inp(6), 120);
   ok(e.some(x => x.type === 'block') && b.p[1].hp < b.p[1].D.hp, '必殺技はガードしても削りダメージが入る（' + (b.p[1].D.hp - b.p[1].hp) + '）'); }
 
 console.log('■ 投げ');
@@ -170,15 +149,13 @@ console.log('■ 投げ');
 { const b = fresh(); let f = 0; const e = run(b, [[1, 5, 'lp,lk']], (bb) => { f++; return f === 9 ? inp(5, 'lp,lk') : N(); }, 100);
   ok(b.p[1].hp === b.p[1].D.hp && e.some(x => x.type === 'announce' && x.text === '投げ抜け'), '受付時間内の弱P+弱Kで投げ抜け'); }
 { const b = fresh(); const e = run(b, [[1, 5, 'lp,lk']], () => inp(6), 100); ok(b.p[1].hp < b.p[1].D.hp, '投げはガードできない'); }
-{ const b = fresh('shuuen', 'kokuu', 60); let f = 0; run(b, [[1, 6], [1, 3], [1, 2], [1, 1], [1, 4, 'hp']], (bb) => { f++; return f === 12 ? inp(5, 'lp,lk') : N(); }, 120);
-  ok(b.p[1].hp < b.p[1].D.hp, 'コマンド投げは投げ抜けできない'); }
 
 console.log('■ 無敵・対空');
 { // 相手の強Pの持続に昇穿を合わせても、無敵で勝つ
-  const b = fresh('kokuu', 'shuuen', 60); let f = 0;
-  const e = run(b, [[4, 5], [1, 6], [1, 2], [1, 3, 'hp']], (bb) => { f++; return f === 1 ? inp(5, 'hp') : N(); }, 80);
+  const b = fresh('kokuu', 'kokuu', 60); let f = 0;
+  const e = run(b, [[4, 5], [1, 6], [1, 2], [1, 3, 'hp']], (bb) => { f++; return f === 6 ? inp(5, 'hp') : N(); }, 80);
   ok(hits(e).some(x => x.move === 'dp') && !e.some(x => x.type === 'hit' && x.side === 1), '昇穿の無敵で相手の強Pをすり抜けて勝つ'); }
-{ const b = fresh('kokuu', 'shuuen', 160); let f = 0;
+{ const b = fresh('kokuu', 'kokuu', 160); let f = 0;
   const e = run(b, [[24, 5], [1, 6], [1, 2], [1, 3, 'hp']], (bb) => { f++; return f === 1 ? inp(7) : (f === 14 ? inp(5, 'hk') : N()); }, 80);
   ok(hits(e).some(x => x.move === 'dp'), '飛び込みを昇穿で対空できる'); }
 
@@ -195,9 +172,8 @@ console.log('■ 密着で技が当たる');
 {
   const CMD = { fire: [[2], [3], [6, 'lp']], dp: [[6], [2], [3, 'lp']], tatsu: [[2], [1], [4, 'lk']], palm: [[2], [1], [4, 'lp']], rushk: [[2], [3], [6, 'lk']],
     wave: [[2], [3], [6, 'lk']], rekka1: [[2], [1], [4, 'lp']], grab: [[6], [3], [2], [1], [4, 'lp']] };
-  const ids = { kokuu: ['lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'c_lp', 'c_mp', 'c_hp', 'c_lk', 'c_mk', 'c_hk', 'f_mp', 'f_hp', 'b_hk', 'fire', 'dp', 'tatsu', 'palm', 'rushk'],
-    shuuen: ['lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'c_lp', 'c_mp', 'c_hp', 'c_lk', 'c_mk', 'c_hk', 'f_hp', 'f_mk', 'b_hp', 'wave', 'dp', 'rekka1', 'rushk', 'grab'] };
-  for (const att of ['kokuu', 'shuuen']) for (const def of ['kokuu', 'shuuen']) {
+  const ids = { kokuu: ['lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'c_lp', 'c_mp', 'c_hp', 'c_lk', 'c_mk', 'c_hk', 'f_mp', 'f_hp', 'b_hk', 'fire', 'dp', 'tatsu', 'palm', 'rushk'], };
+  for (const att of ['kokuu']) for (const def of ['kokuu']) {
     const bad = [];
     for (const id of ids[att]) for (const c of [{}, { crouch: 1 }, { corner: 1 }, { gap: 10 }]) {
       const b = new KF.Battle({ p1: att, p2: def, meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]);
@@ -217,7 +193,7 @@ console.log('■ 密着で技が当たる');
 
 console.log('■ →→のラッシュは技をキャンセルするときだけ');
 {
-  const setup = () => { const b = new KF.Battle({ p1: 'kokuu', p2: 'shuuen', meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]); b.p[0].x = 400; b.p[1].x = 640; b.p[0].facing = 1; b.p[1].facing = -1; return b; };
+  const setup = () => { const b = new KF.Battle({ p1: 'kokuu', p2: 'kokuu', meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]); b.p[0].x = 400; b.p[1].x = 640; b.p[0].facing = 1; b.p[1].facing = -1; return b; };
   let b = setup(); [inp(6), N(), inp(6), inp(6)].forEach(x => b.step([x, N()])); ok(b.p[0].state === 'dash', '何もしていないときの→→は普通のダッシュ（ラッシュにはならない）');
   b = setup(); b.p[0].rush = 0; [inp(6), N(), inp(6), inp(6)].forEach(x => b.step([x, N()])); ok(b.p[0].state === 'dash', 'ゲージがなくても→→は普通のダッシュ');
   b = setup(); b.p[0].x = 560; b.p[1].x = 620; b.step([inp(2, 'mk'), N()]); let rc = false;
@@ -228,11 +204,11 @@ console.log('■ →→のラッシュは技をキャンセルするときだけ
 
 console.log('■ 昇竜コマンドはスト6と同じ（前→下→前）');
 {
-  const tryCmd = (k, seq) => { const b = new KF.Battle({ p1: k, p2: 'shuuen', meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]); b.p[0].x = 400; b.p[1].x = 640; b.p[0].facing = 1; b.p[1].facing = -1; b.p[0].sup = KF.CONST.SUPER_MAX;
+  const tryCmd = (k, seq) => { const b = new KF.Battle({ p1: k, p2: 'kokuu', meta }); for (let i = 0; i < 130; i++) b.step([N(), N()]); b.p[0].x = 400; b.p[1].x = 640; b.p[0].facing = 1; b.p[1].facing = -1; b.p[0].sup = KF.CONST.SUPER_MAX;
     seq.forEach(q => b.step([inp(q[0], q[1]), N()])); for (let i = 0; i < 3; i++) b.step([N(), N()]); return b.p[0].moveId; };
   const D = (s, btn = 'lp') => { const a = s.split('').map(Number); return a.map((d, i) => i === a.length - 1 ? [d, btn] : [d]); };
   const names = { 623: '→↓↘', 626: '→↓→', 636: '→↘→（→押しっぱなしで↓をはじく）', 616: '→↙→', 323: '↘↓↘（しゃがみ昇竜）', 326: '↘↓→', 313: '↘↙↘', 923: '↗↓↘', 936: '↗↘→', 916: '↗↙→' };
-  for (const k of ['kokuu', 'shuuen']) {
+  for (const k of ['kokuu']) {
     const bad = Object.keys(names).filter(c => tryCmd(k, D(c)) !== 'dp');
     ok(!bad.length, k + '：スト6で昇竜が出る10通りの入れ方がすべて出る' + (bad.length ? '（出ない：' + bad.map(c => names[c]).join(' ') + '）' : ''));
   }

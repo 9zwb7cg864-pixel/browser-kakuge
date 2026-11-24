@@ -8,7 +8,7 @@ function fresh(p1, p2, gap) {
   return b;
 }
 function measure(kind, id, dirBtn, block, gap) {
-  const b = fresh(kind, 'shuuen', gap);
+  const b = fresh(kind, 'kokuu', gap);
   const def = b.p[1];
   // 防御側：block=trueなら後ろ（右向きの相手にとって後ろ=+x方向）を押し続ける
   const dIn = block ? (block === 'low' ? inp(3) : inp(6)) : N();
@@ -25,7 +25,7 @@ function measure(kind, id, dirBtn, block, gap) {
   return res;
 }
 const rows = [];
-for (const kind of ['kokuu', 'shuuen']) {
+for (const kind of ['kokuu']) {
   const A = meta[kind].anims, M = KF.CHARS[kind].moves;
   for (const id of ['lp', 'mp', 'hp', 'lk', 'mk', 'hk', 'c_lp', 'c_mp', 'c_hp', 'c_lk', 'c_mk', 'c_hk']) {
     const a = A[M[id].anim];

@@ -57,8 +57,6 @@ function run(o) {
 }
 
 const cases = [
-  { name: '変身キャラ男どうし（↓↓Pで変身をくり返す）・遅延1F', lat: 40, jit: 30, delay: 1, ms: 60000, seed: 11, unordered: 1, kinds: ['gai_h', 'gai_h'] },
-  { name: '変身キャラ男 対 道着キャラ男・モダン', lat: 50, jit: 40, delay: 1, ms: 60000, seed: 12, unordered: 1, kinds: ['gai_h', 'kokuu'], modern: [true, false] },
   { name: 'モダン操作どうし・遅延1F（片道40ms）', lat: 40, jit: 30, delay: 1, ms: 60000, seed: 7, unordered: 1, modern: [true, true] },
   { name: 'モダン対クラシック・遅延1F', lat: 40, jit: 30, delay: 1, ms: 60000, seed: 8, unordered: 1, modern: [true, false] },
   { name: '遅延0F・近い回線（片道15ms）・順番ばらばら', lat: 15, jit: 15, delay: 0, ms: 60000, seed: 5, unordered: 1 },

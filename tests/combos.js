@@ -77,7 +77,7 @@ function run(kind, combo, c, k) {
 let fail = 0;
 // CAND=ファイル名 で、試しのコンボ一覧だけを測る
 if (process.env.CAND) KF.COMBOS = { [process.env.CANDKIND || 'kokuu']: require(require('path').resolve(process.env.CAND)) };
-else KF.COMBOS = { kokuu: KF.COMBOS.kokuu, gai_h: KF.COMBOS.gai_h || [], gai_s: KF.COMBOS.gai_s || [] };   // 遊べるキャラ（変身キャラ男は始めの形態ごと）
+else KF.COMBOS = { kokuu: KF.COMBOS.kokuu };
 for (const kind of Object.keys(KF.COMBOS)) {
   console.log('■ ' + KF.CHARS[kind].name);
   for (const combo of KF.COMBOS[kind]) {
