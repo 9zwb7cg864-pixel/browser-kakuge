@@ -1372,6 +1372,7 @@ var KF = window.KF || (window.KF = {});
     if (att.rushLock && def.combo > 1) sc *= C.RUSH_CANCEL_SCALE;
     sc *= def.addSc || 1;   // 追加補正：前に当てた技（強虚掌破など）のぶん、このコンボの残りがさらに減る
     if (mv.minScale) sc = Math.max(sc, mv.minScale);   // 最低保証（超必殺）は補正の最後にかける
+    if (mv.imm) sc = Math.max(0.1, sc - mv.imm);   // 即時補正：この技は当たった瞬間から補正を mv.imm（0.1＝10%）だけ多くかける（最低保証のあと）
     var dmg = Math.max(1, Math.round(baseDmg * sc * (counter || punish ? 1.2 : 1) * (!proj && att.modernMv || proj && proj.modern ? 0.8 : 1)));
     // 合計の最低保証（超必殺）：この技で与えた合計が minTotal に届くよう、最後の一撃で足す
     if (mv.minTotal) { if (att.hitCount <= 1 && !proj) att.moveDmg = 0; if (lastHit) dmg = Math.max(dmg, mv.minTotal - (att.moveDmg || 0)); att.moveDmg = (att.moveDmg || 0) + dmg; }
