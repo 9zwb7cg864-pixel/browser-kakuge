@@ -91,12 +91,12 @@ KF.CHARS = {
       // EX虚掌破：発生7F。弱・中・強どの通常技からでもつながる
       palm_ex: { anim: 'ex_palm', type: 'x', name: 'EX虚掌破', dmg: 1000, adv: [0, -4], hs: 13, push: [2, 6], lv: 'm', chip: 0.125,
               kd: 'launch', lvy: -8, lvx: 0.6, jset: 0, jlim: 0, cancel: 'u', floatG: 0.275, dashS: 5.5 },   // 前に踏み込みながら打つ。ふわっと浮かせて、ジャンプで追いかけて拾える
-      su3: { anim: 'su_3', type: 'u', bars: 3, name: '天地穿', dmg: 654, hits: 7, rehit: 5, hs: 6, push: [0.3, 2], lv: 'm', chip: 0.25,
-             inv: [[1, 44]], lock: 1, lockAir: 1, dashS: 7, jump: { vx: [0.8], vy: [-10] }, kdLast: 'launch', lvy: -12, lvx: 2.5, lastDmg: 1980, minScale: 0.7, imm: 0.1 },   // 即時補正10%（生当ては4000）
-      su1: { anim: 'su_1', type: 'u', bars: 1, name: '虚空砲', dmg: 620, hits: 5, rehit: 8, hs: 6, push: [1.5, 2], lv: 'm', chip: 0.25,
-             inv: [[1, 14]], beam: { fx: 'beam_k', head: 'beamhead_k', len: 600, h: 34 }, kdLast: 'launch', lvy: -8, lvx: 4, minScale: 0.7 },
-      su2: { anim: 'su_2', type: 'u', bars: 2, name: '零界継承', dmg: 390, hits: 9, rehit: 6, hs: 6, push: [0.5, 4], lv: 'm', chip: 0.25,
-             inv: [[1, 26]], lock: 1, dashS: 9.0, kdLast: 'launch', lvy: -11, lvx: 3, lastDmg: 1044, minScale: 0.3, minTotal: 1250 },   // 生当て2400・最低保証1250
+      su3: { anim: 'su_3', type: 'u', bars: 3, name: '天地穿', dmg: 769, hits: 7, rehit: 5, hs: 6, push: [0.3, 2], lv: 'm', chip: 0.25,
+             inv: [[1, 44]], lock: 1, lockAir: 1, dashS: 7, jump: { vx: [0.8], vy: [-10] }, kdLast: 'launch', lvy: -12, lvx: 2.5, lastDmg: 2310, minScale: 0.5, imm: 0.1 },   // 即時補正10%（生当ては4000）
+      su1: { anim: 'su_1', type: 'u', bars: 1, name: '虚空砲', dmg: 488, lastDmg: 487, hits: 5, rehit: 8, hs: 6, push: [1.5, 2], lv: 'm', chip: 0.25,
+             inv: [[1, 14]], beam: { fx: 'beam_k', head: 'beamhead_k', len: 600, h: 34 }, kdLast: 'launch', lvy: -8, lvx: 4, minScale: 0.5 },
+      su2: { anim: 'su_2', type: 'u', bars: 2, name: '零界継承', dmg: 492, hits: 9, rehit: 6, hs: 6, push: [0.5, 4], lv: 'm', chip: 0.25,
+             inv: [[1, 26]], lock: 1, dashS: 9.0, kdLast: 'launch', lvy: -11, lvx: 3, lastDmg: 1308, minScale: 0.3, minTotal: 1250 },   // 生当て3000・最低保証1250
     },
   },
 
@@ -163,11 +163,11 @@ KF.CHARS = {
       aslam_ex: { anim: 'sp_aslam', type: 'x', name: 'EX空中叩きつけ', air: 1, dmg: 1200, stun: [22, 18], hs: 14, push: [2, 5], lv: 'o', chip: 0.125,
                dive: { vx: 4.2, vy: 10.0 }, armor: [[1, 20]], kd: 'bounce', lvy: -4, lvx: 1.2, jset: 0, jlim: 0 },
       su1: { anim: 'su_1', type: 'u', bars: 1, name: '大槌連打', dmg: 480, hits: 6, rehit: 5, hs: 7, push: [0.3, 2], lv: 'm', chip: 0.25,
-             inv: [[1, 12]], lock: 1, dashS: 4.5, kdLast: 'launch', lvy: -9, lvx: 3, lastDmg: 1200, minScale: 0.7 },
+             inv: [[1, 12]], lock: 1, dashS: 4.5, kdLast: 'launch', lvy: -9, lvx: 3, lastDmg: 1200, minScale: 0.5 },
       su2: { anim: 'su_2', type: 'u', bars: 2, name: 'ギガントスイング', dmg: 380, hits: 9, rehit: 4, hs: 6, push: [0.3, 3], lv: 'm', chip: 0.25,
-             inv: [[1, 22]], lock: 1, dashS: 5.5, kdLast: 'wall', lvy: -7, lvx: 7, lastDmg: 1500, minScale: 0.7 },
+             inv: [[1, 22]], lock: 1, dashS: 5.5, kdLast: 'wall', lvy: -7, lvx: 7, lastDmg: 1500, minScale: 0.5 },
       su3: { anim: 'su_3', type: 'u', bars: 3, name: '天崩', dmg: 900, hits: 3, rehit: 8, hs: 9, push: [0.3, 2], lv: 'o', chip: 0.25,
-             inv: [[1, 34]], lock: 1, jump: { vx: [2.6], vy: [-11] }, kdLast: 'bounce', lvy: -4, lvx: 1, lastDmg: 2600, minScale: 0.7 },
+             inv: [[1, 34]], lock: 1, jump: { vx: [2.6], vy: [-11] }, kdLast: 'bounce', lvy: -4, lvx: 1, lastDmg: 2600, minScale: 0.5 },
     },
   },
   gai_s: {
@@ -229,11 +229,11 @@ KF.CHARS = {
       sdrop_ex: { anim: 'sp_sdrop', type: 'x', name: 'EX盾落下', air: 1, dmg: 600, hits: 2, rehit: 6, stun: [22, 18], hs: 13, push: [3, 6], lv: 'o', chip: 0.125,
                dive: { vx: 2.4, vy: 10.5 }, kdLast: 'launch', lvy: -7, lvx: 1.6, jset: 0, jlim: 1 },
       su1: { anim: 'su_1', type: 'u', bars: 1, name: 'フォートレスブレイク', dmg: 420, hits: 6, rehit: 5, hs: 7, push: [0.3, 2], lv: 'm', chip: 0.25,
-             inv: [[1, 14]], lock: 1, dashS: 5, kdLast: 'launch', lvy: -9, lvx: 3, lastDmg: 1200, minScale: 0.7 },
+             inv: [[1, 14]], lock: 1, dashS: 5, kdLast: 'launch', lvy: -9, lvx: 3, lastDmg: 1200, minScale: 0.5 },
       su2: { anim: 'su_2', type: 'u', bars: 2, name: 'シールドラッシュ', dmg: 320, hits: 9, rehit: 3, hs: 6, push: [0.3, 3], lv: 'm', chip: 0.25,
-             inv: [[1, 22]], lock: 1, dashS: 6.5, kdLast: 'wall', lvy: -7, lvx: 7, lastDmg: 1500, minScale: 0.7 },
+             inv: [[1, 22]], lock: 1, dashS: 6.5, kdLast: 'wall', lvy: -7, lvx: 7, lastDmg: 1500, minScale: 0.5 },
       su3: { anim: 'su_3', type: 'u', bars: 3, name: '城門崩し', dmg: 900, hits: 3, rehit: 8, hs: 9, push: [0.3, 2], lv: 'o', chip: 0.25,
-             inv: [[1, 34]], lock: 1, jump: { vx: [2.4], vy: [-11] }, kdLast: 'launch', lvy: -10, lvx: 2, lastDmg: 2500, minScale: 0.7 },
+             inv: [[1, 34]], lock: 1, jump: { vx: [2.4], vy: [-11] }, kdLast: 'launch', lvy: -10, lvx: 2, lastDmg: 2500, minScale: 0.5 },
     },
   },
   shuuen: {
@@ -287,7 +287,7 @@ KF.CHARS = {
                 kd: 'launch', lvy: -6, lvx: 4, cancel: 'u' },
       dive: { anim: 'sp_dive', type: 's', name: '降魔落', air: 1, dmg: 900, stun: [18, 14], hs: 12, push: [3, 4], lv: 'o', dive: { vx: 4.5, vy: 7.5 } },
       su3: { anim: 'su_3', type: 'u', bars: 3, name: '万象崩', dmg: 900, hits: 2, rehit: 9, hs: 7, push: [0.3, 1], lv: 'm', chip: 0.25,
-             inv: [[1, 26]], pillar: { fx: 'pillar_s', w: 46, offs: [-70, 0, 70] }, kdLast: 'launch', lvy: -13, lvx: 1.5, minScale: 0.7 },
+             inv: [[1, 26]], pillar: { fx: 'pillar_s', w: 46, offs: [-70, 0, 70] }, kdLast: 'launch', lvy: -13, lvx: 1.5, minScale: 0.5 },
       su1: { anim: 'su_1', type: 'u', bars: 1, name: '終焉の柱', dmg: 700, hits: 4, rehit: 9, hs: 7, push: [0.5, 1], lv: 'm', chip: 0.25,
              inv: [[1, 18]], pillar: { fx: 'pillar_s', w: 46 }, kdLast: 'launch', lvy: -12, lvx: 1.5, minScale: 0.5 },
       su2: { anim: 'su_2', type: 'gu', bars: 2, name: '万象終焉', dmg: 4800, range: [96], doAnim: 'su_2_do', inv: [[1, 14]] },
