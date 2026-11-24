@@ -37,7 +37,9 @@
 <body>
 <header>
   <h1>紺野ユイ 通常技ポーズ帳</h1>
-  <span class="tag">関節をドラッグしてポーズを作る。内容はこのブラウザに自動で保存される</span>
+  <span class="tag">関節をドラッグしてポーズを作る。保存はみんなと共有され、ほかの人の変更も自動で届く</span>
+  <span style="flex:1"></span>
+  <span id="net" class="tag">共有：つないでいます…</span>
 </header>
 <main>
   <div class="panel" id="list"></div>
@@ -74,6 +76,9 @@
   <div class="panel">
     <div id="title" style="font-size:18px;font-weight:bold"></div>
     <div id="sub" class="tag"></div>
+    <div id="who" class="tag" style="margin-top:4px"></div>
+    <label>自分の名前（保存したときに「誰が直したか」として残る）</label>
+    <input id="myName" maxlength="20" placeholder="例：ひろと" style="width:100%;background:#0d0f16;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:7px">
     <label>メモ（どんな技にしたいか・判定・当たる高さ・フレームなど何でも）</label>
     <textarea id="memo" placeholder="例：ローキック。出し終わりで足先が相手のすねに当たる。発生は速め"></textarea>
     <label>持ち物（棒・武器など）</label>
@@ -122,7 +127,52 @@
   var db = {};
   try { db = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { db = {}; }
   function rec(id) { if (!db[id]) db[id] = { start: basePose(kindOf(id)), end: basePose(kindOf(id)), memo: '', edited: false }; return db[id]; }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { } }
+  function saveLocal() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { } }
+  // ---- みんなで共有（Supabase）。技ごとに1行。最後に保存したものが全員に届く。保存のたびに履歴も残る
+  var SB = 'https://hpbbijokskrnmetevoza.supabase.co/rest/v1/', SBKEY = 'sb_publishable_YI7_ajJIigpFdnYCSsizug_5_efFTIE';
+  var META = {}, DIRTY = {}, pushT = {}, online = false, lastSync = null;
+  try { META = JSON.parse(localStorage.getItem(KEY + '_meta') || '{}'); } catch (e) { }
+  function myName() { return ($('myName') && $('myName').value.trim()) || '名無し'; }
+  function sb(path, opt) {
+    opt = opt || {}; opt.headers = Object.assign({ apikey: SBKEY, 'Content-Type': 'application/json' }, opt.headers || {});
+    return fetch(SB + path, opt).then(function (r) { if (!r.ok) throw new Error(r.status); return r.status === 204 ? null : r.json(); });
+  }
+  function netShow(t, ok) { var n = document.getElementById('net'); if (n) { n.textContent = t; n.style.color = ok ? '#7fffb0' : '#ffb07f'; } }
+  function stamp(iso) { var d = new Date(iso); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+  function showWho() { var m = META[cur], el = document.getElementById('who'); if (el) el.textContent = m ? '最後の保存：' + (m.editor || '名無し') + '（' + stamp(m.at) + '）' : 'まだ誰も保存していない'; }
+  function push(id) {
+    var body = JSON.stringify({ move_id: id, data: db[id], editor: myName() });
+    netShow('共有：保存中…', true);
+    return sb('yui_poses?on_conflict=move_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' }, body: body })
+      .then(function (rows) { var r = rows && rows[0]; if (r) META[id] = { at: r.updated_at, editor: r.editor }; DIRTY[id] = false; online = true; lastSync = new Date();
+        try { localStorage.setItem(KEY + '_meta', JSON.stringify(META)); } catch (e) { }
+        netShow('共有：保存した（' + stamp(lastSync.toISOString()) + '）', true); if (id === cur) showWho(); renderList(); })
+      .catch(function () { online = false; netShow('共有：つながらない（この端末にだけ保存。つながったら送る）', false); });
+  }
+  function save(ids) {
+    saveLocal();
+    (ids || [cur]).forEach(function (id) { DIRTY[id] = true; clearTimeout(pushT[id]); pushT[id] = setTimeout(function () { push(id); }, 800); });
+  }
+  // ほかの人の変更を取りにいく（数秒ごと）。自分が直している最中の技は上書きしない
+  function pull() {
+    return sb('yui_poses?select=move_id,data,editor,updated_at').then(function (rows) {
+      var changedCur = false;
+      rows.forEach(function (r) {
+        var m = META[r.move_id];
+        if (DIRTY[r.move_id] || (m && m.at >= r.updated_at)) return;
+        db[r.move_id] = r.data; META[r.move_id] = { at: r.updated_at, editor: r.editor };
+        if (r.move_id === cur) changedCur = true;
+      });
+      // 前から自分の端末にだけあって、まだ共有していない技は送る
+      for (var id in db) if (!META[id] && (db[id].edited || db[id].memo) && !DIRTY[id]) save([id]);
+      online = true; lastSync = new Date(); saveLocal();
+      try { localStorage.setItem(KEY + '_meta', JSON.stringify(META)); } catch (e) { }
+      var busy = Object.keys(DIRTY).some(function (k) { return DIRTY[k]; });
+      if (!busy) netShow('共有：つながっている（' + stamp(lastSync.toISOString()) + ' に確認）', true);
+      if (changedCur && !drag && document.activeElement !== $('memo')) { $('memo').value = rec(cur).memo || ''; propUI(); draw(); }
+      renderList(); showWho();
+    }).catch(function () { online = false; netShow('共有：つながらない（この端末にだけ保存）', false); });
+  }
 
   var cur = 'lp', side = 'start', undo = [];
   var cv = document.getElementById('cv'), ctx = cv.getContext('2d');
@@ -335,6 +385,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('.mv'), function (el) { el.onclick = function () { select(el.getAttribute('data-id')); }; });
   }
   function select(id) {
+    setTimeout(showWho, 0);
     cur = id; undo = []; playT = -1;
     $('title').textContent = NAME[id];
     $('sub').textContent = { s: '立ち技', c: 'しゃがみ技', j: 'ジャンプ技（空中）' }[kindOf(id)] || '';
@@ -396,14 +447,17 @@
       for (var id in o.moves) { var m = o.moves[id], cv2 = function (q) { var r = {}; for (var k in q) r[k] = P(q[k][0], q[k][1]); return r; };
         db[id] = { start: cv2(m.start), end: cv2(m.end), memo: m.memo || '', edited: true };
         if (m.prop) { db[id].prop = { on: true, len: m.prop.len, grip: m.prop.grip, hand: m.prop.hand === '奥の手' ? 'h2' : 'h1' }; db[id].propA = { start: (m.prop.angStart || 0) * Math.PI / 180, end: (m.prop.angEnd || 0) * Math.PI / 180 }; } }
-      save(); select(cur); toast('読み込んだ');
+      save(Object.keys(o.moves)); select(cur); toast('読み込んだ');
     } catch (e) { toast('読み込めない文字だった'); }
   }
   $('bImport').onclick = function () {
     var fall = function () { var t = window.prompt('書き出した文字を貼り付けて', ''); if (t) importText(t); };
     try { navigator.clipboard.readText().then(function (t) { if (t && t.indexOf('yui_pose_v1') >= 0) importText(t); else fall(); }, fall); } catch (e) { fall(); }
   };
+  try { $('myName').value = localStorage.getItem(KEY + '_name') || ''; } catch (e) { }
+  $('myName').onchange = function () { try { localStorage.setItem(KEY + '_name', this.value.trim()); } catch (e) { } };
   select('lp');
+  pull(); setInterval(function () { if (!drag) pull(); }, 5000);
 })();
 </script>
 </body>
