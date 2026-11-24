@@ -60,7 +60,7 @@
     </div>
     <p class="hint">
       ・<b>腰</b>（ピンクの四角）をドラッグすると体ごと動く／<b>胸</b>で上体を傾ける／<b>頭</b>で首を傾ける<br>
-      ・<b>手・足先</b>をドラッグすると、ひじ・ひざが自然に曲がって追いかける／<b>ひじ・ひざ</b>をドラッグすると、腕・脚の付け根から回る<br>
+      ・<b>手・足先</b>をドラッグすると、ひじ・ひざが自然に曲がって追いかける／<b>ひじ・ひざ</b>や<b>二の腕・ふともも</b>をドラッグすると付け根から回る／<b>前腕・すね</b>をドラッグするとひじ・ひざから先だけ回る<br>
       ・<b>📌 固定</b>：ボタンを押してから関節をタップすると固定（もう一度タップで外す）。固定した関節は、ほかをドラッグしても動かない（腕・脚は残りの関節が曲がって合わせる）<br>
       ・明るい線が手前（画面側）の手足、暗い線が奥の手足。右にいる青い影が相手（目盛りは自分の腰からの距離）
     </p>
@@ -178,19 +178,28 @@
   var PARENT = { e1: 'c', h1: 'e1', e2: 'c', h2: 'e2', k1: 'p', f1: 'k1', k2: 'p', f2: 'k2' };
   var LEN = { e1: L.up, h1: L.fore, e2: L.up, h2: L.fore, k1: L.thigh, f1: L.shin, k2: L.thigh, f2: L.shin };
   var CHILD = { e1: 'h1', e2: 'h2', k1: 'f1', k2: 'f2' };
+  var LIMBS = [['c', 'e1', 'h1'], ['c', 'e2', 'h2'], ['p', 'k1', 'f1'], ['p', 'k2', 'f2']];
   function rot(pt, o, a) { var dx = pt.x - o.x, dy = pt.y - o.y, c = Math.cos(a), s = Math.sin(a); return P(o.x + dx * c - dy * s, o.y + dx * s + dy * c); }
   function ang(a, b) { return Math.atan2(b.y - a.y, b.x - a.x); }
-  function ik(root, mid, end, target, l1, l2) {
-    // 2本の骨で target に手先を届かせる。曲がる向きは今の向きのまま
-    var dx = target.x - root.x, dy = target.y - root.y, d = Math.hypot(dx, dy);
-    d = Math.max(Math.abs(l1 - l2) + 0.01, Math.min(l1 + l2 - 0.01, d));
-    var base = Math.atan2(dy, dx);
+  // 腕・脚の曲がる向き。ドラッグを始めたときに決めて、動かしている間は変えない
+  // （毎回いまの形から決めると、まっすぐに近いときに向きが入れ替わり続けて震える）
+  var BEND = {};
+  function bendNow(root, mid, end, isLeg) {
     var cr = (end.x - root.x) * (mid.y - root.y) - (end.y - root.y) * (mid.x - root.x);
-    var bend = cr >= 0 ? 1 : -1;
-    var a = Math.acos((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d));
-    var m = P(root.x + Math.cos(base - bend * a) * l1, root.y + Math.sin(base - bend * a) * l1);
-    var e = P(root.x + Math.cos(base) * d, root.y + Math.sin(base) * d);
-    return [m, e];
+    if (Math.abs(cr) > 40) return cr >= 0 ? 1 : -1;
+    var base = ang(root, end);   // ほぼまっすぐ：ひざは前（右）に、ひじは下に曲げる
+    var a = P(Math.cos(base - 0.6), Math.sin(base - 0.6)), b = P(Math.cos(base + 0.6), Math.sin(base + 0.6));
+    return isLeg ? (a.x >= b.x ? -1 : 1) : (a.y >= b.y ? -1 : 1);   // a は bend=-1 側の候補
+  }
+  function setBends(q) { LIMBS.forEach(function (l) { BEND[l[1]] = bendNow(q[l[0]], q[l[1]], q[l[2]], l[0] === 'p'); }); }
+  function ik(q, rt, mid, end, target) {
+    var root = q[rt], l1 = LEN[mid], l2 = LEN[end];
+    var dx = target.x - root.x, dy = target.y - root.y, d = Math.hypot(dx, dy);
+    d = Math.max(Math.abs(l1 - l2) + 1, Math.min(l1 + l2 - 0.3, d));
+    var base = Math.atan2(dy, dx), bend = BEND[mid] || 1;
+    var a = Math.acos(Math.max(-1, Math.min(1, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d))));
+    q[mid] = P(root.x + Math.cos(base + bend * a) * l1, root.y + Math.sin(base + bend * a) * l1);   // bend は今の曲がり方（外積の向き）と同じ向き
+    q[end] = P(root.x + Math.cos(base) * d, root.y + Math.sin(base) * d);
   }
   var drag = null, pinMode = false;
   function pins() { var r = rec(cur); if (!r.pins) r.pins = {}; if (!r.pins[side]) r.pins[side] = {}; return r.pins[side]; }
@@ -200,18 +209,24 @@
     var turn = function (o, k, to, list) { var a = ang(q[o], to) - ang(q[o], q[k]); list.forEach(function (j) { q[j] = rot(q[j], q[o], a); }); };
     if (has('c')) turn('p', 'c', pn.c, ['c', 'h', 'e1', 'h1', 'e2', 'h2']);
     if (has('h')) turn('c', 'h', pn.h, ['h']);
-    [['c', 'e1', 'h1'], ['c', 'e2', 'h2'], ['p', 'k1', 'f1'], ['p', 'k2', 'f2']].forEach(function (l) {
+    LIMBS.forEach(function (l) {
       var r0 = l[0], m = l[1], e = l[2];
       if (has(m)) turn(r0, m, pn[m], [m, e]);
-      if (has(e)) {
-        if (has(m)) turn(m, e, pn[e], [e]);
-        else { var r = ik(q[r0], q[m], q[e], pn[e], LEN[m], LEN[e]); q[m] = r[0]; q[e] = r[1]; }
-      }
+      if (has(e)) { if (has(m)) turn(m, e, pn[e], [e]); else ik(q, r0, m, e, pn[e]); }
     });
   }
+  // つかむもの：関節（近いもの）か、骨（関節から離れたところを押したとき）
+  var BONES = [['p', 'c', 'c'], ['c', 'h', 'h'], ['c', 'e1', 'e1'], ['e1', 'h1', 'h1r'], ['c', 'e2', 'e2'], ['e2', 'h2', 'h2r'],
+    ['p', 'k1', 'k1'], ['k1', 'f1', 'f1r'], ['p', 'k2', 'k2'], ['k2', 'f2', 'f2r']];
   function pick(w) {
-    var q = rec(cur)[side], best = null, bd = 20 / SCALE;
+    var q = rec(cur)[side], best = null, bd = 22 / SCALE;
     for (var k in q) { var d = Math.hypot(q[k].x - w.x, q[k].y - w.y); if (d < bd) { bd = d; best = k; } }
+    if (best) return best;
+    bd = 12 / SCALE;
+    BONES.forEach(function (b) {
+      var A = q[b[0]], B = q[b[1]], vx = B.x - A.x, vy = B.y - A.y, t = Math.max(0, Math.min(1, ((w.x - A.x) * vx + (w.y - A.y) * vy) / (vx * vx + vy * vy)));
+      var d = Math.hypot(A.x + vx * t - w.x, A.y + vy * t - w.y); if (d < bd) { bd = d; best = b[2]; }
+    });
     return best;
   }
   function apply(k, w) {
@@ -219,25 +234,35 @@
     if (k === 'p') { var dx = w.x - q.p.x, dy = w.y - q.p.y; for (var j in q) { if (j === 'f1' || j === 'f2') continue; q[j].x += dx; q[j].y += dy; }
       // 足先は床に残し、ひざで合わせる（ジャンプ中は足もいっしょに動く）
       if (kindOf(cur) === 'j') { q.f1.x += dx; q.f1.y += dy; q.f2.x += dx; q.f2.y += dy; }
-      else ['1', '2'].forEach(function (s) { var r = ik(q.p, q['k' + s], q['f' + s], q['f' + s], L.thigh, L.shin); q['k' + s] = r[0]; q['f' + s] = r[1]; });
+      else { var f1 = P(q.f1.x, q.f1.y), f2 = P(q.f2.x, q.f2.y); ik(q, 'p', 'k1', 'f1', f1); ik(q, 'p', 'k2', 'f2', f2); }
       return; }
     if (k === 'c') { var a = ang(q.p, w) - ang(q.p, q.c); ['c', 'h', 'e1', 'h1', 'e2', 'h2'].forEach(function (j) { q[j] = rot(q[j], q.p, a); }); return; }
     if (k === 'h') { var a2 = ang(q.c, w) - ang(q.c, q.h); q.h = rot(q.h, q.c, a2); return; }
     if (CHILD[k]) { var root = PARENT[k], a3 = ang(q[root], w) - ang(q[root], q[k]); q[k] = rot(q[k], q[root], a3); q[CHILD[k]] = rot(q[CHILD[k]], q[root], a3); return; }
+    if (/r$/.test(k)) { var e = k.slice(0, 2), m = PARENT[e], a4 = ang(q[m], w) - ang(q[m], q[e]); q[e] = rot(q[e], q[m], a4); return; }   // 前腕・すねの骨：ひじ・ひざを中心に回す
     // 手先・足先：2本の骨で追いかける
-    var mid = PARENT[k], rt = PARENT[mid];
-    var r2 = ik(q[rt], q[mid], q[k], w, LEN[mid], LEN[k]); q[mid] = r2[0]; q[k] = r2[1];
+    ik(q, PARENT[PARENT[k]], PARENT[k], k, w);
   }
   function ev(e) { var b = cv.getBoundingClientRect(); return toW((e.clientX - b.left) * cv.width / b.width, (e.clientY - b.top) * cv.height / b.height); }
+  var grabOff = P(0, 0);
   cv.addEventListener('pointerdown', function (e) {
     if (playT >= 0) return;
     var w = ev(e), k = pick(w); if (!k) return;
-    if (pinMode) { var pn = pins(); if (pn[k]) delete pn[k]; else pn[k] = P(rec(cur)[side][k].x, rec(cur)[side][k].y); save(); draw(); return; }
-    if (pins()[k]) { toast('固定している関節（📌で外せる）'); return; }
-    undo.push(JSON.stringify(rec(cur)[side])); if (undo.length > 80) undo.shift();
+    var jk = /r$/.test(k) ? k.slice(0, 2) : k, q = rec(cur)[side];
+    if (pinMode) { var pn = pins(); if (pn[jk]) delete pn[jk]; else pn[jk] = P(q[jk].x, q[jk].y); save(); draw(); return; }
+    if (pins()[jk]) { toast('固定している関節（📌で外せる）'); return; }
+    undo.push(JSON.stringify(q)); if (undo.length > 80) undo.shift();
+    setBends(q);
+    // 押したところと関節の中心のずれを覚えておく（つかんだ瞬間に関節が指の下へ飛ばないように）
+    grabOff = /r$/.test(k) || k === 'c' || k === 'h' || CHILD[k] ? P(0, 0) : P(q[jk].x - w.x, q[jk].y - w.y);
     drag = k; cv.setPointerCapture(e.pointerId); e.preventDefault();
   });
-  cv.addEventListener('pointermove', function (e) { if (!drag) return; apply(drag, ev(e)); enforce(rec(cur)[side]); rec(cur).edited = true; draw(); });
+  var pend = null, pendRaf = 0;   // 指の動きは1コマに1回だけ反映する
+  cv.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    var w = ev(e); pend = P(w.x + grabOff.x, w.y + grabOff.y);
+    if (!pendRaf) pendRaf = requestAnimationFrame(function () { pendRaf = 0; var t = pend; pend = null; if (!drag || !t) return; apply(drag, t); enforce(rec(cur)[side]); rec(cur).edited = true; draw(); });
+  });
   var end = function () { if (drag) { drag = null; save(); renderList(); } };
   cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
 
