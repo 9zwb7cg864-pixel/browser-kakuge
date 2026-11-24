@@ -205,7 +205,7 @@ KF.COMMANDS.yui.splice(KF.COMMANDS.yui.filter(function (c) { return /^su/.test(c
 if (KF.MOVE_LIST.kokuu) KF.MOVE_LIST.yui = KF.MOVE_LIST.kokuu.map(function (r) {
   return /^虚掌破/.test(r[0]) ? ['電撃（手元のボタンを押すと、体の前の地面から電撃。キャラ1人分の幅）', '↓↙← + P']
     : /^虚環弾/.test(r[0]) ? ['捕獲網（対空投げ。空中の相手を網で捕まえ、方向+P でその方向へ投げる。入力なしなら前へ）', '↓↘→ + P']
-    : /^特殊技 鎚打ち/.test(r[0]) ? [r[0].replace('特殊技 旋踵（ガードさせて有利）', '特殊技 かち上げ（当たると真上に浮く。捕獲網につながる）'), r[1].replace('← + 強K', '← + 強K')] : r;
+    : /^特殊技 旋踵/.test(r[0]) ? ['特殊技 かち上げ（当たると真上に浮く。必殺技キャンセルで捕獲網につながる）', r[1]] : r;
 }).concat([['パワーグラブ（コマンド投げ。ガード不能・投げ抜け不可。投げより少し遠くまで届く）', '→↘↓↙← + P']]);
 // 虚掌破を使うコンボはユイには無い
 if (KF.COMBOS.kokuu) KF.COMBOS.yui = KF.COMBOS.kokuu.filter(function (c) { return !c.steps.some(function (st) { return st.m && (st.m.join() === '2,1,4' || st.m.join() === '2,3,6') && /p/.test(st.b); }); });
