@@ -104,6 +104,7 @@ for name, a in meta['anims'].items():
         n = copy.deepcopy(f); n['d'] = 1; new.append(n)
     a['frames'] = new
     a['file'] = 'yui_' + name + '.png'
+    a.pop('fw', None)   # 蒼井蓮の横に広いセル（中足）はユイには無い。ユイの絵はどれも同じ幅
     a['pl'] = True
     sheet = Image.new('RGBA', (FW * len(new), FH))
     for i, p in enumerate(pics):
