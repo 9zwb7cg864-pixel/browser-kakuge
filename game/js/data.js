@@ -86,7 +86,7 @@ KF.CHARS = {
                proj: { fx: 'ball_k_ex', spd: [4.2], vy: [2.6], life: 160, hits: 2, r: 18, rehit: 8 }, kd: 'launch', lvy: -5.5, lvx: 1.2, floatG: 0.3 },
       palm: { anim: 'sp_palm', type: 's', name: '虚掌破', dmg: 1100, adv: [0, -8], hs: 13, push: [2, 7], lv: 'm', chip: 0.125,
               kd: 'launch', lvy: -6, lvx: 14, lvxDrag: 0.92, floatG: 0.3125, jset: -1, jlim: 0, cancel: 'u', meter: 40,   // 強さの違いは無し（弱・中・強どれも同じ）。横に吹っ飛んでから止まる：画面中央では強Pが届かず、画面端では壁で止まって届く
-              addScale: 0.7,   // 追加補正：当てたあとのコンボのダメージが ×0.7
+              addScale: 0.5,   // 追加補正：当てたあとのコンボのダメージが ×0.5
               preDelay: 10 },   // 発生24F。のけぞりの長い強P系からだけつながり、弱・中からは出るがつながらない
       // EX虚掌破：発生7F。弱・中・強どの通常技からでもつながる
       palm_ex: { anim: 'ex_palm', type: 'x', name: 'EX虚掌破', dmg: 1000, adv: [0, -4], hs: 13, push: [2, 6], lv: 'm', chip: 0.125,
